@@ -18,6 +18,9 @@ composer "画布" button           →  opens/focuses the same tab
   snapping, alignment, grouping, copy/paste, z-order and undo/redo.
 - Top-level Frame names sit above their frames like Figma labels and are always
   visible; clicking a label selects its frame.
+- The layer panel and inspector each have a drawer pull on their inner edge:
+  click it to fold the panel away or pull it back; the last opened tab is
+  remembered. Rail buttons keep working as before.
 - Right-click the canvas for a context menu: copy/cut/paste/duplicate/delete,
   insert selection into the chat composer, group/ungroup, z-order, lock/unlock,
   show/hide, create component, fit, select all.

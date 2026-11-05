@@ -24,6 +24,15 @@ const RAIL = [
   ['comments', 'comment', '评论'],
 ]
 
+const PANEL_LABELS = {
+  layers: '图层面板',
+  components: '组件面板',
+  templates: '模板面板',
+  styles: '样式面板',
+  fonts: '字体面板',
+  comments: '评论面板',
+}
+
 export class CanvasErrorBoundary extends React.Component {
   constructor(props) {
     super(props)
@@ -127,6 +136,15 @@ export function CanvasPanel({ sessionId, inputActions }: any) {
     })
   }
   const panel = store.state.panel
+  // Keep the last opened panel so a closed drawer can reopen the same tab.
+  const lastPanelRef = React.useRef(panel ?? 'layers')
+  if (panel) lastPanelRef.current = panel
+  const panelLabel = PANEL_LABELS[panel ?? lastPanelRef.current] ?? '面板'
+  const togglePanel = () => store.setPanel(panel ? null : lastPanelRef.current)
+  const toggleInspector = () => {
+    state.inspectorOpen = !state.inspectorOpen
+    store.emit()
+  }
   const comments = (state.doc?.comments ?? []).filter((comment) => !comment.resolved && comment.pageId === state.pageId)
 
   if (state.loading || !state.ready) {
@@ -221,10 +239,7 @@ export function CanvasPanel({ sessionId, inputActions }: any) {
           size: 22,
           title: state.inspectorOpen ? '收起属性' : '展开属性',
           active: state.inspectorOpen,
-          onClick: () => {
-            state.inspectorOpen = !state.inspectorOpen
-            store.emit()
-          },
+          onClick: toggleInspector,
         }),
       ),
       panel &&
@@ -254,6 +269,40 @@ export function CanvasPanel({ sessionId, inputActions }: any) {
       ),
       state.inspectorOpen &&
         React.createElement(Inspector, { store, onNameDialog: onNeedName }),
+      // Drawer pulls stay attached to the inner edge of the panel slot, so both
+      // the open panel and the empty slot keep a visible affordance.
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          className: `dshc-drawer dshc-drawer-left${panel ? ' is-open' : ''}`,
+          title: panel ? `收起${panelLabel}` : `展开${panelLabel}`,
+          'aria-label': panel ? `收起${panelLabel}` : `展开${panelLabel}`,
+          'aria-expanded': Boolean(panel),
+          onClick: togglePanel,
+        },
+        React.createElement(Icon, {
+          name: 'chevronRight',
+          size: 12,
+          style: panel ? { transform: 'rotate(180deg)' } : undefined,
+        }),
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          className: `dshc-drawer dshc-drawer-right${state.inspectorOpen ? ' is-open' : ''}`,
+          title: state.inspectorOpen ? '收起属性' : '展开属性',
+          'aria-label': state.inspectorOpen ? '收起属性' : '展开属性',
+          'aria-expanded': Boolean(state.inspectorOpen),
+          onClick: toggleInspector,
+        },
+        React.createElement(Icon, {
+          name: 'chevronRight',
+          size: 12,
+          style: state.inspectorOpen ? undefined : { transform: 'rotate(180deg)' },
+        }),
+      ),
     ),
     React.createElement(
       'div',
