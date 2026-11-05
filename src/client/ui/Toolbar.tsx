@@ -16,7 +16,7 @@ const TOOLS = [
   ['comment', 'c', '评论 (C)'],
 ]
 
-export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName }: any) {
+export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName, inspectorOpen, onToggleInspector }: any) {
   const state = store.state
   const [showExport, setShowExport] = React.useState(false)
   const [docsOpen, setDocsOpen] = React.useState(false)
@@ -130,31 +130,46 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName 
     React.createElement(
       'div',
       { className: 'dshc-topbar-row dshc-topbar-tools' },
-      ...TOOLS.map(([tool, key, title]) =>
+      React.createElement(
+        'div',
+        { className: 'dshc-tools-scroll' },
+        ...TOOLS.map(([tool, key, title]) =>
+          React.createElement(IconButton, {
+            key: tool,
+            icon: tool,
+            title,
+            active: state.tool === tool,
+            onClick: () => onTool(tool),
+          }),
+        ),
+        React.createElement('span', { className: 'dshc-divider' }),
+        React.createElement(IconButton, { icon: 'comment', title: '显示/隐藏评论', active: state.showComments, onClick: () => {
+          state.showComments = !state.showComments
+          store.emit()
+        } }),
+        React.createElement(IconButton, { icon: 'zoomOut', title: '缩小', onClick: () => {
+          const view = store.viewportSize()
+          store.zoomAt({ x: view.width / 2, y: view.height / 2 }, 1 / 1.2)
+        } }),
+        React.createElement('button', { type: 'button', className: 'dshc-zoom-label', title: '重置到 100%', onClick: () => store.setViewport({ ...store.viewport, zoom: 1 }) }, `${Math.round(state.viewport.zoom * 100)}%`),
+        React.createElement(IconButton, { icon: 'zoomIn', title: '放大', onClick: () => {
+          const view = store.viewportSize()
+          store.zoomAt({ x: view.width / 2, y: view.height / 2 }, 1.2)
+        } }),
+        React.createElement(IconButton, { icon: 'fit', title: '适应画布 (1)', onClick: () => store.zoomToFit() }),
+        React.createElement(IconButton, { icon: 'reset', title: '适应选区 (2)', onClick: () => store.zoomToSelection() }),
+      ),
+      React.createElement(
+        'span',
+        { className: 'dshc-topbar-end' },
+        React.createElement('span', { className: 'dshc-divider' }),
         React.createElement(IconButton, {
-          key: tool,
-          icon: tool,
-          title,
-          active: state.tool === tool,
-          onClick: () => onTool(tool),
+          icon: 'panelRight',
+          title: inspectorOpen ? '收起属性面板' : '展开属性面板',
+          active: Boolean(inspectorOpen),
+          onClick: onToggleInspector,
         }),
       ),
-      React.createElement('span', { className: 'dshc-divider' }),
-      React.createElement(IconButton, { icon: 'comment', title: '显示/隐藏评论', active: state.showComments, onClick: () => {
-        state.showComments = !state.showComments
-        store.emit()
-      } }),
-      React.createElement(IconButton, { icon: 'zoomOut', title: '缩小', onClick: () => {
-        const view = store.viewportSize()
-        store.zoomAt({ x: view.width / 2, y: view.height / 2 }, 1 / 1.2)
-      } }),
-      React.createElement('button', { type: 'button', className: 'dshc-zoom-label', title: '重置到 100%', onClick: () => store.setViewport({ ...store.viewport, zoom: 1 }) }, `${Math.round(state.viewport.zoom * 100)}%`),
-      React.createElement(IconButton, { icon: 'zoomIn', title: '放大', onClick: () => {
-        const view = store.viewportSize()
-        store.zoomAt({ x: view.width / 2, y: view.height / 2 }, 1.2)
-      } }),
-      React.createElement(IconButton, { icon: 'fit', title: '适应画布 (1)', onClick: () => store.zoomToFit() }),
-      React.createElement(IconButton, { icon: 'reset', title: '适应选区 (2)', onClick: () => store.zoomToSelection() }),
     ),
     showExport &&
       React.createElement(
