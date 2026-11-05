@@ -1,0 +1,21 @@
+{
+  "colors": {
+    "primary": "#6D28D9",
+    "background": "#FAF7FF",
+    "onSurface": "#2E1065",
+    "muted": "#6B527F",
+    "outline": "#806593"
+  },
+  "spacing": {
+    "pageHorizontal": 20,
+    "sectionGap": 20,
+    "cardPadding": 20
+  },
+  "radius": {
+    "card": 20,
+    "button": 16
+  },
+  "elevation": {
+    "card": 2
+  }
+}

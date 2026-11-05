@@ -1,0 +1,480 @@
+{
+  "format": "dsh.canvas",
+  "version": 1,
+  "id": "doc_login_demo",
+  "title": "Login Demo",
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Page 1",
+      "background": null,
+      "children": [
+        {
+          "id": "login-frame",
+          "type": "frame",
+          "name": "Login",
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "clip": true,
+          "fills": [
+            {
+              "type": "linear-gradient",
+              "angle": 160,
+              "stops": [
+                {
+                  "position": 0,
+                  "color": "#0F172A"
+                },
+                {
+                  "position": 1,
+                  "color": "#1E293B"
+                }
+              ]
+            }
+          ],
+          "strokes": [],
+          "effects": [],
+          "cornerRadius": 0,
+          "children": [
+            {
+              "id": "login-title",
+              "type": "text",
+              "name": "Title",
+              "x": 32,
+              "y": 132,
+              "width": 326,
+              "height": 40,
+              "text": "Welcome back",
+              "font": {
+                "family": "system-ui",
+                "weight": 700,
+                "style": "normal",
+                "size": 30,
+                "lineHeight": 1.2,
+                "letterSpacing": -0.4
+              },
+              "align": "left",
+              "verticalAlign": "top",
+              "fills": [
+                {
+                  "type": "solid",
+                  "color": "#F8FAFC"
+                }
+              ],
+              "effects": [],
+              "autoHeight": true
+            },
+            {
+              "id": "login-subtitle",
+              "type": "text",
+              "name": "Subtitle",
+              "x": 32,
+              "y": 176,
+              "width": 326,
+              "height": 22,
+              "text": "Sign in to your workspace",
+              "font": {
+                "family": "system-ui",
+                "weight": 400,
+                "style": "normal",
+                "size": 14,
+                "lineHeight": 1.4,
+                "letterSpacing": 0
+              },
+              "align": "left",
+              "verticalAlign": "top",
+              "fills": [
+                {
+                  "type": "solid",
+                  "color": "#94A3B8"
+                }
+              ],
+              "effects": [],
+              "autoHeight": true
+            },
+            {
+              "id": "login-card",
+              "type": "frame",
+              "name": "Form Card",
+              "x": 32,
+              "y": 248,
+              "width": 326,
+              "height": 356,
+              "rotation": 0,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "clip": true,
+              "cornerRadius": 18,
+              "fills": [
+                {
+                  "type": "solid",
+                  "color": "#FFFFFF"
+                }
+              ],
+              "strokes": [],
+              "effects": [
+                {
+                  "type": "drop-shadow",
+                  "x": 0,
+                  "y": 18,
+                  "blur": 40,
+                  "spread": -8,
+                  "color": "#02061766",
+                  "visible": true
+                }
+              ],
+              "layout": {
+                "direction": "vertical",
+                "gap": 14,
+                "padding": {
+                  "top": 22,
+                  "right": 20,
+                  "bottom": 22,
+                  "left": 20
+                },
+                "alignPrimary": "start",
+                "alignCounter": "stretch"
+              },
+              "layoutSizing": {
+                "h": "fixed",
+                "v": "fixed"
+              },
+              "children": [
+                {
+                  "id": "card-heading",
+                  "type": "text",
+                  "name": "Card heading",
+                  "x": 20,
+                  "y": 22,
+                  "width": 286,
+                  "height": 24,
+                  "text": "Email sign in",
+                  "font": {
+                    "family": "system-ui",
+                    "weight": 600,
+                    "style": "normal",
+                    "size": 18,
+                    "lineHeight": 1.3,
+                    "letterSpacing": 0
+                  },
+                  "align": "left",
+                  "verticalAlign": "top",
+                  "fills": [
+                    {
+                      "type": "solid",
+                      "color": "#0F172A"
+                    }
+                  ],
+                  "effects": [],
+                  "autoHeight": true,
+                  "layoutSizing": {
+                    "h": "fill",
+                    "v": "hug"
+                  }
+                },
+                {
+                  "id": "email-field",
+                  "type": "rect",
+                  "name": "Email field",
+                  "x": 20,
+                  "y": 60,
+                  "width": 286,
+                  "height": 48,
+                  "rotation": 0,
+                  "opacity": 1,
+                  "visible": true,
+                  "locked": false,
+                  "cornerRadius": 10,
+                  "fills": [
+                    {
+                      "type": "solid",
+                      "color": "#F1F5F9"
+                    }
+                  ],
+                  "strokes": [
+                    {
+                      "color": "#E2E8F0",
+                      "width": 1,
+                      "align": "center"
+                    }
+                  ],
+                  "effects": [],
+                  "layoutSizing": {
+                    "h": "fill",
+                    "v": "fixed"
+                  }
+                },
+                {
+                  "id": "email-label",
+                  "type": "text",
+                  "name": "Email placeholder",
+                  "x": 20,
+                  "y": 74,
+                  "width": 286,
+                  "height": 20,
+                  "text": "you@company.com",
+                  "font": {
+                    "family": "system-ui",
+                    "weight": 400,
+                    "style": "normal",
+                    "size": 14,
+                    "lineHeight": 1.4,
+                    "letterSpacing": 0
+                  },
+                  "align": "left",
+                  "verticalAlign": "top",
+                  "fills": [
+                    {
+                      "type": "solid",
+                      "color": "#94A3B8"
+                    }
+                  ],
+                  "effects": [],
+                  "autoHeight": true,
+                  "layoutSizing": {
+                    "h": "fill",
+                    "v": "hug"
+                  }
+                },
+                {
+                  "id": "password-field",
+                  "type": "rect",
+                  "name": "Password field",
+                  "x": 20,
+                  "y": 122,
+                  "width": 286,
+                  "height": 48,
+                  "rotation": 0,
+                  "opacity": 1,
+                  "visible": true,
+                  "locked": false,
+                  "cornerRadius": 10,
+                  "fills": [
+                    {
+                      "type": "solid",
+                      "color": "#F1F5F9"
+                    }
+                  ],
+                  "strokes": [
+                    {
+                      "color": "#E2E8F0",
+                      "width": 1,
+                      "align": "center"
+                    }
+                  ],
+                  "effects": [],
+                  "layoutSizing": {
+                    "h": "fill",
+                    "v": "fixed"
+                  }
+                },
+                {
+                  "id": "card-spacer",
+                  "type": "frame",
+                  "name": "Spacer",
+                  "x": 20,
+                  "y": 184,
+                  "width": 286,
+                  "height": 24,
+                  "rotation": 0,
+                  "opacity": 1,
+                  "visible": true,
+                  "locked": false,
+                  "clip": true,
+                  "fills": [],
+                  "strokes": [],
+                  "effects": [],
+                  "cornerRadius": 0,
+                  "children": [],
+                  "layoutSizing": {
+                    "h": "fill",
+                    "v": "fixed"
+                  }
+                },
+                {
+                  "id": "btn-instance",
+                  "type": "instance",
+                  "name": "Primary button",
+                  "x": 20,
+                  "y": 222,
+                  "width": 286,
+                  "height": 48,
+                  "rotation": 0,
+                  "opacity": 1,
+                  "visible": true,
+                  "locked": false,
+                  "componentId": "cmp-button",
+                  "variantProps": {},
+                  "overrides": {
+                    "btn-label": {
+                      "text": "Sign in"
+                    }
+                  },
+                  "layoutSizing": {
+                    "h": "fill",
+                    "v": "fixed"
+                  }
+                },
+                {
+                  "id": "card-footnote",
+                  "type": "text",
+                  "name": "Footnote",
+                  "x": 20,
+                  "y": 284,
+                  "width": 286,
+                  "height": 18,
+                  "text": "Forgot your password?",
+                  "font": {
+                    "family": "system-ui",
+                    "weight": 400,
+                    "style": "normal",
+                    "size": 13,
+                    "lineHeight": 1.4,
+                    "letterSpacing": 0
+                  },
+                  "align": "center",
+                  "verticalAlign": "top",
+                  "fills": [
+                    {
+                      "type": "solid",
+                      "color": "#64748B"
+                    }
+                  ],
+                  "effects": [],
+                  "autoHeight": true,
+                  "layoutSizing": {
+                    "h": "fill",
+                    "v": "hug"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "components": [
+    {
+      "id": "cmp-button",
+      "name": "Button/Primary",
+      "variantProps": {},
+      "root": {
+        "id": "cmp-button-root",
+        "type": "frame",
+        "name": "Primary Button",
+        "x": 0,
+        "y": 0,
+        "width": 286,
+        "height": 48,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "locked": false,
+        "clip": true,
+        "cornerRadius": 10,
+        "fills": [],
+        "strokes": [],
+        "effects": [],
+        "fillStyleId": "style-brand",
+        "layout": {
+          "direction": "horizontal",
+          "gap": 8,
+          "padding": {
+            "top": 0,
+            "right": 16,
+            "bottom": 0,
+            "left": 16
+          },
+          "alignPrimary": "center",
+          "alignCounter": "center"
+        },
+        "layoutSizing": {
+          "h": "fixed",
+          "v": "fixed"
+        },
+        "children": [
+          {
+            "id": "btn-label",
+            "type": "text",
+            "name": "Label",
+            "x": 0,
+            "y": 0,
+            "width": 120,
+            "height": 20,
+            "text": "Button",
+            "font": {
+              "family": "system-ui",
+              "weight": 600,
+              "style": "normal",
+              "size": 15,
+              "lineHeight": 1.4,
+              "letterSpacing": 0
+            },
+            "align": "center",
+            "verticalAlign": "center",
+            "fills": [
+              {
+                "type": "solid",
+                "color": "#FFFFFF"
+              }
+            ],
+            "effects": [],
+            "autoHeight": true,
+            "layoutSizing": {
+              "h": "hug",
+              "v": "hug"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "variantSets": [],
+  "styles": [
+    {
+      "id": "style-brand",
+      "type": "fill",
+      "name": "Brand/Primary",
+      "value": {
+        "type": "solid",
+        "color": "#4D6BFE"
+      }
+    },
+    {
+      "id": "style-ink",
+      "type": "fill",
+      "name": "Ink/900",
+      "value": {
+        "type": "solid",
+        "color": "#0F172A"
+      }
+    }
+  ],
+  "fonts": [],
+  "comments": [
+    {
+      "id": "comment-1",
+      "pageId": "page-1",
+      "nodeId": "btn-instance",
+      "x": 0.5,
+      "y": 0.5,
+      "body": "按钮再高一点，并把圆角改成 12。",
+      "author": "user",
+      "createdAt": "2026-11-04T00:00:00.000Z",
+      "resolved": false,
+      "replies": []
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-11-04T00:00:00.000Z",
+    "updatedAt": "2026-11-04T00:00:00.000Z"
+  }
+}

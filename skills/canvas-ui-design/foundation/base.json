@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "appearance": "light",
+  "colors": {
+    "primary": "#4F46E5",
+    "onPrimary": "#FFFFFF",
+    "secondary": "#475569",
+    "onSecondary": "#FFFFFF",
+    "background": "#F8FAFC",
+    "surface": "#FFFFFF",
+    "onSurface": "#0F172A",
+    "muted": "#475569",
+    "error": "#B91C1C",
+    "onError": "#FFFFFF",
+    "outline": "#64748B"
+  },
+  "typography": {
+    "fontFamily": "SF Pro",
+    "display": {
+      "size": 32,
+      "lineHeight": 40,
+      "weight": 700
+    },
+    "headingLg": {
+      "size": 28,
+      "lineHeight": 36,
+      "weight": 700
+    },
+    "headingMd": {
+      "size": 24,
+      "lineHeight": 32,
+      "weight": 600
+    },
+    "title": {
+      "size": 20,
+      "lineHeight": 28,
+      "weight": 600
+    },
+    "subtitle": {
+      "size": 16,
+      "lineHeight": 24,
+      "weight": 500
+    },
+    "body": {
+      "size": 16,
+      "lineHeight": 24,
+      "weight": 400
+    },
+    "bodySm": {
+      "size": 14,
+      "lineHeight": 20,
+      "weight": 400
+    },
+    "caption": {
+      "size": 12,
+      "lineHeight": 16,
+      "weight": 400
+    }
+  },
+  "spacing": {
+    "scale": [
+      4,
+      8,
+      12,
+      16,
+      20,
+      24,
+      32,
+      40,
+      48
+    ],
+    "pageHorizontal": 16,
+    "sectionGap": 16,
+    "cardPadding": 16
+  },
+  "radius": {
+    "button": 12,
+    "card": 12,
+    "dialog": 24
+  },
+  "elevation": {
+    "card": 1
+  },
+  "motion": {
+    "fastMs": 150,
+    "normalMs": 250
+  },
+  "layout": {
+    "medium": 600,
+    "expanded": 840
+  },
+  "accessibility": {
+    "minTouchTarget": 48
+  }
+}

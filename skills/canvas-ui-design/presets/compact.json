@@ -1,0 +1,17 @@
+{
+  "colors": {
+    "primary": "#1D4ED8"
+  },
+  "spacing": {
+    "pageHorizontal": 12,
+    "sectionGap": 12,
+    "cardPadding": 12
+  },
+  "radius": {
+    "card": 8,
+    "button": 8
+  },
+  "elevation": {
+    "card": 0
+  }
+}
