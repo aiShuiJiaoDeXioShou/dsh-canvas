@@ -469,11 +469,15 @@
   display: flex;
   align-items: stretch;
   position: relative;
+  /* Panel slot geometry is shared with the drawer pulls. */
+  --dshc-rail-w: 44px;
+  --dshc-panel-w: 216px;
+  --dshc-inspector-w: 236px;
 }
 
 .dshc-rail {
   flex: none;
-  width: 44px;
+  width: var(--dshc-rail-w);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -511,12 +515,103 @@
 
 .dshc-panel-wrap {
   flex: none;
-  width: 216px;
+  width: var(--dshc-panel-w);
   min-width: 0;
   border-right: 1px solid var(--dshc-line);
   background: var(--dshc-raise);
   overflow: auto;
   z-index: 5;
+  animation: dshc-drawer-in-left 180ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Drawer pulls: attached to the inner edge of a panel slot, so the open panel
+   and the empty slot keep the same visible affordance. */
+.dshc-drawer {
+  position: absolute;
+  top: 6px;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--dshc-line-strong);
+  border-radius: 9px;
+  background: var(--dshc-overlay);
+  color: var(--dshc-muted);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1);
+  cursor: pointer;
+  transition:
+    left 180ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    right 180ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    color 120ms ease,
+    background 120ms ease;
+}
+
+.dshc-drawer:hover {
+  color: var(--dshc-accent);
+  background: color-mix(in srgb, var(--dshc-accent) 8%, var(--dshc-overlay));
+}
+
+.dshc-drawer:focus-visible {
+  outline: 2px solid var(--dshc-accent);
+  outline-offset: 1px;
+}
+
+.dshc-drawer-left {
+  left: min(var(--dshc-rail-w), calc(100% - 16px));
+  border-left: none;
+  border-radius: 0 9px 9px 0;
+}
+
+.dshc-drawer-left.is-open {
+  left: min(calc(var(--dshc-rail-w) + var(--dshc-panel-w)), calc(100% - 16px));
+}
+
+.dshc-drawer-right {
+  right: 0;
+  border-right: none;
+  border-radius: 9px 0 0 9px;
+}
+
+.dshc-drawer-right.is-open {
+  right: min(var(--dshc-inspector-w), calc(100% - 16px));
+}
+
+@keyframes dshc-drawer-in-left {
+  from {
+    opacity: 0.4;
+    transform: translateX(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes dshc-drawer-in-right {
+  from {
+    opacity: 0.4;
+    transform: translateX(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dshc-drawer {
+    transition: none;
+  }
+
+  .dshc-panel-wrap,
+  .dshc-inspector {
+    animation: none;
+  }
 }
 
 .dshc-panel {
@@ -686,11 +781,12 @@
 /* inspector */
 .dshc-inspector {
   flex: none;
-  width: 236px;
+  width: var(--dshc-inspector-w);
   border-left: 1px solid var(--dshc-line);
   background: var(--dshc-raise);
   overflow: auto;
   z-index: 5;
+  animation: dshc-drawer-in-right 180ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .dshc-inspector-head {
