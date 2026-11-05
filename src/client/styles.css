@@ -220,12 +220,30 @@
 }
 
 .dshc-topbar-tools {
+  overflow: visible;
+}
+
+/* The tool strip scrolls on a narrow dock; the drawer toggle stays pinned to the
+   toolbar's right edge, level with the rest of the row. */
+.dshc-tools-scroll {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
 }
 
-.dshc-topbar-tools::-webkit-scrollbar {
+.dshc-tools-scroll::-webkit-scrollbar {
   display: none;
+}
+
+.dshc-topbar-end {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
 }
 
 .dshc-page-select {
