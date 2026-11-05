@@ -66,6 +66,10 @@ composer "画布" button           →  opens/focuses the same tab
   agent follows these defaults (documented in `canvas/DESIGN.md`).
 - Agent tools: `canvas_read`, `canvas_write`, `canvas_edit`, `canvas_comment`,
   `canvas_template`, `canvas_audit`, `canvas_image`.
+- `path` vector nodes: SVG path `d`, viewBox, fill/stroke, solid/gradient
+  paints and SVG export; basic SVG path import via the toolbar. No pen/anchors.
+- TypeScript source layout under `src/{shared,host,client}` with generated
+  `client/client.js` and `dist/host/main.js`.
   Agent writes appear in an open canvas within a second (SSE, with a polling
   fallback). The user's current selection is part of `canvas_read` output.
 - After a selection is inserted, a compact「在画布中定位：Title」chip appears
@@ -147,8 +151,9 @@ Repository: <https://github.com/aiShuiJiaoDeXioShou/dsh-canvas>
 git clone https://github.com/aiShuiJiaoDeXioShou/dsh-canvas.git
 cd dsh-canvas
 pnpm install
-node build.mjs
-node --test tests/*.test.mjs
+pnpm typecheck
+pnpm build
+pnpm test
 ```
 
 Then install the bundle in the current profile:
@@ -157,9 +162,10 @@ Then install the bundle in the current profile:
 plugin_manager action=install_bundle target=/absolute/path/to/dsh-canvas
 ```
 
-`client/client.js` is committed so a checkout can be installed directly; run
-`node build.mjs` after client changes. Refresh the Harness page (or toggle the
-plugin) to load a rebuilt bundle. Host code reloads on plugin disable/enable.
+`client/client.js` and `dist/host/main.js` are committed so a checkout can be
+installed directly; run `pnpm build` after source changes. Refresh the Harness
+page (or toggle the plugin) to load a rebuilt client bundle. Host code reloads
+on plugin disable/enable.
 
 ## License
 
@@ -168,22 +174,23 @@ MIT; see [LICENSE](LICENSE).
 ## Development
 
 ```bash
-node build.mjs        # esbuild → client/client.js (single __ModuleLoader__ factory)
-node --test tests/*.test.mjs
+pnpm typecheck        # TypeScript checks
+pnpm build            # esbuild → client/client.js + dist/host/main.js
+pnpm test             # tsx --test tests/*.test.ts
 ```
 
 | Path | Role |
 | --- | --- |
-| `index.js` | thin Host entry, cache-busted import of `lib/host/main.js` |
-| `lib/format.js` | document model, normalization and validation |
-| `lib/ops.js` | document mutations shared by tools and UI |
-| `lib/host/main.js` | Host routes, SSE, file store, assets/fonts, agent tools |
-| `lib/host/skills.js` | Registers the runtime `canvas-ui-design` skill |
-| `lib/design-system.js` | Material 3 / iOS HIG tokens and the default-system summary |
-| `lib/foundation.js` | iPhone device metrics + Neutral/Minimal/Soft/Compact presets |
-| `lib/templates.js` | Device-aware iOS page/system templates and placement metadata |
-| `lib/audit.js` | Deterministic design audit checks |
-| `lib/image.js` | GPT/Codex image capability probe, Codex CLI adapter and image import |
+| `index.js` | thin Host entry, cache-busted import of `dist/host/main.js` |
+| `src/shared/format.ts` | document model, normalization and validation |
+| `src/shared/ops.ts` | document mutations shared by tools and UI |
+| `src/host/main.ts` | Host routes, SSE, file store, assets/fonts, agent tools |
+| `src/host/skills.ts` | Registers the runtime `canvas-ui-design` skill |
+| `src/shared/design-system.ts` | Material 3 / iOS HIG tokens and the default-system summary |
+| `src/shared/foundation.ts` | iPhone device metrics + Neutral/Minimal/Soft/Compact presets |
+| `src/shared/templates.ts` | Device-aware iOS page/system templates and placement metadata |
+| `src/shared/audit.ts` | Deterministic design audit checks |
+| `src/host/image.ts` | GPT/Codex image capability probe, Codex CLI adapter and image import |
 | `skills/canvas-ui-design/` | Adapted UI design skill, workflows and references |
 | `src/client/index.jsx` | placement in the right sidebar (with inline-dock fallback) |
 | `src/client/store.js` | the canvas tab's mutable store, history, autosave, AI sync |
@@ -203,9 +210,11 @@ come from the Harness platform module table.
 - Background blur is exact on screen but approximated in SVG/PNG export.
 - The composer can only receive plain text, so the canvas link is markdown in
   the input box; it becomes the clickable reference chip once sent.
-- Figma/Penpot file import, SVG vector import, code export and prototyping are
-  not included. Image generation requires a GPT-native image tool or a local
-  Codex CLI with `image_generation`; otherwise import an image.
+- Figma/Penpot file import, full SVG vector editing, code export and prototyping
+  are not included. Basic SVG `<path>` import is supported; transforms, text,
+  filters and masks are skipped with warnings. Image generation requires a
+  GPT-native image tool or a local Codex CLI with `image_generation`; otherwise
+  import an image.
 - The runtime skill is adapted from the user's BD Flutter Dev UI design skill
   (see `skills/canvas-ui-design/`); Figma/Flutter-specific parts were replaced
   with canvas tools and design handoff.

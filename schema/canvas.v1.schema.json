@@ -3,29 +3,90 @@
   "$id": "https://local.dsh/dsh-canvas/v1",
   "title": "dsh.canvas@1",
   "type": "object",
-  "required": ["format", "version", "pages"],
+  "required": [
+    "format",
+    "version",
+    "pages"
+  ],
   "properties": {
-    "format": { "const": "dsh.canvas" },
-    "version": { "const": 1 },
-    "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
-    "title": { "type": "string" },
-    "pages": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/page" } },
-    "components": { "type": "array", "items": { "$ref": "#/$defs/component" } },
-    "variantSets": { "type": "array", "items": { "$ref": "#/$defs/variantSet" } },
-    "styles": { "type": "array", "items": { "$ref": "#/$defs/style" } },
-    "fonts": { "type": "array", "items": { "$ref": "#/$defs/fontAsset" } },
-    "comments": { "type": "array", "items": { "$ref": "#/$defs/comment" } },
-    "meta": { "type": "object" }
+    "format": {
+      "const": "dsh.canvas"
+    },
+    "version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "title": {
+      "type": "string"
+    },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/page"
+      }
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/component"
+      }
+    },
+    "variantSets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/variantSet"
+      }
+    },
+    "styles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/style"
+      }
+    },
+    "fonts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fontAsset"
+      }
+    },
+    "comments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/comment"
+      }
+    },
+    "meta": {
+      "type": "object"
+    }
   },
   "$defs": {
-    "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
-    "color": { "type": "string", "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$" },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$"
+    },
     "stop": {
       "type": "object",
-      "required": ["position", "color"],
+      "required": [
+        "position",
+        "color"
+      ],
       "properties": {
-        "position": { "type": "number", "minimum": 0, "maximum": 1 },
-        "color": { "$ref": "#/$defs/color" }
+        "position": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        }
       },
       "additionalProperties": true
     },
@@ -33,49 +94,120 @@
       "oneOf": [
         {
           "type": "object",
-          "required": ["type", "color"],
+          "required": [
+            "type",
+            "color"
+          ],
           "properties": {
-            "type": { "const": "solid" },
-            "color": { "$ref": "#/$defs/color" },
-            "opacity": { "type": "number", "minimum": 0, "maximum": 1 }
+            "type": {
+              "const": "solid"
+            },
+            "color": {
+              "$ref": "#/$defs/color"
+            },
+            "opacity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
           },
           "additionalProperties": true
         },
         {
           "type": "object",
-          "required": ["type", "stops"],
+          "required": [
+            "type",
+            "stops"
+          ],
           "properties": {
-            "type": { "const": "linear-gradient" },
-            "angle": { "type": "number" },
-            "stops": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/stop" } }
+            "type": {
+              "const": "linear-gradient"
+            },
+            "angle": {
+              "type": "number"
+            },
+            "stops": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "$ref": "#/$defs/stop"
+              }
+            }
           },
           "additionalProperties": true
         },
         {
           "type": "object",
-          "required": ["type", "stops"],
+          "required": [
+            "type",
+            "stops"
+          ],
           "properties": {
-            "type": { "const": "radial-gradient" },
-            "center": { "type": "object", "properties": { "x": { "type": "number" }, "y": { "type": "number" } } },
-            "radius": { "type": "number" },
-            "stops": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/stop" } }
+            "type": {
+              "const": "radial-gradient"
+            },
+            "center": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
+              }
+            },
+            "radius": {
+              "type": "number"
+            },
+            "stops": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "$ref": "#/$defs/stop"
+              }
+            }
           },
           "additionalProperties": true
         },
         {
           "type": "object",
-          "required": ["type", "asset"],
+          "required": [
+            "type",
+            "asset"
+          ],
           "properties": {
-            "type": { "const": "image" },
-            "asset": { "type": "string", "pattern": "^assets/" },
-            "fit": { "enum": ["cover", "contain", "fill"] },
+            "type": {
+              "const": "image"
+            },
+            "asset": {
+              "type": "string",
+              "pattern": "^assets/"
+            },
+            "fit": {
+              "enum": [
+                "cover",
+                "contain",
+                "fill"
+              ]
+            },
             "crop": {
               "type": "object",
               "properties": {
-                "x": { "type": "number" },
-                "y": { "type": "number" },
-                "width": { "type": "number", "exclusiveMinimum": 0 },
-                "height": { "type": "number", "exclusiveMinimum": 0 }
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "width": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "height": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
               }
             }
           },
@@ -86,9 +218,20 @@
     "stroke": {
       "type": "object",
       "properties": {
-        "color": { "$ref": "#/$defs/color" },
-        "width": { "type": "number", "minimum": 0 },
-        "align": { "enum": ["center", "inside", "outside"] }
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "align": {
+          "enum": [
+            "center",
+            "inside",
+            "outside"
+          ]
+        }
       },
       "additionalProperties": true
     },
@@ -96,25 +239,57 @@
       "oneOf": [
         {
           "type": "object",
-          "required": ["type"],
+          "required": [
+            "type"
+          ],
           "properties": {
-            "type": { "enum": ["drop-shadow", "inner-shadow"] },
-            "x": { "type": "number" },
-            "y": { "type": "number" },
-            "blur": { "type": "number", "minimum": 0 },
-            "spread": { "type": "number" },
-            "color": { "$ref": "#/$defs/color" },
-            "visible": { "type": "boolean" }
+            "type": {
+              "enum": [
+                "drop-shadow",
+                "inner-shadow"
+              ]
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "blur": {
+              "type": "number",
+              "minimum": 0
+            },
+            "spread": {
+              "type": "number"
+            },
+            "color": {
+              "$ref": "#/$defs/color"
+            },
+            "visible": {
+              "type": "boolean"
+            }
           },
           "additionalProperties": true
         },
         {
           "type": "object",
-          "required": ["type"],
+          "required": [
+            "type"
+          ],
           "properties": {
-            "type": { "enum": ["layer-blur", "background-blur"] },
-            "radius": { "type": "number", "minimum": 0 },
-            "visible": { "type": "boolean" }
+            "type": {
+              "enum": [
+                "layer-blur",
+                "background-blur"
+              ]
+            },
+            "radius": {
+              "type": "number",
+              "minimum": 0
+            },
+            "visible": {
+              "type": "boolean"
+            }
           },
           "additionalProperties": true
         }
@@ -123,181 +298,524 @@
     "layout": {
       "type": "object",
       "properties": {
-        "direction": { "enum": ["horizontal", "vertical"] },
-        "gap": { "type": "number", "minimum": 0 },
+        "direction": {
+          "enum": [
+            "horizontal",
+            "vertical"
+          ]
+        },
+        "gap": {
+          "type": "number",
+          "minimum": 0
+        },
         "padding": {
           "type": "object",
           "properties": {
-            "top": { "type": "number", "minimum": 0 },
-            "right": { "type": "number", "minimum": 0 },
-            "bottom": { "type": "number", "minimum": 0 },
-            "left": { "type": "number", "minimum": 0 }
+            "top": {
+              "type": "number",
+              "minimum": 0
+            },
+            "right": {
+              "type": "number",
+              "minimum": 0
+            },
+            "bottom": {
+              "type": "number",
+              "minimum": 0
+            },
+            "left": {
+              "type": "number",
+              "minimum": 0
+            }
           }
         },
-        "alignPrimary": { "enum": ["start", "center", "end", "space-between"] },
-        "alignCounter": { "enum": ["start", "center", "end", "stretch"] }
+        "alignPrimary": {
+          "enum": [
+            "start",
+            "center",
+            "end",
+            "space-between"
+          ]
+        },
+        "alignCounter": {
+          "enum": [
+            "start",
+            "center",
+            "end",
+            "stretch"
+          ]
+        }
       },
       "additionalProperties": true
     },
     "layoutSizing": {
       "type": "object",
       "properties": {
-        "h": { "enum": ["fixed", "hug", "fill"] },
-        "v": { "enum": ["fixed", "hug", "fill"] }
+        "h": {
+          "enum": [
+            "fixed",
+            "hug",
+            "fill"
+          ]
+        },
+        "v": {
+          "enum": [
+            "fixed",
+            "hug",
+            "fill"
+          ]
+        }
       },
       "additionalProperties": true
     },
     "font": {
       "type": "object",
       "properties": {
-        "family": { "type": "string" },
-        "weight": { "type": "integer", "minimum": 100, "maximum": 900 },
-        "style": { "enum": ["normal", "italic"] },
-        "size": { "type": "number", "minimum": 1 },
-        "lineHeight": { "type": "number", "minimum": 0.5 },
-        "letterSpacing": { "type": "number" }
+        "family": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 900
+        },
+        "style": {
+          "enum": [
+            "normal",
+            "italic"
+          ]
+        },
+        "size": {
+          "type": "number",
+          "minimum": 1
+        },
+        "lineHeight": {
+          "type": "number",
+          "minimum": 0.5
+        },
+        "letterSpacing": {
+          "type": "number"
+        }
       },
       "additionalProperties": true
     },
     "node": {
       "type": "object",
-      "required": ["id", "type"],
+      "required": [
+        "id",
+        "type"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "type": { "enum": ["frame", "group", "rect", "ellipse", "line", "text", "instance"] },
-        "name": { "type": "string" },
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "width": { "type": "number", "minimum": 0 },
-        "height": { "type": "number", "minimum": 0 },
-        "rotation": { "type": "number" },
-        "opacity": { "type": "number", "minimum": 0, "maximum": 1 },
-        "visible": { "type": "boolean" },
-        "locked": { "type": "boolean" },
-        "fills": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/fill" } },
-        "strokes": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/stroke" } },
-        "effects": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/effect" } },
-        "cornerRadius": { "type": "number", "minimum": 0 },
-        "clip": { "type": "boolean" },
-        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } },
-        "layout": { "$ref": "#/$defs/layout" },
-        "layoutSizing": { "$ref": "#/$defs/layoutSizing" },
-        "text": { "type": "string" },
-        "font": { "$ref": "#/$defs/font" },
-        "align": { "enum": ["left", "center", "right", "justify"] },
-        "verticalAlign": { "enum": ["top", "center", "bottom"] },
-        "autoHeight": { "type": "boolean" },
-        "componentId": { "$ref": "#/$defs/id" },
-        "variantProps": { "type": "object", "additionalProperties": { "type": "string" } },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "enum": [
+            "frame",
+            "group",
+            "rect",
+            "ellipse",
+            "line",
+            "text",
+            "path",
+            "instance"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        },
+        "rotation": {
+          "type": "number"
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "fills": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/fill"
+          }
+        },
+        "strokes": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/stroke"
+          }
+        },
+        "effects": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/effect"
+          }
+        },
+        "cornerRadius": {
+          "type": "number",
+          "minimum": 0
+        },
+        "clip": {
+          "type": "boolean"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        },
+        "layout": {
+          "$ref": "#/$defs/layout"
+        },
+        "layoutSizing": {
+          "$ref": "#/$defs/layoutSizing"
+        },
+        "text": {
+          "type": "string"
+        },
+        "font": {
+          "$ref": "#/$defs/font"
+        },
+        "align": {
+          "enum": [
+            "left",
+            "center",
+            "right",
+            "justify"
+          ]
+        },
+        "verticalAlign": {
+          "enum": [
+            "top",
+            "center",
+            "bottom"
+          ]
+        },
+        "autoHeight": {
+          "type": "boolean"
+        },
+        "componentId": {
+          "$ref": "#/$defs/id"
+        },
+        "variantProps": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "overrides": {
           "type": "object",
           "additionalProperties": {
             "type": "object",
             "properties": {
-              "text": { "type": "string" },
-              "visible": { "type": "boolean" },
-              "fills": { "type": "array", "items": { "$ref": "#/$defs/fill" } }
+              "text": {
+                "type": "string"
+              },
+              "visible": {
+                "type": "boolean"
+              },
+              "fills": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/fill"
+                }
+              }
             },
             "additionalProperties": true
           }
         },
-        "fillStyleId": { "$ref": "#/$defs/id" },
-        "textStyleId": { "$ref": "#/$defs/id" },
-        "effectStyleId": { "$ref": "#/$defs/id" }
+        "fillStyleId": {
+          "$ref": "#/$defs/id"
+        },
+        "textStyleId": {
+          "$ref": "#/$defs/id"
+        },
+        "effectStyleId": {
+          "$ref": "#/$defs/id"
+        },
+        "d": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "viewBox": {
+          "type": "object",
+          "required": [
+            "x",
+            "y",
+            "width",
+            "height"
+          ],
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "width": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "height": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "fillRule": {
+          "enum": [
+            "nonzero",
+            "evenodd"
+          ]
+        }
       },
       "additionalProperties": true
     },
     "page": {
       "type": "object",
-      "required": ["id"],
+      "required": [
+        "id"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "name": { "type": "string" },
-        "background": { "oneOf": [{ "$ref": "#/$defs/color" }, { "type": "null" }] },
-        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "background": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/color"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        }
       },
       "additionalProperties": true
     },
     "component": {
       "type": "object",
-      "required": ["id", "root"],
+      "required": [
+        "id",
+        "root"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "name": { "type": "string" },
-        "root": { "$ref": "#/$defs/node" },
-        "variantSetId": { "$ref": "#/$defs/id" },
-        "variantProps": { "type": "object", "additionalProperties": { "type": "string" } }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "root": {
+          "$ref": "#/$defs/node"
+        },
+        "variantSetId": {
+          "$ref": "#/$defs/id"
+        },
+        "variantProps": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
       },
       "additionalProperties": true
     },
     "variantSet": {
       "type": "object",
-      "required": ["id", "properties"],
+      "required": [
+        "id",
+        "properties"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "name": { "type": "string" },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string"
+        },
         "properties": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["name", "values"],
+            "required": [
+              "name",
+              "values"
+            ],
             "properties": {
-              "name": { "type": "string" },
-              "values": { "type": "array", "items": { "type": "string" } }
+              "name": {
+                "type": "string"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
             },
             "additionalProperties": true
           }
         },
-        "componentIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+        "componentIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        }
       },
       "additionalProperties": true
     },
     "style": {
       "type": "object",
-      "required": ["id", "type", "value"],
+      "required": [
+        "id",
+        "type",
+        "value"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "type": { "enum": ["fill", "text", "effect"] },
-        "name": { "type": "string" },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "enum": [
+            "fill",
+            "text",
+            "effect"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
         "value": {}
       },
       "additionalProperties": true
     },
     "fontAsset": {
       "type": "object",
-      "required": ["id", "family", "asset"],
+      "required": [
+        "id",
+        "family",
+        "asset"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "family": { "type": "string" },
-        "weight": { "type": "integer", "minimum": 100, "maximum": 900 },
-        "style": { "enum": ["normal", "italic"] },
-        "asset": { "type": "string", "pattern": "^fonts/" },
-        "sourceName": { "type": "string" }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "family": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 900
+        },
+        "style": {
+          "enum": [
+            "normal",
+            "italic"
+          ]
+        },
+        "asset": {
+          "type": "string",
+          "pattern": "^fonts/"
+        },
+        "sourceName": {
+          "type": "string"
+        }
       },
       "additionalProperties": true
     },
     "comment": {
       "type": "object",
-      "required": ["id", "pageId", "body"],
+      "required": [
+        "id",
+        "pageId",
+        "body"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "pageId": { "$ref": "#/$defs/id" },
-        "nodeId": { "$ref": "#/$defs/id" },
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "body": { "type": "string" },
-        "author": { "enum": ["user", "ai"] },
-        "createdAt": { "type": "string" },
-        "resolved": { "type": "boolean" },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "pageId": {
+          "$ref": "#/$defs/id"
+        },
+        "nodeId": {
+          "$ref": "#/$defs/id"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "body": {
+          "type": "string"
+        },
+        "author": {
+          "enum": [
+            "user",
+            "ai"
+          ]
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "resolved": {
+          "type": "boolean"
+        },
         "replies": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "id": { "$ref": "#/$defs/id" },
-              "body": { "type": "string" },
-              "author": { "enum": ["user", "ai"] },
-              "createdAt": { "type": "string" }
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "body": {
+                "type": "string"
+              },
+              "author": {
+                "enum": [
+                  "user",
+                  "ai"
+                ]
+              },
+              "createdAt": {
+                "type": "string"
+              }
             },
             "additionalProperties": true
           }

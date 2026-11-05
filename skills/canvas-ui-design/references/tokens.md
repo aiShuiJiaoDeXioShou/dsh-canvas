@@ -1,12 +1,12 @@
 # Token 协议与 Foundation 数据
 
-Canvas 不依赖 Python 运行时；Host 端 `lib/foundation.js` 负责解析设备/预设，`canvas_template` 的 `foundation` action 返回最终数据。
+Canvas 不依赖 Python 运行时；Host 端 `src/shared/foundation.ts` 负责解析设备/预设，`canvas_template` 的 `foundation` action 返回最终数据。
 
 ## 数据源
 
 - `foundation/base.json`：完整基础字段（颜色、字体、间距、圆角、阴影、动效、断点、可用性初值）。
 - `presets/neutral.json` 等：仅保存差异。
-- 设备尺寸由 `lib/foundation.js` 的 DEVICES 提供；iPhone 16 393×852 为默认，iPhone 15 390×844 兼容。
+- 设备尺寸由 `src/shared/foundation.ts` 的 DEVICES 提供；iPhone 16 393×852 为默认，iPhone 15 390×844 兼容。
 - 颜色和字体沿用现有 M3/iOS 设计系统；Foundation 预设只覆盖页边距、section gap、card padding、圆角、阴影等几何/密度字段。
 
 ## 合并顺序

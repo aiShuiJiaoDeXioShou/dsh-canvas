@@ -49,7 +49,7 @@ Presets (geometry/density only; colors and type stay on the design system):
 
 Source data: [skills/canvas-ui-design/foundation/base.json](skills/canvas-ui-design/foundation/base.json)
 and [skills/canvas-ui-design/presets/](skills/canvas-ui-design/presets/).
-Device metrics live in `lib/foundation.js`.
+Device metrics live in `src/shared/foundation.ts`.
 
 ## Tokens
 
@@ -61,7 +61,7 @@ onSurfaceVariant `#49454F`, outline `#79747E`, error `#B3261E`,
 success `#146C2E`.
 
 Type scale: display 57/64, headline 32/40, title 22/28, body 16/24, label
-14/20 (use the `type` table in `lib/design-system.js` for the full scale).
+14/20 (use the `type` table in `src/shared/design-system.ts` for the full scale).
 
 Spacing: 4 / 8 / 12 / 16 / 24 / 32 / 48. Radius: 4 / 8 / 12 / 16 / 24 / 999.
 Elevation: 0 1 3, 0 2 6, 0 4 12 with black at 10–14% alpha.

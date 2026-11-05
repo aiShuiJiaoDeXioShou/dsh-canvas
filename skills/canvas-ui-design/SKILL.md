@@ -21,7 +21,7 @@ whenToUse: 用户要在 dsh-canvas 画布中直接生成 UI、补页面/状态�
 - 已有文档、已有设计系统或用户指定品牌优先，不重置现有视觉。
 - 颜色和字体沿用现有 Material 3 / iOS HIG token；Foundation 只覆盖设备、密度、圆角、阴影和预设。
 - 正式页面 Frame 圆角为 0，背景完整铺满；卡片/按钮内部圆角不受影响。
-- 功能图标优先用 frame/rect/ellipse/line/text 组合；复杂图标/插画使用图片素材，不伪造 SVG 矢量导入。
+- 简单矢量图标可使用 `path` 节点或基础 SVG `<path>` 导入；复杂插画/需要钢笔编辑的矢量使用图片素材或要求用户提供源文件，不伪造完整矢量编辑能力。
 
 ## 直接生成 UI（主路径）
 
@@ -80,7 +80,7 @@ Templates 面板提供设备选择（iPhone 16 / iPhone 15）和模板插入；A
 
 ## 边界
 
-- 不交付 Figma/Sketch 文件，不做 .fig 解析或 SVG 矢量导入。
+- 不交付 Figma/Sketch 文件，不做 .fig 解析；SVG 只支持基础 `<path>` 导入，不承诺完整矢量还原。
 - 不生成 Flutter/GetX 代码或 ThemeData；交付是设计文档、token、SVG/PNG 和说明。
 - 不做真机/模拟器验收；静态设计稿可以审查，但不冒充运行验收。
 - 不伪造 Image Gen 结果；无能力时明确要求用户提供素材。

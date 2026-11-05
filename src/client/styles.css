@@ -1203,6 +1203,18 @@
   background: color-mix(in srgb, var(--dshc-accent) 10%, transparent);
 }
 
+.dshc-path-input {
+  width: 100%;
+  min-height: 90px;
+  resize: vertical;
+  padding: 6px 7px;
+  font: 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  border: 1px solid var(--dshc-line);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--dsw-alias-bg-overlay, #fff) 70%, transparent);
+  color: var(--dsw-alias-label-primary);
+}
+
 /* code preview */
 .dshc-code {
   max-height: 220px;

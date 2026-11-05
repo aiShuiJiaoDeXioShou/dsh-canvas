@@ -54,6 +54,7 @@ Common fields: `id` (unique, `^[A-Za-z0-9_-]{1,64}$`), `type`, `name`, `x`,
 | `frame` | `fills`, `strokes`, `effects`, `cornerRadius`, `clip`, `layout`, `children` |
 | `group` | `children` |
 | `rect` | `fills`, `strokes`, `effects`, `cornerRadius` |
+| `path` | `d`, `viewBox`, `fillRule`, `fills`, `strokes`, `effects` |
 | `ellipse` | `fills`, `strokes`, `effects` |
 | `line` | `strokes` (width = length, height = 0) |
 | `text` | `text`, `font`, `align`, `verticalAlign`, `fills`, `effects`, `autoHeight` |
@@ -155,6 +156,37 @@ and PNG export (blurred backdrop copy).
 A fill style value is one `Fill`; a text style value is `{ font, fills }`; an
 effect style value is an `Effect[]`. Editing a style updates every referencing
 node when the document is rendered.
+
+## Path nodes
+
+`path` uses SVG path data in `d`, with a local `viewBox`:
+
+```json
+{
+  "id": "icon-star",
+  "type": "path",
+  "name": "Star",
+  "x": 0,
+  "y": 0,
+  "width": 24,
+  "height": 24,
+  "d": "M12 2l3 7 7 .5-5.5 4.5 2 7-6.5-4-6.5 4 2-7L2 9.5 9 9z",
+  "viewBox": { "x": 0, "y": 0, "width": 24, "height": 24 },
+  "fillRule": "nonzero",
+  "fills": [{ "type": "solid", "color": "#111111" }],
+  "strokes": [],
+  "effects": []
+}
+```
+
+- `d` is required; supported commands are `M/L/H/V/C/S/Q/T/A/Z`, absolute and relative.
+- `viewBox` is optional; if omitted it is derived from the path bounds.
+- `fillRule` is `nonzero` or `evenodd`.
+- Path supports solid/gradient fills and strokes; image fills are rejected.
+- Path nodes have no children, corner radius or clip. Selection uses the node
+  bounding box; transparent interiors are not precisely hit-tested yet.
+- Basic SVG `<path>` import is available in the toolbar; transforms/text/filters
+  are skipped with a warning.
 
 ## Components, variants and instances
 

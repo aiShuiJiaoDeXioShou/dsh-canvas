@@ -12,7 +12,7 @@ Adapted for dsh-canvas:
   Codex CLI `image_generation` / user import);
 - Visualize → DSH `ask_user_question` or direct clarification;
 - Flutter/GetX implementation → canvas design handoff (tokens, exports, spec);
-- SVG vector import / Figma file fallback → not included;
+- SVG vector import / Figma file fallback → basic SVG `<path>` import only; no .fig parsing or pen editor;
 - default iPhone 16 393×852; iPhone 15 390×844 remains available.
 
 The package retains the original workflow intent and rules; tool-specific parts

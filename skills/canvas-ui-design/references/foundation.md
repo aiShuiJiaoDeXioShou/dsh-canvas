@@ -13,7 +13,7 @@
 ## 字体、间距与色彩
 
 - 默认字体：iOS 系统字体；中文使用系统字体回退。用户指定字体优先。
-- 语义角色沿用现有 M3/iOS：display / heading / title / subtitle / body / bodySm / caption 等（以 `lib/design-system.js` 为准）。
+- 语义角色沿用现有 M3/iOS：display / heading / title / subtitle / body / bodySm / caption 等（以 `src/shared/design-system.ts` 为准）。
 - 间距阶梯：4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48；页面边距、section gap、card padding 由预设控制。
 - 颜色用 primary/onPrimary、surface/onSurface、error/onError、outline 等语义角色；品牌色、状态色和装饰色分开。
 
