@@ -16,7 +16,7 @@ const TOOLS = [
   ['comment', 'c', '评论 (C)'],
 ]
 
-export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName }: any) {
+export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName, inspectorOpen, onToggleInspector }: any) {
   const state = store.state
   const [showExport, setShowExport] = React.useState(false)
   const [docsOpen, setDocsOpen] = React.useState(false)
@@ -155,6 +155,13 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName 
       } }),
       React.createElement(IconButton, { icon: 'fit', title: '适应画布 (1)', onClick: () => store.zoomToFit() }),
       React.createElement(IconButton, { icon: 'reset', title: '适应选区 (2)', onClick: () => store.zoomToSelection() }),
+      React.createElement('span', { className: 'dshc-divider' }),
+      React.createElement(IconButton, {
+        icon: 'panelRight',
+        title: inspectorOpen ? '收起属性面板' : '展开属性面板',
+        active: Boolean(inspectorOpen),
+        onClick: onToggleInspector,
+      }),
     ),
     showExport &&
       React.createElement(
