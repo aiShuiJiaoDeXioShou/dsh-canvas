@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "画布",
-    "description": "Figma 风格的无限画布：可视化编辑 UI 稿，选中元素可插入对话，AI 可通过 canvas/*.canvas.json 生成与修改设计。"
+    "title": "Drafi",
+    "description": "AI 原生设计画布：可视化编辑 UI 稿，选中元素可插入对话，AI 可通过 canvas/*.canvas.json 生成与修改设计。"
   }
 }

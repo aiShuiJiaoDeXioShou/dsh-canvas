@@ -8,6 +8,7 @@
  */
 
 import * as React from 'react'
+import canvasIcon from '../../icon.png'
 
 import { CanvasPanel, CanvasErrorBoundary } from './CanvasPanel.jsx'
 import { reportDiag } from './api.js'
@@ -19,43 +20,33 @@ const ID = '@local/dsh-canvas'
 const NS = 'dsh-canvas'
 
 const zh = {
-  'tab.title': '画布',
-  'guide.title': '画布',
-  'guide.description': 'Figma 风格无限画布：可视化设计 UI 稿，选区插入对话，AI 可通过 canvas/*.canvas.json 生成与修改。',
-  'dock.open': '打开画布',
-  'dock.close': '收起画布',
-  'composer.open': '打开画布',
+  'tab.title': 'Drafi',
+  'guide.title': 'Drafi',
+  'guide.description': 'AI 原生设计画布：可视化设计 UI 稿，选区插入对话，AI 可通过 canvas/*.canvas.json 生成与修改。',
+  'dock.open': '打开 Drafi',
+  'dock.close': '收起 Drafi',
+  'composer.open': '打开 Drafi',
 }
 
 const en = {
-  'tab.title': 'Canvas',
-  'guide.title': 'Canvas',
-  'guide.description': 'Figma-style infinite canvas: design UI mockups, send selections to the composer, and let the AI edit canvas/*.canvas.json.',
-  'dock.open': 'Open canvas',
-  'dock.close': 'Hide canvas',
-  'composer.open': 'Open canvas',
+  'tab.title': 'Drafi',
+  'guide.title': 'Drafi',
+  'guide.description': 'An AI-native design canvas: design UI mockups, send selections to the composer, and let the AI edit canvas/*.canvas.json.',
+  'dock.open': 'Open Drafi',
+  'dock.close': 'Hide Drafi',
+  'composer.open': 'Open Drafi',
 }
 
 function CanvasGlyph({ size = 18 }) {
-  return React.createElement(
-    'svg',
-    { viewBox: '0 0 24 24', width: size, height: size, fill: 'none', 'aria-hidden': true },
-    React.createElement('path', {
-      d: 'M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11Z',
-      stroke: 'currentColor',
-      strokeWidth: 1.6,
-    }),
-    React.createElement('path', {
-      d: 'M8.25 8.25h7.5v7.5h-7.5z',
-      stroke: 'currentColor',
-      strokeWidth: 1.4,
-      strokeDasharray: '2.2 2.2',
-    }),
-    React.createElement('circle', { cx: 8.25, cy: 8.25, r: 1.2, fill: 'currentColor' }),
-    React.createElement('circle', { cx: 15.75, cy: 8.25, r: 1.2, fill: 'currentColor' }),
-    React.createElement('circle', { cx: 8.25, cy: 15.75, r: 1.2, fill: 'currentColor' }),
-    React.createElement('circle', { cx: 15.75, cy: 15.75, r: 1.2, fill: 'currentColor' }),
-  )
+  return React.createElement('img', {
+    src: canvasIcon,
+    width: size,
+    height: size,
+    alt: '',
+    'aria-hidden': true,
+    draggable: false,
+    style: { display: 'block', flexShrink: 0, objectFit: 'contain' },
+  })
 }
 
 function CanvasBody(props) {
@@ -102,7 +93,7 @@ function InlineDock(props) {
         },
       },
       React.createElement(CanvasGlyph, { size: 15 }),
-      React.createElement('span', { style: { fontWeight: 600 } }, props.title ?? '画布'),
+      React.createElement('span', { style: { fontWeight: 600 } }, props.title ?? 'Drafi'),
       React.createElement('span', { style: { marginLeft: 'auto', color: 'var(--dsw-alias-label-secondary)', fontSize: 11 } }, open ? props.closeLabel : props.openLabel),
     ),
     open &&

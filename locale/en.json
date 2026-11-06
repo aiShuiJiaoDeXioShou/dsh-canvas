@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Canvas",
-    "description": "A Figma-style infinite canvas: design UI mockups visually, send the selection to the composer, and let the AI generate or edit designs through canvas/*.canvas.json."
+    "title": "Drafi",
+    "description": "An AI-native design canvas: design UI mockups visually, send the selection to the composer, and let the AI generate or edit designs through canvas/*.canvas.json."
   }
 }

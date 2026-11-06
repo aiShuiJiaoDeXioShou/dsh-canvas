@@ -1,12 +1,17 @@
-# dsh-canvas
+# Drafi
 
-A Figma-style infinite canvas inside DeepSeek Harness. Design UI mockups in the
+<img src="icon.png" width="128" height="128" alt="Drafi icon">
+
+An AI-native design canvas inside DeepSeek Harness. Design UI mockups in the
 right sidebar, send the current selection into the chat composer with one click,
 and let the agent generate or edit the design through an open JSON file.
 
+The package name is `@local/dsh-canvas`; installation paths, `dsh-canvas://` links,
+and the `dsh.canvas@1` document format retain their technical identifiers.
+
 ```
-right Sidebar guide card "画布"  →  canvas tab
-composer "画布" button           →  opens/focuses the same tab
+right Sidebar guide card "Drafi"  →  Drafi tab
+composer "打开 Drafi" button      →  opens/focuses the same tab
 ```
 
 ![Canvas tab preview](docs/canvas-preview.png)
@@ -228,5 +233,12 @@ come from the Harness platform module table.
 
 ## Icon
 
-`icon.svg` is an original drawing for this package. No third-party artwork is
-bundled.
+[icon.png](icon.png) contains the AI-generated Drafi mascot artwork; the browser
+bundle embeds it directly. [icon.svg](icon.svg) embeds the same PNG for the
+package icon export and is not a vector tracing. The full-resolution source is
+[docs/drafi-icon.png](docs/drafi-icon.png).
+
+The artwork combines the Figma mark with a whale-maid character inspired by the
+[community DeepSeek mascot](https://github.com/yanzwzz/dsh-whale-girl-pet).
+Drafi is an independent plugin, not an official Figma product. The code's MIT
+license does not grant rights to third-party trademarks or character designs.

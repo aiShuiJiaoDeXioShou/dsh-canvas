@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Figma-style infinite canvas for DeepSeek Harness with an AI UI design skill, design foundation, deterministic audit, image generation, and selection-to-composer.",
+  "description": "Drafi: an AI-native design canvas for DeepSeek Harness with UI design tools, design foundations, deterministic audits, image generation, and selection-to-composer.",
   "icon": "icon.svg",
   "exports": {
     ".": "./index.js",
@@ -23,6 +23,7 @@
     "skills",
     "docs",
     "icon.svg",
+    "icon.png",
     "cordis.patch.yml",
     "README.md"
   ],
