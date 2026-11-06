@@ -25,7 +25,6 @@ const zh = {
   'guide.description': 'AI 原生设计画布：可视化设计 UI 稿，选区插入对话，AI 可通过 canvas/*.canvas.json 生成与修改。',
   'dock.open': '打开 Drafi',
   'dock.close': '收起 Drafi',
-  'composer.open': '打开 Drafi',
 }
 
 const en = {
@@ -34,7 +33,6 @@ const en = {
   'guide.description': 'An AI-native design canvas: design UI mockups, send selections to the composer, and let the AI edit canvas/*.canvas.json.',
   'dock.open': 'Open Drafi',
   'dock.close': 'Hide Drafi',
-  'composer.open': 'Open Drafi',
 }
 
 function CanvasGlyph({ size = 18 }) {
@@ -253,39 +251,6 @@ function CanvasSelectionDock({ sessionId, nav }) {
   )
 }
 
-function ComposerCanvasButton({ nav, title }) {
-  return React.createElement(
-    'button',
-    {
-      type: 'button',
-      title,
-      'aria-label': title,
-      onClick: () => {
-        try {
-          nav.openTab('canvas')
-          reportDiag({ phase: 'open-tab', ok: true })
-        } catch (error) {
-          console.warn('[dsh-canvas] openTab failed', error)
-          reportDiag({ phase: 'open-tab', ok: false, message: String(error instanceof Error ? error.message : error) })
-        }
-      },
-      style: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 24,
-        height: 24,
-        border: 'none',
-        borderRadius: 6,
-        background: 'transparent',
-        color: 'var(--dsw-alias-label-secondary)',
-        cursor: 'pointer',
-      },
-    },
-    React.createElement(CanvasGlyph, { size: 16 }),
-  )
-}
-
 export const name = 'dsh-canvas'
 
 export const inject = ['slots', 'locale']
@@ -335,16 +300,6 @@ export function apply(ctx) {
       const nav = navCtx.sidebarRight
       if (!nav || typeof nav.openTab !== 'function') return
       registerCanvasTextReference(navCtx, nav)
-      navCtx.effect(
-        () =>
-          navCtx.slots.inject('conversation.input.right', () =>
-            navCtx.slots.register(
-              { name: 'conversation.input.right', id: 'dsh-canvas-open', order: 23, label: () => t('composer.open') },
-              () => React.createElement(ComposerCanvasButton, { nav, title: t('composer.open') }),
-            ),
-          ),
-        'dsh-canvas: composer button',
-      )
       navCtx.effect(
         () =>
           navCtx.slots.inject('conversation.input.dock', () =>

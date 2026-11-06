@@ -11,8 +11,10 @@ and the `dsh.canvas@1` document format retain their technical identifiers.
 
 ```
 right Sidebar guide card "Drafi"  →  Drafi tab
-composer "打开 Drafi" button      →  opens/focuses the same tab
 ```
+
+The composer toolbar carries no Drafi button; the right sidebar is the only
+entry point. Inserting a selection still adds a locate chip above the composer.
 
 ![Canvas tab preview](docs/canvas-preview.png)
 
