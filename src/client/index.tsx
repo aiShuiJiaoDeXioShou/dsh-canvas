@@ -193,60 +193,79 @@ function CanvasSelectionDock({ sessionId, nav }) {
     }
     requestCanvasFocus({ ...selection, sessionId })
   }
+  // The dock is a full-width row above the composer card, so the chip needs the
+  // same centred width as an official dock item to line up with the input box.
+  const clearance = 'var(--dsh-composer-side-clearance, 16px)'
+  const inset = 'var(--dsh-composer-dock-inset, 8px)'
+  const cardWidth = 'var(--dsh-composer-card-max-width, 780px)'
   return React.createElement(
     'div',
     {
       style: {
-        display: 'inline-flex',
-        alignSelf: 'flex-start',
-        marginLeft: 16,
-        alignItems: 'center',
-        gap: 6,
-        maxWidth: '100%',
-        padding: '2px 8px',
-        border: '1px solid color-mix(in srgb, #4D6BFE 16%, transparent)',
-        borderRadius: 999,
-        background: 'color-mix(in srgb, #4D6BFE 7%, transparent)',
-        color: 'var(--dsw-alias-label-primary)',
-        font: '12px/1.5 var(--dsw-font-family, system-ui, sans-serif)',
+        boxSizing: 'border-box',
+        display: 'flex',
+        justifyContent: 'flex-start',
+        width: `calc(100% - ${clearance} * 2 - ${inset} * 2)`,
+        maxWidth: `calc(${cardWidth} - ${inset} * 2)`,
+        margin: '0 auto',
+        padding: `0 ${inset}`,
+        flex: 'none',
       },
     },
     React.createElement(
-      'button',
+      'div',
       {
-        type: 'button',
-        onClick: locate,
-        title: '打开画布并定位到该节点',
         style: {
-          display: 'flex',
-          alignItems: 'center',
-          gap: 5,
+          display: 'inline-flex',
           minWidth: 0,
-          padding: 0,
-          border: 'none',
-          background: 'transparent',
-          color: '#4D6BFE',
-          cursor: 'pointer',
-          font: 'inherit',
+          alignItems: 'center',
+          gap: 6,
+          maxWidth: '100%',
+          padding: '2px 8px',
+          border: '1px solid color-mix(in srgb, #4D6BFE 16%, transparent)',
+          borderRadius: 999,
+          background: 'color-mix(in srgb, #4D6BFE 7%, transparent)',
+          color: 'var(--dsw-alias-label-primary)',
+          font: '12px/1.5 var(--dsw-font-family, system-ui, sans-serif)',
         },
       },
-      React.createElement(CanvasGlyph, { size: 14 }),
       React.createElement(
-        'span',
-        { style: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
-        `在画布中定位：${selection.label}`,
+        'button',
+        {
+          type: 'button',
+          onClick: locate,
+          title: '打开画布并定位到该节点',
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            minWidth: 0,
+            padding: 0,
+            border: 'none',
+            background: 'transparent',
+            color: '#4D6BFE',
+            cursor: 'pointer',
+            font: 'inherit',
+          },
+        },
+        React.createElement(CanvasGlyph, { size: 14 }),
+        React.createElement(
+          'span',
+          { style: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+          `在画布中定位：${selection.label}`,
+        ),
       ),
-    ),
-    React.createElement(
-      'button',
-      {
-        type: 'button',
-        title: '关闭',
-        'aria-label': '关闭',
-        onClick: () => dismissCanvasSelection(sessionId),
-        style: { border: 'none', background: 'transparent', color: 'var(--dsw-alias-label-secondary)', cursor: 'pointer', font: 'inherit' },
-      },
-      '×',
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          title: '关闭',
+          'aria-label': '关闭',
+          onClick: () => dismissCanvasSelection(sessionId),
+          style: { border: 'none', background: 'transparent', color: 'var(--dsw-alias-label-secondary)', cursor: 'pointer', font: 'inherit' },
+        },
+        '×',
+      ),
     ),
   )
 }
