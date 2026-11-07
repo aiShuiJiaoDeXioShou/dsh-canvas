@@ -1495,3 +1495,9 @@
   pointer-events: none;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
 }
+
+/* Icons are flex items in every row; without this they shrink when hover
+   actions appear, which reads as a zoom-out. */
+.dshc-root svg {
+  flex: 0 0 auto;
+}
