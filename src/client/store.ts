@@ -39,8 +39,11 @@ import {
   generateCanvasImage,
   imageCapabilities,
   loadState,
+  exportPack,
+  importPack,
   openEvents,
   postSelection,
+  postSnapshot,
   renameCanvasDoc,
   saveDoc,
   saveExport,
@@ -554,6 +557,12 @@ class CanvasStore {
       this.sessionId,
       this.state.name,
       (event) => {
+        if (event.type === 'snapshot-request') {
+          this.renderSnapshotFor(event).catch((error) => {
+            console.warn('[dsh-canvas] snapshot failed', error)
+          })
+          return
+        }
         if (event.type !== 'doc-changed') return
         if (event.revision === this.state.revision) return
         if (event.source === 'client') return
@@ -1746,28 +1755,60 @@ class CanvasStore {
     }
   }
 
+  /** Render the requested node, or the whole page, and return a PNG data URL. */
+  async renderPngFor(nodeId, scale = 2) {
+    const targetKeys = this.exportTargetKeys(nodeId)
+    const svg = await this.buildExportSvg(targetKeys)
+    const { svgToPng } = await import('./editor/export-png.js')
+    return await svgToPng(svg, scale)
+  }
+
+  /** Keys for export: an explicit node id, else the selection, else every root. */
+  exportTargetKeys(nodeId) {
+    if (typeof nodeId === 'string' && nodeId) {
+      const match = [...(this.state.scene?.byKey.values() ?? [])].find(
+        (node) => node.id === nodeId || node.key === nodeId,
+      )
+      if (match) return [match.key]
+    }
+    const nodes = this.selectedNodes()
+    if (nodes.length) return nodes.map((node) => node.key)
+    return this.state.scene?.roots.map((node) => node.key) ?? []
+  }
+
+  async renderSnapshotFor(event) {
+    const requestId = event?.requestId
+    if (typeof requestId !== 'string' || !requestId) return
+    const png = await this.renderPngFor(event.nodeId, Number(event.scale) || 2)
+    await postSnapshot(this.sessionId, requestId, String(png).split(',')[1], event.nodeId)
+  }
+
+  async buildExportSvg(targetKeys) {
+    const { buildSvg } = await import('./editor/export-svg.js')
+    return await buildSvg(this.state.scene, {
+      nodeKeys: targetKeys,
+      background: this.state.doc.pages.find((page) => page.id === this.state.pageId)?.background ?? null,
+      resolveAsset: async (asset) => {
+        const response = await fetch(assetUrl(this.sessionId, this.state.name, asset), { credentials: 'same-origin' })
+        if (!response.ok) throw new Error(`asset ${asset} unavailable`)
+        const blob = await response.blob()
+        return await blobToDataUrl(blob)
+      },
+      resolveFont: async (font) => {
+        const response = await fetch(fontUrl(this.sessionId, font.asset), { credentials: 'same-origin' })
+        if (!response.ok) throw new Error(`font ${font.asset} unavailable`)
+        const blob = await response.blob()
+        return await blobToDataUrl(blob)
+      },
+      fonts: this.state.doc.fonts ?? [],
+    })
+  }
+
   async exportSelection(kind) {
     const nodes = this.selectedNodes()
     const targetKeys = nodes.length ? nodes.map((node) => node.key) : this.state.scene?.roots.map((node) => node.key) ?? []
     try {
-      const { buildSvg } = await import('./editor/export-svg.js')
-      const svg = await buildSvg(this.state.scene, {
-        nodeKeys: targetKeys,
-        background: this.state.doc.pages.find((page) => page.id === this.state.pageId)?.background ?? null,
-        resolveAsset: async (asset) => {
-          const response = await fetch(assetUrl(this.sessionId, this.state.name, asset), { credentials: 'same-origin' })
-          if (!response.ok) throw new Error(`asset ${asset} unavailable`)
-          const blob = await response.blob()
-          return await blobToDataUrl(blob)
-        },
-        resolveFont: async (font) => {
-          const response = await fetch(fontUrl(this.sessionId, font.asset), { credentials: 'same-origin' })
-          if (!response.ok) throw new Error(`font ${font.asset} unavailable`)
-          const blob = await response.blob()
-          return await blobToDataUrl(blob)
-        },
-        fonts: this.state.doc.fonts ?? [],
-      })
+      const svg = await this.buildExportSvg(targetKeys)
       if (kind === 'svg') {
         const result = await saveExport(this.sessionId, this.state.name, 'svg', btoaUnicode(svg))
         this.toast(`已导出 ${result.path}`)
@@ -1781,6 +1822,33 @@ class CanvasStore {
       this.insertExportPath(result.path)
     } catch (error) {
       this.toast(`导出失败：${String(error?.message ?? error)}`, 'error')
+    }
+  }
+
+  async exportPack() {
+    try {
+      const result = await exportPack(this.sessionId, this.state.name)
+      this.toast(`已导出 ${result.path}（${result.assets} 个素材）`)
+      return result
+    } catch (error) {
+      this.toast(`打包失败：${String(error?.message ?? error)}`, 'error')
+      return null
+    }
+  }
+
+  async importPackFile(file, name) {
+    try {
+      const text = await file.text()
+      const pack = JSON.parse(text)
+      const result = await importPack(this.sessionId, pack, name)
+      const data = await loadState(this.sessionId, result.name)
+      this.applyState(data, { resetHistory: true })
+      this.toast(`已导入 ${result.path}（${result.assets} 个素材）`)
+      this.emit()
+      return result
+    } catch (error) {
+      this.toast(`导入失败：${String(error?.message ?? error)}`, 'error')
+      return null
     }
   }
 

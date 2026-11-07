@@ -23,6 +23,7 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName,
   const docsRef = React.useRef(null)
   const fileRef = React.useRef(null)
   const svgRef = React.useRef(null)
+  const packRef = React.useRef(null)
 
   React.useEffect(() => {
     if (!docsOpen) return
@@ -178,6 +179,8 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName,
         React.createElement('div', { className: 'dshc-export-title' }, selectionCount ? '导出选区' : '导出整页'),
         React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportSelection('svg') } }, 'SVG'),
         React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportSelection('png') } }, 'PNG (2x)'),
+        React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportPack() } }, 'Drafi 包'),
+        React.createElement(Button, { icon: 'upload', onClick: () => { setShowExport(false); packRef.current?.click() } }, '导入 Drafi 包'),
         React.createElement('div', { className: 'dshc-export-hint' }, '保存到 canvas/exports/，并把路径插入输入框'),
       ),
     React.createElement('input', {
@@ -192,6 +195,17 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName,
         const file = event.target.files?.[0]
         if (file) store.uploadImageFile(file, store.imageInsertPoint ?? undefined)
         store.imageInsertPoint = null
+        event.target.value = ''
+      },
+    }),
+    React.createElement('input', {
+      ref: packRef,
+      type: 'file',
+      accept: '.json,application/json',
+      style: { display: 'none' },
+      onChange: async (event) => {
+        const file = event.target.files?.[0]
+        if (file) await store.importPackFile(file)
         event.target.value = ''
       },
     }),

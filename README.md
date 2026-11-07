@@ -76,7 +76,21 @@ entry point. Inserting a selection still adds a locate chip above the composer.
   Apple HIG metrics/colors for iOS. If the user does not name a system, the
   agent follows these defaults (documented in `canvas/DESIGN.md`).
 - Agent tools: `canvas_read`, `canvas_write`, `canvas_edit`, `canvas_comment`,
-  `canvas_template`, `canvas_audit`, `canvas_image`.
+  `canvas_template`, `canvas_audit`, `canvas_image`, `canvas_export`,
+  `canvas_import`, `canvas_migrate`, `canvas_snapshot`.
+- `canvas_read` takes `query` (match id/name/text and return matches with their
+  ancestor path), `fields` (only the outline sections you need), `depth` and
+  `childrenLimit`. Tool output is compact JSON, so a read costs far less context
+  than the pretty-printed form.
+- `canvas_snapshot` renders the open canvas tab and saves a PNG under
+  `canvas/exports/`, so the agent can read the image instead of guessing visual
+  results. It requires an open canvas tab; without one the tool explains why.
+- Portable packs: `canvas_export` writes `<name>.drafi.json` under
+  `canvas/exports/` with the document and its assets inlined; `canvas_import`
+  restores a pack as a document plus assets. The toolbar export menu exposes the
+  same flow for people.
+- `canvas_migrate` upgrades a stored document to the current format version and
+  reports what changed.
 - `path` vector nodes: SVG path `d`, viewBox, fill/stroke, solid/gradient
   paints and SVG export; basic SVG path import via the toolbar. No pen/anchors.
 - TypeScript source layout under `src/{shared,host,client}` with generated
@@ -217,7 +231,8 @@ come from the Harness platform module table.
 - No independent backend or cloud account; the Host half runs inside the DSH
   process and only reads/writes the session workspace.
 - No server-side rendering, thumbnail generation, font conversion/subsetting or
-  image processing. Exports are rendered in the browser.
+  image processing. Exports are rendered in the browser, including the PNG that
+  `canvas_snapshot` returns, which is why it needs an open canvas tab.
 - Background blur is exact on screen but approximated in SVG/PNG export.
 - The composer can only receive plain text, so the canvas link is markdown in
   the input box; it becomes the clickable reference chip once sent.

@@ -886,11 +886,13 @@ export function firstPage(doc) {
 /**
  * Compact summary for the AI and for selection context.
  * @param {any} doc
- * @param {{selection?: string[], pageId?: string, detail?: 'outline'|'full'}} [options]
+ * @param {{selection?: string[], pageId?: string, detail?: 'outline'|'full', depth?: number, childrenLimit?: number, fields?: string[]}} [options]
  */
 export function outlineDoc(doc, options = {}) {
   const page = options.pageId ? findPage(doc, options.pageId) : firstPage(doc)
   const selection = new Set(options.selection ?? [])
+  const maxDepth = Number.isInteger(options.depth) ? Math.min(Math.max(options.depth, 0), 12) : 6
+  const childLimit = Number.isInteger(options.childrenLimit) ? Math.min(Math.max(options.childrenLimit, 0), 500) : 100
   const outlineNode = (node, depth = 0) => {
     const item = {
       id: node.id,
@@ -911,12 +913,12 @@ export function outlineDoc(doc, options = {}) {
     if (node.layoutSizing) item.layoutSizing = node.layoutSizing
     if (selection.has(node.id)) item.selected = true
     if (node.visible === false) item.visible = false
-    if (depth < 6 && Array.isArray(node.children) && node.children.length) {
-      item.children = node.children.slice(0, 100).map((child) => outlineNode(child, depth + 1))
+    if (depth < maxDepth && Array.isArray(node.children) && node.children.length) {
+      item.children = node.children.slice(0, childLimit).map((child) => outlineNode(child, depth + 1))
     }
     return item
   }
-  return {
+  const outline = {
     format: FORMAT,
     version: VERSION,
     id: doc.id,
@@ -965,6 +967,58 @@ export function outlineDoc(doc, options = {}) {
     },
     meta: doc.meta ?? {},
   }
+  if (!Array.isArray(options.fields) || options.fields.length === 0) return outline
+  const keep = new Set(options.fields)
+  const filtered = { format: outline.format, version: outline.version, id: outline.id, title: outline.title }
+  for (const key of ['page', 'pages', 'nodes', 'selection', 'components', 'variantSets', 'styles', 'fonts', 'comments', 'stats', 'meta']) {
+    if (key === 'page' || key === 'nodes' || key === 'selection') {
+      if (keep.has('nodes') || keep.has('page') || keep.has('selection')) filtered[key] = outline[key]
+    } else if (keep.has(key)) {
+      filtered[key] = outline[key]
+    }
+  }
+  return filtered
+}
+
+/**
+ * Search nodes by id, name or text. Returns matches with their ancestor path so
+ * an agent can edit one node without reading the whole document.
+ * @param {any} doc
+ * @param {string} query
+ * @param {{pageId?: string, limit?: number}} [options]
+ */
+export function findInDoc(doc, query, options = {}) {
+  const needle = String(query ?? '').trim().toLowerCase()
+  if (!needle) return { matches: [], truncated: false }
+  const limit = Math.min(Math.max(Number(options.limit) || 20, 1), 100)
+  const page = options.pageId ? findPage(doc, options.pageId) : firstPage(doc)
+  const matches = []
+  let total = 0
+  const walk = (nodes, path) => {
+    for (const node of nodes ?? []) {
+      const haystack = [node.id, node.name, node.type === 'text' ? node.text : '']
+      if (haystack.some((value) => String(value ?? '').toLowerCase().includes(needle))) {
+        total += 1
+        if (matches.length < limit) {
+          const item = {
+            id: node.id,
+            type: node.type,
+            name: node.name,
+            x: round(node.x),
+            y: round(node.y),
+            w: round(node.width),
+            h: round(node.height),
+            path: path.map((entry) => entry.id),
+          }
+          if (node.type === 'text') item.text = String(node.text ?? '').slice(0, 80)
+          matches.push(item)
+        }
+      }
+      if (Array.isArray(node.children) && node.children.length) walk(node.children, [...path, node])
+    }
+  }
+  walk(page?.children ?? [], [])
+  return { matches, total, truncated: total > matches.length }
 }
 
 /** @param {number} value */
@@ -975,4 +1029,34 @@ function round(value) {
 /** @param {unknown} value */
 export function isValidColor(value) {
   return typeof value === 'string' && COLOR_RE.test(value)
+}
+
+/**
+ * Upgrade a stored document to the current format version.
+ * Steps are explicit so a future bump can be added without touching callers.
+ * @param {unknown} input
+ */
+export function migrateDoc(input) {
+  if (!isPlainObject(input)) throw new CanvasError('$', 'expected a document object')
+  const raw = clone(input)
+  const from = Number.isInteger(raw.version) ? raw.version : 0
+  const changes = []
+  if (raw.format !== FORMAT) {
+    changes.push(`format: ${raw.format === undefined ? 'missing' : String(raw.format)} -> ${FORMAT}`)
+    raw.format = FORMAT
+  }
+  if (from < 1) {
+    if (!isPlainObject(raw.meta)) {
+      raw.meta = { createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+      changes.push('meta: added timestamps')
+    }
+    if (!Array.isArray(raw.pages) || raw.pages.length === 0) {
+      raw.pages = [{ id: newId('page'), name: 'Page 1', children: [] }]
+      changes.push('pages: added a default page')
+    }
+    changes.push(`version: ${from} -> ${VERSION}`)
+  }
+  raw.version = VERSION
+  const doc = normalizeDoc(raw)
+  return { doc, from, to: VERSION, changes }
 }

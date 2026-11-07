@@ -105,6 +105,24 @@ export function postSelection(sessionId, name, ids, pageId) {
   }).catch(() => undefined)
 }
 
+/** @param {string} sessionId @param {string} [name] */
+export function exportPack(sessionId, name) {
+  return request('pack/export', { method: 'POST', body: { sessionId, name } })
+}
+
+/** @param {string} sessionId @param {object} pack @param {string} [name] */
+export function importPack(sessionId, pack, name) {
+  return request('pack/import', { method: 'POST', body: { sessionId, pack, name } })
+}
+
+/** @param {string} sessionId @param {string} requestId @param {string} data @param {string|undefined} nodeId */
+export function postSnapshot(sessionId, requestId, data, nodeId) {
+  return request('snapshot', {
+    method: 'POST',
+    body: { sessionId, requestId, data, nodeId },
+  })
+}
+
 /** @param {string} sessionId @param {string} name @param {'png'|'svg'} kind @param {string} data */
 export function saveExport(sessionId, name, kind, data) {
   return request('export', { method: 'POST', body: { sessionId, name, kind, data } })

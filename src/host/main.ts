@@ -9,7 +9,7 @@
  * thumbnails, font conversion or image processing happens here.
  */
 
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { watchFile, unwatchFile } from 'node:fs'
 import { appendFile, mkdir, readFile, readdir, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { dirname, extname, join, relative, resolve, sep } from 'node:path'
@@ -20,7 +20,9 @@ import {
   FORMAT,
   LIMITS,
   emptyDoc,
+  findInDoc,
   findNodeInDoc,
+  migrateDoc,
   isSlug,
   normalizeDoc,
   outlineDoc,
@@ -36,6 +38,9 @@ import { registerCanvasSkills } from './skills.js'
 const HEALTH_PATH = '/dsh-canvas/health'
 const API_PREFIX = '/dsh-canvas/api/'
 const DOC_SUFFIX = '.canvas.json'
+const PACK_FORMAT = 'dsh.canvas.pack'
+const PACK_VERSION = 1
+const PACK_SUFFIX = '.drafi.json'
 const MIME = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -91,6 +96,12 @@ function sendJson(response, status, value) {
     'content-length': Buffer.byteLength(body),
   })
   response.end(body)
+}
+
+/** Compact tool output keeps the model payload small; set the env flag for readable logs. */
+function renderJson(value) {
+  const pretty = process.env.DSH_CANVAS_PRETTY_JSON === '1'
+  return [{ type: 'text', text: JSON.stringify(value, null, pretty ? 2 : 0) }]
 }
 
 function sendError(response, error) {
@@ -239,6 +250,7 @@ const state = () => ({
   sse: new Set(),
   watchers: new Map(),
   revisions: new Map(),
+  snapshots: new Map(),
 })
 
 /** @param {string} cwd */
@@ -373,6 +385,129 @@ async function writeDoc(ctx, store, cwd, name, doc, options) {
   store.revisions.set(file, revision)
   broadcast(store, file, { type: 'doc-changed', name, revision, source: options.source })
   return { doc: normalized, revision, file, path: relative(cwd, file) }
+}
+
+/** Build a portable pack: one JSON file with the document and its assets inlined. */
+async function buildPack(cwd, name) {
+  const read = await readDoc(cwd, name)
+  const root = canvasRoot(cwd)
+  const assets = {}
+  let assetCount = 0
+  try {
+    const entries = await readdir(join(root, 'assets'), { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isFile()) continue
+      const file = join(root, 'assets', entry.name)
+      const info = await stat(file)
+      if (info.size > 8 * 1024 * 1024) continue
+      const buffer = await readFile(file)
+      assets[`assets/${entry.name}`] = `data:${MIME[extname(entry.name)] ?? 'application/octet-stream'};base64,${buffer.toString('base64')}`
+      assetCount += 1
+    }
+  } catch {
+    // an empty or missing assets folder still exports
+  }
+  return {
+    format: PACK_FORMAT,
+    version: PACK_VERSION,
+    name,
+    exportedAt: nowIso(),
+    document: read.doc,
+    assets,
+    assetCount,
+  }
+}
+
+async function writePack(cwd, name) {
+  const pack = await buildPack(cwd, name)
+  const file = assertInside(canvasRoot(cwd), join(canvasRoot(cwd), 'exports', `${name}${PACK_SUFFIX}`))
+  await mkdir(dirname(file), { recursive: true })
+  const json = JSON.stringify(pack)
+  if (Buffer.byteLength(json) > LIMITS.docBytes) throw new HttpError(413, 'pack-too-large', 'packed document exceeds the size limit')
+  await writeFile(file, json, 'utf8')
+  return { pack, file, bytes: Buffer.byteLength(json) }
+}
+
+/** Validate a pack file and return its document plus assets. */
+async function readPack(cwd, packPath) {
+  const file = assertInside(cwd, resolve(cwd, packPath))
+  let raw
+  try {
+    raw = await readFile(file, 'utf8')
+  } catch (error) {
+    if (error?.code === 'ENOENT') throw new HttpError(404, 'pack-not-found', `pack "${packPath}" does not exist`)
+    throw error
+  }
+  let parsed
+  try {
+    parsed = JSON.parse(raw)
+  } catch (error) {
+    throw new HttpError(422, 'invalid-pack', `pack is not valid JSON: ${String(error.message)}`)
+  }
+  if (!parsed || parsed.format !== PACK_FORMAT || !parsed.document) {
+    throw new HttpError(422, 'invalid-pack', `expected a ${PACK_FORMAT} file`)
+  }
+  if (Number(parsed.version) > PACK_VERSION) {
+    throw new HttpError(422, 'pack-version', `pack version ${parsed.version} is newer than supported ${PACK_VERSION}`)
+  }
+  return parsed
+}
+
+/** Write a pack's document and inline assets into the workspace. */
+async function importPack(ctx, store, cwd, pack, options = {}) {
+  const name = options.name ?? (isSlug(pack.name) ? pack.name : 'imported')
+  const doc = normalizeDoc(pack.document)
+  const root = canvasRoot(cwd)
+  let assets = 0
+  for (const [relativePathValue, dataUrl] of Object.entries(pack.assets ?? {})) {
+    const match = /^assets\/[A-Za-z0-9._-]{1,120}$/.exec(relativePathValue)
+    if (!match) continue
+    const base64 = String(dataUrl).split(',')[1]
+    if (!base64) continue
+    const buffer = Buffer.from(base64, 'base64')
+    if (buffer.byteLength > LIMITS.imageBytes) continue
+    await mkdir(join(root, 'assets'), { recursive: true })
+    await writeFile(join(root, relativePathValue), buffer)
+    assets += 1
+  }
+  const result = await writeDoc(ctx, store, cwd, name, doc, {
+    source: 'import',
+    ...(typeof options.baseRevision === 'string' ? { baseRevision: options.baseRevision } : {}),
+  })
+  return { name, assets, revision: result.revision, path: relativePath(cwd, result.file) }
+}
+
+/** Ask the open canvas tab to rasterise a node or the whole page. */
+async function requestSnapshot(store, cwd, name, options = {}) {
+  const file = docFile(cwd, name)
+  const clients = [...store.sse].filter((client) => client.file === file)
+  if (clients.length === 0) {
+    throw new HttpError(409, 'no-live-canvas', 'open the canvas tab first: snapshot needs a live renderer')
+  }
+  const requestId = randomUUID()
+  const scale = Math.min(Math.max(Number(options.scale) || 2, 0.5), 4)
+  const nodeId = typeof options.nodeId === 'string' ? options.nodeId : null
+  const settled = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      store.snapshots.delete(requestId)
+      reject(new HttpError(504, 'snapshot-timeout', 'the canvas tab did not answer the snapshot request'))
+    }, 20_000)
+    store.snapshots.set(requestId, {
+      resolve: (value) => {
+        clearTimeout(timer)
+        store.snapshots.delete(requestId)
+        resolve(value)
+      },
+    })
+  })
+  for (const client of clients) {
+    try {
+      client.response.write(`data: ${JSON.stringify({ type: 'snapshot-request', requestId, nodeId, scale })}\n\n`)
+    } catch {
+      // the close handler removes dead clients
+    }
+  }
+  return { requestId, settled, nodeId, scale }
 }
 
 function selectionKey(sessionId, name) {
@@ -666,6 +801,50 @@ function createRoutes(ctx, store) {
         })
         return
       }
+      if (action === 'pack/export' && request.method === 'POST') {
+        const body = await readBody(request, 64 * 1024)
+        const { cwd } = sessionCwd(ctx, body.sessionId)
+        const name = resolveName(store, body.sessionId, body.name)
+        await ensureScaffold(cwd, store)
+        const packed = await writePack(cwd, name)
+        sendJson(response, 200, {
+          ok: true,
+          name,
+          path: relativePath(cwd, packed.file),
+          bytes: packed.bytes,
+          assets: packed.pack.assetCount,
+        })
+        return
+      }
+      if (action === 'pack/import' && request.method === 'POST') {
+        const body = await readBody(request, LIMITS.docBytes * 4)
+        const { cwd } = sessionCwd(ctx, body.sessionId)
+        const pack = body.pack
+        if (!pack || pack.format !== PACK_FORMAT || !pack.document) {
+          throw new HttpError(422, 'invalid-pack', `expected a ${PACK_FORMAT} payload`)
+        }
+        if (Number(pack.version) > PACK_VERSION) {
+          throw new HttpError(422, 'pack-version', `pack version ${pack.version} is newer than supported ${PACK_VERSION}`)
+        }
+        const result = await importPack(ctx, store, cwd, pack, {
+          ...(typeof body.name === 'string' && body.name ? { name: body.name } : {}),
+          ...(typeof body.baseRevision === 'string' ? { baseRevision: body.baseRevision } : {}),
+        })
+        sendJson(response, 200, { ok: true, ...result })
+        return
+      }
+      if (action === 'snapshot' && request.method === 'POST') {
+        const body = await readBody(request, 40 * 1024 * 1024)
+        const waiter = store.snapshots.get(String(body.requestId ?? ''))
+        if (!waiter) throw new HttpError(404, 'unknown-snapshot', 'snapshot request expired or unknown')
+        const data = typeof body.data === 'string' ? body.data : ''
+        if (!data) throw new HttpError(400, 'invalid-snapshot', 'data is required')
+        const buffer = Buffer.from(data, 'base64')
+        if (buffer.byteLength > 30 * 1024 * 1024) throw new HttpError(413, 'snapshot-too-large', 'snapshot exceeds 30 MiB')
+        waiter.resolve({ buffer, nodeId: typeof body.nodeId === 'string' ? body.nodeId : null })
+        sendJson(response, 200, { ok: true })
+        return
+      }
       if (action === 'asset' && request.method === 'POST') {
         const body = await readBody(request, 40 * 1024 * 1024)
         const { cwd } = sessionCwd(ctx, body.sessionId)
@@ -840,21 +1019,24 @@ function createTools(ctx, store) {
   const read = {
     name: 'canvas_read',
     description:
-      'Read a dsh-canvas document (canvas/*.canvas.json, format dsh.canvas@1) and the user\'s current canvas selection. ' +
-      'Use detail "outline" (default) for a compact node tree, "full" for the whole JSON document, or "node" with nodeId for one subtree. ' +
-      'Read canvas/FORMAT.md for the schema before writing complex documents.',
+      'Read a canvas document and the current selection. Prefer query to locate nodes, node for one subtree, outline for the page tree.',
     parameters: {
       type: 'object',
       properties: {
         name: { type: 'string', description: 'document name; defaults to the last opened canvas in this session' },
         detail: { type: 'string', enum: ['outline', 'full', 'node'], description: 'how much of the document to return' },
         nodeId: { type: 'string', description: 'node id when detail is "node"' },
+        query: { type: 'string', description: 'match id, name or text; returns matches with ancestor path' },
+        limit: { type: 'number', description: 'max matches for query (default 20)' },
+        fields: { type: 'array', items: { type: 'string' }, description: 'outline sections: nodes, styles, components, comments, fonts, meta, pages' },
+        depth: { type: 'number', description: 'outline child depth (default 6)' },
+        childrenLimit: { type: 'number', description: 'max children per node in the outline (default 100)' },
       },
       additionalProperties: false,
     },
     output: {
       schema: { type: 'object', additionalProperties: true },
-      render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+      render: (_args, value) => renderJson(value),
     },
     async execute(args, exec) {
       const { cwd, sessionId } = await workspace(exec)
@@ -872,6 +1054,10 @@ function createTools(ctx, store) {
         format: FORMAT,
       }
       if (pageId) base.pageId = pageId
+      if (typeof args?.query === 'string' && args.query.trim()) {
+        const found = findInDoc(readDocValue.doc, args.query, { pageId, limit: args.limit })
+        return { ...base, detail: 'query', query: args.query, ...found }
+      }
       if (args?.detail === 'full') {
         const json = JSON.stringify(readDocValue.doc)
         if (json.length > 120_000) {
@@ -895,8 +1081,14 @@ function createTools(ctx, store) {
       return {
         ...base,
         detail: 'outline',
-        outline: outlineDoc(readDocValue.doc, { selection: selection?.ids, pageId }),
-        hint: `Schema: ${relativePath(cwd, join(canvasRoot(cwd), 'FORMAT.md'))}; design system: ${relativePath(cwd, join(canvasRoot(cwd), 'DESIGN.md'))}. Use canvas_edit for small changes, canvas_template for the iOS screen template.`,
+        outline: outlineDoc(readDocValue.doc, {
+          selection: selection?.ids,
+          pageId,
+          ...(Array.isArray(args?.fields) ? { fields: args.fields } : {}),
+          ...(Number.isInteger(args?.depth) ? { depth: args.depth } : {}),
+          ...(Number.isInteger(args?.childrenLimit) ? { childrenLimit: args.childrenLimit } : {}),
+        }),
+        hint: 'Use canvas_edit for small changes; read canvas/FORMAT.md only when creating new node structures.',
       }
     },
   }
@@ -919,7 +1111,7 @@ function createTools(ctx, store) {
     },
     output: {
       schema: { type: 'object', additionalProperties: true },
-      render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+      render: (_args, value) => renderJson(value),
     },
     async execute(args, exec) {
       const { cwd, sessionId } = await workspace(exec)
@@ -960,7 +1152,7 @@ function createTools(ctx, store) {
     },
     output: {
       schema: { type: 'object', additionalProperties: true },
-      render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+      render: (_args, value) => renderJson(value),
     },
     async execute(args, exec) {
       const { cwd, sessionId } = await workspace(exec)
@@ -1011,7 +1203,7 @@ function createTools(ctx, store) {
     },
     output: {
       schema: { type: 'object', additionalProperties: true },
-      render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+      render: (_args, value) => renderJson(value),
     },
     async execute(args, exec) {
       const { cwd, sessionId } = await workspace(exec)
@@ -1088,7 +1280,7 @@ function createTools(ctx, store) {
     },
     output: {
       schema: { type: 'object', additionalProperties: true },
-      render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+      render: (_args, value) => renderJson(value),
     },
     async execute(args, exec) {
       const { cwd, sessionId } = await workspace(exec)
@@ -1214,7 +1406,7 @@ function createTools(ctx, store) {
     },
     output: {
       schema: { type: 'object', additionalProperties: true },
-      render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+      render: (_args, value) => renderJson(value),
     },
     async execute(args, exec) {
       const { cwd, sessionId } = await workspace(exec)
@@ -1249,7 +1441,7 @@ function createTools(ctx, store) {
     },
     output: {
       schema: { type: 'object', additionalProperties: true },
-      render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+      render: (_args, value) => renderJson(value),
     },
     async execute(args, exec) {
       const { cwd, sessionId } = await workspace(exec)
@@ -1297,7 +1489,127 @@ function createTools(ctx, store) {
     },
   }
 
-  return [read, write, edit, comment, template, audit, image]
+  const exportTool = {
+    name: 'canvas_export',
+    description: 'Pack a canvas document and its assets into one portable file under canvas/exports/.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'document name; defaults to the current document' },
+      },
+      additionalProperties: false,
+    },
+    output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => renderJson(value) },
+    async execute(args, exec) {
+      const { cwd, sessionId } = await workspace(exec)
+      const name = defaultName(sessionId, args?.name)
+      await ensureScaffold(cwd, store)
+      const packed = await writePack(cwd, name)
+      return {
+        ok: true,
+        name,
+        path: relativePath(cwd, packed.file),
+        bytes: packed.bytes,
+        assets: packed.pack.assetCount,
+        format: PACK_FORMAT,
+      }
+    },
+  }
+
+  const importTool = {
+    name: 'canvas_import',
+    description: 'Import a canvas pack written by canvas_export as a document plus its assets.',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'pack path relative to the workspace' },
+        name: { type: 'string', description: 'target document name; defaults to the pack name' },
+        baseRevision: { type: 'string', description: 'optional revision guard when overwriting' },
+      },
+      required: ['path'],
+      additionalProperties: false,
+    },
+    output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => renderJson(value) },
+    async execute(args, exec) {
+      const { cwd } = await workspace(exec)
+      if (typeof args?.path !== 'string' || !args.path) throw new Error('canvas_import requires path')
+      const pack = await readPack(cwd, args.path)
+      const result = await importPack(ctx, store, cwd, pack, {
+        ...(typeof args?.name === 'string' ? { name: args.name } : {}),
+        ...(typeof args?.baseRevision === 'string' ? { baseRevision: args.baseRevision } : {}),
+      })
+      return { ok: true, ...result }
+    },
+  }
+
+  const migrateTool = {
+    name: 'canvas_migrate',
+    description: 'Upgrade a stored canvas document to the current format version and report what changed.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'document name; defaults to the current document' },
+        dryRun: { type: 'boolean', description: 'report changes without writing' },
+      },
+      additionalProperties: false,
+    },
+    output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => renderJson(value) },
+    async execute(args, exec) {
+      const { cwd, sessionId } = await workspace(exec)
+      const name = defaultName(sessionId, args?.name)
+      await ensureScaffold(cwd, store)
+      const current = await readDoc(cwd, name)
+      const parsed = JSON.parse(current.raw)
+      const migrated = migrateDoc(parsed)
+      const changed = migrated.changes.length > 0 || migrated.from !== migrated.to
+      if (!changed || args?.dryRun) {
+        return { ok: true, name, from: migrated.from, to: migrated.to, changes: migrated.changes, written: false }
+      }
+      const result = await writeDoc(ctx, store, cwd, name, migrated.doc, { source: 'migrate' })
+      return { ok: true, name, from: migrated.from, to: migrated.to, changes: migrated.changes, written: true, revision: result.revision }
+    },
+  }
+
+  const snapshotTool = {
+    name: 'canvas_snapshot',
+    description:
+      'Render a node or the whole page in the open canvas tab and save a PNG under canvas/exports/. ' +
+      'Read the returned path with the image tool to actually see the design.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'document name; defaults to the current document' },
+        nodeId: { type: 'string', description: 'node to render; omit for the whole page' },
+        scale: { type: 'number', description: 'pixel scale, 0.5 to 4 (default 2)' },
+      },
+      additionalProperties: false,
+    },
+    output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => renderJson(value) },
+    async execute(args, exec) {
+      const { cwd, sessionId } = await workspace(exec)
+      const name = defaultName(sessionId, args?.name)
+      const pending = await requestSnapshot(store, cwd, name, {
+        ...(typeof args?.nodeId === 'string' ? { nodeId: args.nodeId } : {}),
+        ...(args?.scale !== undefined ? { scale: args.scale } : {}),
+      })
+      const { buffer, nodeId } = await pending.settled
+      const root = canvasRoot(cwd)
+      await mkdir(join(root, 'exports'), { recursive: true })
+      const suffix = new Date().toISOString().replace(/[:.]/g, '-')
+      const target = assertInside(root, join(root, 'exports', `snapshot-${name}-${suffix}.png`))
+      await writeFile(target, buffer)
+      return {
+        ok: true,
+        name,
+        nodeId: nodeId ?? null,
+        path: relativePath(cwd, target),
+        bytes: buffer.byteLength,
+        hint: 'Read this PNG with the image tool to inspect the rendered design.',
+      }
+    },
+  }
+
+  return [read, write, edit, comment, template, audit, image, exportTool, importTool, migrateTool, snapshotTool]
 }
 
 export function apply(ctx) {

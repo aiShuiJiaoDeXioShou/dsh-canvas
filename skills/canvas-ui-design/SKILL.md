@@ -30,7 +30,7 @@ whenToUse: 用户要在 dsh-canvas 画布中直接生成 UI、补页面/状态�
 3. 用 `canvas_template` 插入页面骨架（`ios-form-screen` / `ios-list-screen` / `ios-detail-screen` / `ios-screen`）或系统栏模板；也可以从空白 Frame 开始。
 4. 用 `canvas_write` / `canvas_edit` 写真实内容、组件、样式、自动布局和状态；优先复用已有 component/style，避免逐页重复发明颜色和尺寸。
 5. 需要图片时按下方「图片与素材」处理；文字、按钮、表单、动态数据必须使用原生节点，不能烘焙进图片。
-6. 用 `canvas_audit` 检查，再按 findings 修正；最后用实际渲染/导出预览核对。
+6. 用 `canvas_audit` 检查，按 findings 修正；再用 `canvas_snapshot` 读回渲染图核对视觉结果。
 7. 交付时说明改了什么、哪些状态已覆盖、哪些未验证；不要把结构检查通过说成视觉审查通过。
 
 简单页面直接生成；复杂页面、多业务区块或参考图复刻任务先读 `references/reference-fidelity.md`，必要时补齐参考或先做页面计划，但不要用流程文档代替实际生成。
@@ -69,6 +69,10 @@ whenToUse: 用户要在 dsh-canvas 画布中直接生成 UI、补页面/状态�
 ## 工具
 
 - `canvas_read` / `canvas_write` / `canvas_edit` / `canvas_comment`：读、写、改、评论。
+  局部改稿先用 `query` 定位节点，再用 `fields` 只取需要的大纲段落，避免整棵树进上下文。
+- `canvas_export` / `canvas_import`：把文档与素材打包成单个 `.drafi.json`，或从该文件恢复。
+- `canvas_migrate`：把旧版本文档升级到当前格式，先 `dryRun` 看变更。
+- `canvas_snapshot`：让打开的画布标签渲染整页或指定节点，返回 PNG 路径；用图片工具读取后核对视觉效果。改完稿需要自证效果时优先用它。
 - `canvas_template`：`list` / `insert` / `styles` / `foundation`；页面骨架与设计基础。
 - `canvas_audit`：确定性设计检查（边界、对比度、触控、裁切、引用）。
 - `canvas_image`：`probe` / `generate` / `import`。
