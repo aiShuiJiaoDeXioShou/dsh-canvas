@@ -39,14 +39,13 @@ import {
   generateCanvasImage,
   imageCapabilities,
   loadState,
-  exportPack,
+  fetchPack,
   importPack,
   openEvents,
   postSelection,
   postSnapshot,
   renameCanvasDoc,
   saveDoc,
-  saveExport,
   uploadFont,
   uploadImage,
 } from './api.js'
@@ -1808,18 +1807,20 @@ class CanvasStore {
     const nodes = this.selectedNodes()
     const targetKeys = nodes.length ? nodes.map((node) => node.key) : this.state.scene?.roots.map((node) => node.key) ?? []
     try {
+      const { saveFile } = await import('./save-file.js')
       const svg = await this.buildExportSvg(targetKeys)
       if (kind === 'svg') {
-        const result = await saveExport(this.sessionId, this.state.name, 'svg', btoaUnicode(svg))
-        this.toast(`已导出 ${result.path}`)
-        this.insertExportPath(result.path)
+        const result = await saveFile(svg, `${this.state.name}.svg`, 'image/svg+xml')
+        if (result.cancelled) return
+        this.toast(`已保存 ${result.filename}`)
         return
       }
       const { svgToPng } = await import('./editor/export-png.js')
       const png = await svgToPng(svg, 2)
-      const result = await saveExport(this.sessionId, this.state.name, 'png', png.split(',')[1])
-      this.toast(`已导出 ${result.path}`)
-      this.insertExportPath(result.path)
+      const blob = await (await fetch(png)).blob()
+      const result = await saveFile(blob, `${this.state.name}.png`, 'image/png')
+      if (result.cancelled) return
+      this.toast(`已保存 ${result.filename}`)
     } catch (error) {
       this.toast(`导出失败：${String(error?.message ?? error)}`, 'error')
     }
@@ -1827,8 +1828,12 @@ class CanvasStore {
 
   async exportPack() {
     try {
-      const result = await exportPack(this.sessionId, this.state.name)
-      this.toast(`已导出 ${result.path}（${result.assets} 个素材）`)
+      const { saveFile } = await import('./save-file.js')
+      const response = await fetchPack(this.sessionId, this.state.name)
+      const json = JSON.stringify(response.pack)
+      const result = await saveFile(json, `${this.state.name}.drafi.json`, 'application/json')
+      if (result.cancelled) return null
+      this.toast(`已保存 ${result.filename}`)
       return result
     } catch (error) {
       this.toast(`打包失败：${String(error?.message ?? error)}`, 'error')
@@ -1869,16 +1874,6 @@ class CanvasStore {
       this.toast('剪贴板不可用，已下载 PNG')
     } catch (error) {
       this.toast(`复制图片失败：${String(error?.message ?? error)}`, 'error')
-    }
-  }
-
-  insertExportPath(path) {
-    const actions = this.inputActions
-    if (!actions?.captureInsertion) return
-    try {
-      actions.insertText(`\n\n画布预览图：${path}\n`, actions.captureInsertion())
-    } catch {
-      // exporting still succeeded
     }
   }
 

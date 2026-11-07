@@ -190,7 +190,6 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName,
         React.createElement('div', { className: 'dshc-export-section' }, '工程文件'),
         React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportPack() } }, '导出 Drafi 包（含素材，可再导入）'),
         React.createElement(Button, { icon: 'upload', onClick: () => { setShowExport(false); packRef.current?.click() } }, '导入 Drafi 包'),
-        React.createElement('div', { className: 'dshc-export-hint' }, 'SVG/PNG 保存到 canvas/exports/ 并插入输入框；Drafi 包保存到 canvas/exports/<名称>.drafi.json。'),
       ),
     React.createElement('input', {
       ref: (element) => {

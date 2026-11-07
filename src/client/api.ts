@@ -106,6 +106,12 @@ export function postSelection(sessionId, name, ids, pageId) {
 }
 
 /** @param {string} sessionId @param {string} [name] */
+export function fetchPack(sessionId, name) {
+  const query = new URLSearchParams({ sessionId, ...(name ? { name } : {}) })
+  return request(`pack?${query}`)
+}
+
+/** @param {string} sessionId @param {string} [name] */
 export function exportPack(sessionId, name) {
   return request('pack/export', { method: 'POST', body: { sessionId, name } })
 }

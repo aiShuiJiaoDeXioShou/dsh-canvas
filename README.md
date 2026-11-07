@@ -52,8 +52,9 @@ entry point. Inserting a selection still adds a locate chip above the composer.
 - Non-destructive image cropping.
 - Single-user threaded comments pinned to a node or a page position; the agent
   can read and reply through `canvas_comment`.
-- SVG and PNG export (selection, frame or the whole page), saved under
-  `canvas/exports/` and optionally inserted into the composer.
+- SVG and PNG export (selection, frame or the whole page) through a save
+  dialog: the browser picker chooses the destination, with a download fallback.
+  The UI no longer writes files into the workspace or into the composer.
 - Built-in iOS mobile page templates (iPhone 16 393×852 by default, iPhone 15
   390×844 optional): Settings, Form, List and Detail screens; plus standard
   status bar (dark/light icons), navigation bar and tab bar. Insert them from the
@@ -88,10 +89,10 @@ entry point. Inserting a selection still adds a locate chip above the composer.
 - `canvas_snapshot` renders the open canvas tab and saves a PNG under
   `canvas/exports/`, so the agent can read the image instead of guessing visual
   results. It requires an open canvas tab; without one the tool explains why.
-- Portable packs: `canvas_export` writes `<name>.drafi.json` under
-  `canvas/exports/` with the document and its assets inlined; `canvas_import`
-  restores a pack as a document plus assets. The toolbar export menu exposes the
-  same flow for people.
+- Portable packs: the agent tool `canvas_export` writes `<name>.drafi.json` under
+  `canvas/exports/`; the toolbar export dialog downloads the same pack file
+  through the save picker. `canvas_import` restores a pack as a document plus
+  assets.
 - `canvas_migrate` upgrades a stored document to the current format version and
   reports what changed.
 - `path` vector nodes: SVG path `d`, viewBox, fill/stroke, solid/gradient
@@ -161,7 +162,7 @@ is named, and the iOS templates use HIG metrics.
 <workspace>/canvas/<name>.canvas.json   dsh.canvas@1 document (default `main`)
 <workspace>/canvas/assets/              image assets
 <workspace>/canvas/fonts/               uploaded font files
-<workspace>/canvas/exports/             PNG/SVG exports
+<workspace>/canvas/exports/             agent exports and snapshots
 <workspace>/canvas/FORMAT.md            format reference (generated on first open)
 <workspace>/canvas/DESIGN.md            default design system and templates
 ```

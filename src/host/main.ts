@@ -801,6 +801,14 @@ function createRoutes(ctx, store) {
         })
         return
       }
+      if (action === 'pack' && request.method === 'GET') {
+        const { cwd } = sessionCwd(ctx, query.sessionId)
+        const name = resolveName(store, query.sessionId, query.name)
+        await ensureScaffold(cwd, store)
+        const pack = await buildPack(cwd, name)
+        sendJson(response, 200, { ok: true, pack })
+        return
+      }
       if (action === 'pack/export' && request.method === 'POST') {
         const body = await readBody(request, 64 * 1024)
         const { cwd } = sessionCwd(ctx, body.sessionId)

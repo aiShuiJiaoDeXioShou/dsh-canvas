@@ -30,11 +30,11 @@ function fakeHost(cwd) {
     get: () => undefined,
   }
   apply(ctx)
-  const call = (url, body) =>
+  const call = (url, body, method = 'POST') =>
     new Promise((resolve) => {
       const request = Readable.from([Buffer.from(JSON.stringify(body ?? {}))])
       request.url = url
-      request.method = 'POST'
+      request.method = method
       request.headers = { host: '127.0.0.1', 'content-type': 'application/json' }
       const chunks = []
       const response = {
@@ -138,4 +138,19 @@ test('an unknown snapshot request is rejected', async () => {
   const { call } = fakeHost(cwd)
   const result = await call('/dsh-canvas/api/snapshot', { sessionId: 'sess-test', requestId: 'missing', data: 'AAAA' })
   assert.equal(result.status, 404)
+})
+
+test('the read-only pack route returns the pack without writing files', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'drafi-pack-get-'))
+  const { tools, call, exec } = fakeHost(cwd)
+  await tools.get('canvas_read').execute({}, exec)
+  const response = await call('/dsh-canvas/api/pack?sessionId=sess-test&name=main', undefined, 'GET')
+  assert.equal(response.status, 200)
+  const payload = JSON.parse(response.body)
+  assert.equal(payload.pack.format, 'dsh.canvas.pack')
+  assert.ok(payload.pack.document)
+  const exported = existsSync(join(cwd, 'canvas', 'exports'))
+    ? await (await import('node:fs/promises')).readdir(join(cwd, 'canvas', 'exports'))
+    : []
+  assert.equal(exported.some((entry) => entry.endsWith('.drafi.json')), false)
 })
