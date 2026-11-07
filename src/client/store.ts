@@ -1852,6 +1852,26 @@ class CanvasStore {
     }
   }
 
+  /** Copy the current selection (or the page) as a PNG image to the clipboard. */
+  async copySelectionImage() {
+    try {
+      const png = await this.renderPngFor(null, 2)
+      const blob = await (await fetch(png)).blob()
+      if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+        this.toast('已复制渲染图片到剪贴板')
+        return
+      }
+      const link = document.createElement('a')
+      link.href = png
+      link.download = `${this.state.name}.png`
+      link.click()
+      this.toast('剪贴板不可用，已下载 PNG')
+    } catch (error) {
+      this.toast(`复制图片失败：${String(error?.message ?? error)}`, 'error')
+    }
+  }
+
   insertExportPath(path) {
     const actions = this.inputActions
     if (!actions?.captureInsertion) return

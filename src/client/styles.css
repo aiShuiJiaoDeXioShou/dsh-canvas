@@ -1362,3 +1362,105 @@
 }
 
 
+
+/* modal dialogs */
+.dshc-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, #0b1220 34%, transparent);
+}
+
+.dshc-modal {
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100vw - 48px);
+  max-height: min(78vh, 620px);
+  border: 1px solid var(--dshc-line-strong);
+  border-radius: 14px;
+  background: var(--dshc-overlay);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+  color: var(--dsw-alias-label-primary);
+  font: 12px/1.5 var(--dsw-font-family, system-ui, -apple-system, "PingFang SC", sans-serif);
+  overflow: hidden;
+}
+
+.dshc-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 10px 10px 16px;
+  border-bottom: 1px solid var(--dshc-line);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dshc-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  overflow: auto;
+}
+
+.dshc-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px 14px;
+}
+
+.dshc-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dshc-dialog-field > span {
+  color: var(--dshc-muted);
+  font-size: 11px;
+}
+
+.dshc-dialog-field input {
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--dshc-line-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.dshc-dialog-field input:focus {
+  outline: 2px solid color-mix(in srgb, #4D6BFE 45%, transparent);
+  outline-offset: -1px;
+}
+
+/* export dialog */
+.dshc-export-section {
+  margin-top: 4px;
+  color: var(--dshc-muted);
+  font-size: 11px;
+}
+
+.dshc-export-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dshc-export-grid > * {
+  justify-content: center;
+}
+
+.dshc-export-hint {
+  margin-top: 4px;
+  color: var(--dshc-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}

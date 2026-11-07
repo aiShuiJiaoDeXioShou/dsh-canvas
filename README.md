@@ -30,8 +30,11 @@ entry point. Inserting a selection still adds a locate chip above the composer.
   opened tab), the right one sits at the far right of the tool row and folds the
   inspector. Rail buttons keep working as before.
 - Right-click the canvas for a context menu: copy/cut/paste/duplicate/delete,
-  insert selection into the chat composer, group/ungroup, z-order, lock/unlock,
+  insert selection into the chat composer, copy the rendered selection as an
+  image, export PNG/SVG or a Drafi pack, group/ungroup, z-order, lock/unlock,
   show/hide, create component, fit, select all.
+- Export opens a dialog with image formats and the portable Drafi pack; rename
+  and create dialogs are modal.
 - The layer tree starts collapsed; right-click a layer for rename, reveal,
   copy/cut/paste/duplicate/delete, group/ungroup, z-order, lock/hide and
   component actions. Row action icons are larger and appear on hover/selection.

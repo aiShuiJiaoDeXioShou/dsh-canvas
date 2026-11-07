@@ -1,7 +1,7 @@
 /** Top toolbar: document/page switching, tools, history, zoom, AI and export. */
 
 import * as React from 'react'
-import { IconButton, Button } from './common.jsx'
+import { IconButton, Button, Modal } from './common.jsx'
 import { Icon } from './icons.jsx'
 
 const TOOLS = [
@@ -174,14 +174,23 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName,
     ),
     showExport &&
       React.createElement(
-        'div',
-        { className: 'dshc-export-menu' },
-        React.createElement('div', { className: 'dshc-export-title' }, selectionCount ? '导出选区' : '导出整页'),
-        React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportSelection('svg') } }, 'SVG'),
-        React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportSelection('png') } }, 'PNG (2x)'),
-        React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportPack() } }, 'Drafi 包'),
+        Modal,
+        {
+          title: selectionCount ? `导出选区（${selectionCount} 个图层）` : '导出整页',
+          width: 420,
+          onClose: () => setShowExport(false),
+        },
+        React.createElement('div', { className: 'dshc-export-section' }, '图片'),
+        React.createElement(
+          'div',
+          { className: 'dshc-export-grid' },
+          React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportSelection('svg') } }, 'SVG 矢量'),
+          React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportSelection('png') } }, 'PNG（2x）'),
+        ),
+        React.createElement('div', { className: 'dshc-export-section' }, '工程文件'),
+        React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportPack() } }, '导出 Drafi 包（含素材，可再导入）'),
         React.createElement(Button, { icon: 'upload', onClick: () => { setShowExport(false); packRef.current?.click() } }, '导入 Drafi 包'),
-        React.createElement('div', { className: 'dshc-export-hint' }, '保存到 canvas/exports/，并把路径插入输入框'),
+        React.createElement('div', { className: 'dshc-export-hint' }, 'SVG/PNG 保存到 canvas/exports/ 并插入输入框；Drafi 包保存到 canvas/exports/<名称>.drafi.json。'),
       ),
     React.createElement('input', {
       ref: (element) => {

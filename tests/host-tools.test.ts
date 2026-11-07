@@ -1,5 +1,7 @@
+// @ts-nocheck
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
+import { Readable } from 'node:stream'
 import { mkdtemp, readFile, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -9,8 +11,14 @@ import { apply } from '../src/host/main.js'
 
 function fakeHost(cwd) {
   const tools = new Map()
+  let handler = null
   const ctx = {
-    webServer: { register: () => () => {} },
+    webServer: {
+      register: (spec) => {
+        handler = spec.handler
+        return () => {}
+      },
+    },
     tools: {
       register: (tool) => {
         tools.set(tool.name, tool)
@@ -22,7 +30,29 @@ function fakeHost(cwd) {
     get: () => undefined,
   }
   apply(ctx)
-  return { tools, exec: { agent: { id: 'sess-test' } } }
+  const call = (url, body) =>
+    new Promise((resolve) => {
+      const request = Readable.from([Buffer.from(JSON.stringify(body ?? {}))])
+      request.url = url
+      request.method = 'POST'
+      request.headers = { host: '127.0.0.1', 'content-type': 'application/json' }
+      const chunks = []
+      const response = {
+        writeHead(status) {
+          this.statusCode = status
+        },
+        setHeader() {},
+        write(chunk) {
+          chunks.push(chunk)
+        },
+        end(chunk) {
+          if (chunk) chunks.push(chunk)
+          resolve({ status: this.statusCode, body: Buffer.concat(chunks.map((entry) => Buffer.from(entry))).toString() })
+        },
+      }
+      handler(request, response)
+    })
+  return { tools, call, exec: { agent: { id: 'sess-test' } } }
 }
 
 test('canvas_read query returns matches instead of the page tree', async () => {
@@ -86,4 +116,26 @@ test('canvas_snapshot explains that a live canvas is required', async () => {
     () => tools.get('canvas_snapshot').execute({}, exec),
     /open the canvas tab first/,
   )
+})
+
+test('the pack routes serve the toolbar export and import', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'drafi-routes-'))
+  const { tools, call, exec } = fakeHost(cwd)
+  await tools.get('canvas_read').execute({}, exec)
+  const exported = await call('/dsh-canvas/api/pack/export', { sessionId: 'sess-test', name: 'main' })
+  assert.equal(exported.status, 200)
+  const summary = JSON.parse(exported.body)
+  assert.ok(summary.path.endsWith('main.drafi.json'))
+
+  const pack = JSON.parse(await readFile(join(cwd, summary.path), 'utf8'))
+  const imported = await call('/dsh-canvas/api/pack/import', { sessionId: 'sess-test', name: 'from-ui', pack })
+  assert.equal(imported.status, 200)
+  assert.ok(existsSync(join(cwd, 'canvas', 'from-ui.canvas.json')))
+})
+
+test('an unknown snapshot request is rejected', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'drafi-snap-route-'))
+  const { call } = fakeHost(cwd)
+  const result = await call('/dsh-canvas/api/snapshot', { sessionId: 'sess-test', requestId: 'missing', data: 'AAAA' })
+  assert.equal(result.status, 404)
 })
