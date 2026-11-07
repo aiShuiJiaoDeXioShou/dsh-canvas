@@ -23,8 +23,8 @@ export function IconButton({ icon, title, active, onClick, size = 20, danger }: 
     'button',
     {
       type: 'button',
-      title,
       'aria-label': title,
+      'data-tip': title,
       onClick,
       className: `dshc-icon-btn ${active ? 'is-active' : ''} ${danger ? 'is-danger' : ''}`,
     },

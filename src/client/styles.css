@@ -679,7 +679,8 @@
   padding: 5px 4px;
 }
 
-.dshc-layer-row {
+".dshc-layer-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -725,14 +726,28 @@
 }
 
 .dshc-layer-actions {
-  display: none;
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
   align-items: center;
   gap: 0;
+  padding-left: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, transparent, var(--dshc-hover) 14px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dshc-layer-row.is-selected .dshc-layer-actions {
+  background: linear-gradient(90deg, transparent, var(--dshc-active) 14px);
 }
 
 .dshc-layer-row:hover .dshc-layer-actions,
 .dshc-layer-row.is-selected .dshc-layer-actions {
-  display: inline-flex;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .dshc-layer-name {
@@ -1463,4 +1478,20 @@
   color: var(--dshc-muted);
   font-size: 11px;
   line-height: 1.6;
+}
+
+
+/* hover labels */
+.dshc-tooltip {
+  position: fixed;
+  z-index: 200;
+  transform: translateX(-50%);
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, #0b1220 90%, transparent);
+  color: #fff;
+  font: 11px/1.45 var(--dsw-font-family, system-ui, -apple-system, "PingFang SC", sans-serif);
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
 }

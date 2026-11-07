@@ -12,6 +12,7 @@ import { Inspector } from './ui/Inspector.jsx'
 import { ComponentsPanel, StylesPanel, FontsPanel, CommentsPanel, TemplatesPanel } from './ui/panels.jsx'
 import { Icon } from './ui/icons.jsx'
 import { Button, ContextMenu, IconButton, NameDialog, Select } from './ui/common.jsx'
+import { attachGlobalTooltips } from './ui/tooltip.js'
 import { buildSelectionMenu } from './ui/selection-menu.js'
 import cssText from './styles.css'
 
@@ -72,6 +73,8 @@ export function CanvasPanel({ sessionId, inputActions }: any) {
   const [nameDialog, setNameDialog] = React.useState(null)
   const [layerMenu, setLayerMenu] = React.useState(null)
   const state = store.state
+
+  React.useEffect(() => attachGlobalTooltips(), [])
 
   React.useEffect(() => {
     reportDiag({ phase: 'panel-mount', sessionId, width: store.canvasSize?.width ?? null })
