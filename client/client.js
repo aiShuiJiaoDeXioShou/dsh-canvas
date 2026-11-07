@@ -709,7 +709,7 @@ ${n.join(`
   padding: 5px 4px;
 }
 
-".dshc-layer-row {
+.dshc-layer-row {
   position: relative;
   display: flex;
   align-items: center;

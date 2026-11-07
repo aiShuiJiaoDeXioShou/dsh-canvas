@@ -7,6 +7,7 @@ const root = new URL('../', import.meta.url)
 
 test('layer rows keep their icons and name size on hover and selection', async () => {
   const css = await readFile(new URL('src/client/styles.css', root), 'utf8')
+  assert.doesNotMatch(css, /^"\./m, 'a stray quote would invalidate the following rule')
   assert.match(css, /\.dshc-root svg \{\s*flex: 0 0 auto;/, 'icons must not shrink inside flex rows')
   const actions = css.slice(css.indexOf('.dshc-layer-actions'))
   assert.match(actions, /position: absolute/, 'row actions overlay instead of taking layout space')
