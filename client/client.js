@@ -47,7 +47,8 @@ ${n.join(`
   --dshc-accent: #4D6BFE;
   --dshc-accent-strong: #3D5AFE;
   --dshc-icon: color-mix(in srgb, var(--dsw-alias-label-primary) 62%, transparent);
-  --dshc-active: color-mix(in srgb, var(--dshc-accent) 14%, transparent);
+  --dshc-active: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
+  --dshc-selected-bar: color-mix(in srgb, var(--dshc-accent) 45%, transparent);
   --dshc-muted: var(--dsw-alias-label-secondary, #667085);
   --dshc-raise: var(--dsw-alias-bg-layer-1, #fff);
   --dshc-overlay: var(--dsw-alias-bg-overlay, #fff);
@@ -730,7 +731,11 @@ ${n.join(`
 }
 
 .dshc-layer-row.is-primary {
-  box-shadow: inset 2px 0 0 var(--dshc-accent);
+  box-shadow: inset 2px 0 0 var(--dshc-selected-bar);
+}
+
+.dshc-layer-row.is-selected .dshc-icon-btn {
+  color: var(--dsw-alias-label-primary);
 }
 
 .dshc-layer-caret {
