@@ -5,7 +5,7 @@
 ## 读取
 
 - `canvas_read` 返回文档、页面、选区、revision 和节点 outline；先读再改。
-- 画布格式 `dsh.canvas@1` 见 `canvas/FORMAT.md`；节点字段、样式、自动布局、组件、评论都在其中。
+- 画布格式 `dsh.canvas@1` 见 `.dsh-canvas/FORMAT.md`；节点字段、样式、自动布局、组件、评论都在其中。
 - 已有文档优先复用现有 styles/components/frames，不重新发明颜色和尺寸。
 
 ## 写入

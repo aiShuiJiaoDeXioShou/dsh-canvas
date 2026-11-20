@@ -253,7 +253,7 @@ test('accepts a promise-returning spawnImpl', async () => {
 test('generates with codex exec and stores a valid image asset', async () => {
   const directory = await caseDir('generate-ok')
   const outDir = join(directory, 'tmp')
-  const assetDir = join(directory, 'canvas', 'assets')
+  const assetDir = join(directory, '.dsh-canvas', 'assets')
   const logPath = join(directory, 'calls.log')
   const bin = await makeFakeBin(directory)
 
@@ -443,7 +443,7 @@ test('imports a local PNG into assets', async () => {
   const directory = await caseDir('import-ok')
   const sourcePath = join(directory, 'photo.png')
   await writeFile(sourcePath, PNG)
-  const assetDir = join(directory, 'canvas', 'assets')
+  const assetDir = join(directory, '.dsh-canvas', 'assets')
 
   const result = await importImage({ sourcePath, assetDir })
   assert.equal(result.ok, true)

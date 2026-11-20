@@ -1,6 +1,6 @@
 # 画布布局构造与核对
 
-补充 dsh-canvas 中容易出错的布局细节，不替代 `canvas/FORMAT.md`。
+补充 dsh-canvas 中容易出错的布局细节，不替代 `.dsh-canvas/FORMAT.md`。
 
 ## Auto Layout
 

@@ -31,7 +31,7 @@ globalThis.fetch = async (url, options = {}) => {
     return jsonResponse({
       ok: true,
       name: activeName,
-      path: `canvas/${activeName}.canvas.json`,
+      path: `.dsh-canvas/${activeName}.canvas.json`,
       revision: 'rev-1',
       doc: structuredClone(example),
       docs: [{ name: activeName, title: '主画布', updatedAt: new Date().toISOString(), bytes: 100 }],
@@ -45,11 +45,11 @@ globalThis.fetch = async (url, options = {}) => {
   if (text.includes('/dsh-canvas/api/doc/rename')) {
     const body = JSON.parse(options.body)
     activeName = body.to
-    return jsonResponse({ ok: true, name: body.to, path: `canvas/${body.to}.canvas.json`, revision: 'rev-renamed', docs: [] })
+    return jsonResponse({ ok: true, name: body.to, path: `.dsh-canvas/${body.to}.canvas.json`, revision: 'rev-renamed', docs: [] })
   }
   if (text.includes('/dsh-canvas/api/doc') && options.method === 'PUT') {
     savedDoc = JSON.parse(options.body).doc
-    return jsonResponse({ ok: true, name: 'main', path: 'canvas/main.canvas.json', revision: 'rev-2', stats: {} })
+    return jsonResponse({ ok: true, name: 'main', path: '.dsh-canvas/main.canvas.json', revision: 'rev-2', stats: {} })
   }
   if (text.includes('/dsh-canvas/api/selection')) return jsonResponse({ ok: true })
   if (text.includes('/dsh-canvas/api/audit')) return jsonResponse({ ok: true, findings: [{ severity: 'high', code: 'contrast', nodeId: 'login-title', nodeName: 'Title', message: 'contrast' }], checked: ['contrast'], skipped: [] })
@@ -187,7 +187,7 @@ test('renameDoc changes the active canvas document name', async () => {
   const { store } = await boot()
   await store.renameDoc('renamed-canvas')
   assert.equal(store.state.name, 'renamed-canvas')
-  assert.equal(store.state.path, 'canvas/renamed-canvas.canvas.json')
+  assert.equal(store.state.path, '.dsh-canvas/renamed-canvas.canvas.json')
   store.unmount()
 })
 

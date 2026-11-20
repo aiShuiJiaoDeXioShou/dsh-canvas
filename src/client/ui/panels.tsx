@@ -291,7 +291,7 @@ export function FontsPanel({ store, onNeedName }: any) {
         })),
       ),
       React.createElement(Button, { small: true, primary: true, icon: 'upload', disabled: busy || !file || !family.trim(), onClick: upload }, busy ? '上传中…' : '上传并登记'),
-      React.createElement('div', { className: 'dshc-help' }, '文件保存到 canvas/fonts/，客户端 @font-face 加载；不做服务端转换或子集化。'),
+      React.createElement('div', { className: 'dshc-help' }, '文件保存到 .dsh-canvas/fonts/，客户端 @font-face 加载；不做服务端转换或子集化。'),
     ),
     React.createElement(
       'div',

@@ -4,7 +4,7 @@
  *
  * The default when the user names no system is Material Design 3 (the most
  * widely adopted cross-platform system). iOS screens use Apple Human Interface
- * Guidelines conventions. The agent-facing summary lives in canvas/DESIGN.md.
+ * Guidelines conventions. The agent-facing summary lives in .dsh-canvas/DESIGN.md.
  */
 
 export const DEFAULT_DESIGN_SYSTEM = 'material3'
@@ -143,7 +143,7 @@ export function getDesignSystem(id = DEFAULT_DESIGN_SYSTEM) {
 
 /** Short prompt text shared by Host tools and the client's "generate" prompt. */
 export const DESIGN_SYSTEM_PROMPT = [
-  'If the user does not name a design system, use the built-in design system documented in canvas/DESIGN.md:',
+  'If the user does not name a design system, use the built-in design system documented in .dsh-canvas/DESIGN.md:',
   'Material Design 3 tokens for general UI, and Apple Human Interface Guidelines for iOS screens.',
   'For a mobile/iOS screen, start from the foundation (iPhone 16 393×852 by default; iPhone 15 optional) and a page template, then customize it.',
 ].join(' ')

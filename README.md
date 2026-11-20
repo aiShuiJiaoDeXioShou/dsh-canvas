@@ -78,7 +78,7 @@ entry point. Inserting a selection still adds a locate chip above the composer.
   with one-click copy; this is CSS handoff, separate from local style reuse.
 - A built-in default design system: Material Design 3 tokens for general UI and
   Apple HIG metrics/colors for iOS. If the user does not name a system, the
-  agent follows these defaults (documented in `canvas/DESIGN.md`).
+  agent follows these defaults (documented in `.dsh-canvas/DESIGN.md`).
 - Agent tools: `canvas_read`, `canvas_write`, `canvas_edit`, `canvas_comment`,
   `canvas_template`, `canvas_audit`, `canvas_image`, `canvas_export`,
   `canvas_import`, `canvas_migrate`, `canvas_snapshot`.
@@ -87,10 +87,10 @@ entry point. Inserting a selection still adds a locate chip above the composer.
   `childrenLimit`. Tool output is compact JSON, so a read costs far less context
   than the pretty-printed form.
 - `canvas_snapshot` renders the open canvas tab and saves a PNG under
-  `canvas/exports/`, so the agent can read the image instead of guessing visual
+  `.dsh-canvas/exports/`, so the agent can read the image instead of guessing visual
   results. It requires an open canvas tab; without one the tool explains why.
 - Portable packs: the agent tool `canvas_export` writes `<name>.drafi.json` under
-  `canvas/exports/`; the toolbar export dialog downloads the same pack file
+  `.dsh-canvas/exports/`; the toolbar export dialog downloads the same pack file
   through the save picker. `canvas_import` restores a pack as a document plus
   assets.
 - `canvas_migrate` upgrades a stored document to the current format version and
@@ -159,12 +159,12 @@ is named, and the iOS templates use HIG metrics.
 ## The document lives in the workspace
 
 ```
-<workspace>/canvas/<name>.canvas.json   dsh.canvas@1 document (default `main`)
-<workspace>/canvas/assets/              image assets
-<workspace>/canvas/fonts/               uploaded font files
-<workspace>/canvas/exports/             agent exports and snapshots
-<workspace>/canvas/FORMAT.md            format reference (generated on first open)
-<workspace>/canvas/DESIGN.md            default design system and templates
+<workspace>/.dsh-canvas/<name>.canvas.json   dsh.canvas@1 document (default `main`)
+<workspace>/.dsh-canvas/assets/              image assets
+<workspace>/.dsh-canvas/fonts/               uploaded font files
+<workspace>/.dsh-canvas/exports/             agent exports and snapshots
+<workspace>/.dsh-canvas/FORMAT.md            format reference (generated on first open)
+<workspace>/.dsh-canvas/DESIGN.md            default design system and templates
 ```
 
 The format is plain JSON and is documented in [FORMAT.md](FORMAT.md) and

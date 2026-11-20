@@ -1,6 +1,6 @@
 # 设计系统
 
-先读取画布现有 styles、components、字体和 `canvas/DESIGN.md`；已有项目保持原体系，局部修改不重新套预设。
+先读取画布现有 styles、components、字体和 `.dsh-canvas/DESIGN.md`；已有项目保持原体系，局部修改不重新套预设。
 
 ## 新项目
 
@@ -16,7 +16,7 @@
 
 ## Token 使用
 
-`canvas_template action="foundation"` 返回设备、预设和解析后的 token。页面和组件消费同一份最终 token；不要在每页重新发明颜色和尺寸。需要交付 token 时把结果写入 `canvas/design/resolved-tokens.json`，并注明来源与覆盖项。
+`canvas_template action="foundation"` 返回设备、预设和解析后的 token。页面和组件消费同一份最终 token；不要在每页重新发明颜色和尺寸。需要交付 token 时把结果写入 `.dsh-canvas/design/resolved-tokens.json`，并注明来源与覆盖项。
 
 ## 完成
 

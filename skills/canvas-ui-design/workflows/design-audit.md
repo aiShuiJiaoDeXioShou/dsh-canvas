@@ -13,7 +13,7 @@
 
 ## 执行
 
-1. 读取页面清单、`canvas/DESIGN.md`、Foundation/目标参考和 `canvas_read` 选区。
+1. 读取页面清单、`.dsh-canvas/DESIGN.md`、Foundation/目标参考和 `canvas_read` 选区。
 2. 运行 `canvas_audit`（page 或 node scope），记录 findings 与 skipped。
 3. 查看实际画布或导出预览；对照参考同尺寸核对关键区块、文字、颜色、密度、素材和状态。
 4. 需要查看具体节点时用 `canvas_read`/画布 UI；截图和实际渲染优先于节点数量。
@@ -29,7 +29,7 @@
 
 ## 输出
 
-直接说明结论、主要问题、影响和证据；需要留存时在 `canvas/design/report.md` 记录严重程度、页面/节点、建议和复验结果。只报告真实发现与未检查项；不要用单个“通过”概括结构、视觉和交互三个不同结果。
+直接说明结论、主要问题、影响和证据；需要留存时在 `.dsh-canvas/design/report.md` 记录严重程度、页面/节点、建议和复验结果。只报告真实发现与未检查项；不要用单个“通过”概括结构、视觉和交互三个不同结果。
 
 - 有 `high` finding：仍需修订；
 - 只有 skipped/无法检查项：明确列出，不能写“视觉审查通过”；

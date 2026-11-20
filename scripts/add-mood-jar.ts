@@ -1,5 +1,5 @@
 /**
- * Adds the mood-jar mobile screen to canvas/main.canvas.json.
+ * Adds the mood-jar mobile screen to .dsh-canvas/main.canvas.json.
  * Run with: pnpm exec tsx scripts/add-mood-jar.ts
  */
 
@@ -9,7 +9,7 @@ import { buildScene } from '../src/client/editor/resolve.js'
 import { layoutScene } from '../src/client/editor/layout.js'
 import { instantiateTemplate } from '../src/shared/templates.js'
 
-const ROOT = new URL('../../canvas/main.canvas.json', import.meta.url)
+const ROOT = new URL('../../.dsh-canvas/main.canvas.json', import.meta.url)
 const X = 480
 const Y = 20
 

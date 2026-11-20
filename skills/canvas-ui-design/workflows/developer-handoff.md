@@ -1,16 +1,16 @@
 # 开发交付
 
-按 [交付](../references/delivery.md) 提供实际页面/节点、版本、预览、关键交互与适配说明。多页任务沿用 `canvas/design/manifest.json`。
+按 [交付](../references/delivery.md) 提供实际页面/节点、版本、预览、关键交互与适配说明。多页任务沿用 `.dsh-canvas/design/manifest.json`。
 
 ## 交付内容
 
 | 内容 | 说明 |
 | --- | --- |
-| `canvas/*.canvas.json` | 设计源，标明文档名/revision |
+| `.dsh-canvas/*.canvas.json` | 设计源，标明文档名/revision |
 | 页面/Frame 节点 | 选定的页面和状态，不只给整页截图 |
-| SVG/PNG 导出 | 用画布导出功能生成，保存到 `canvas/exports/`；标明直角完整截图边界 |
-| resolved tokens | 需要规范交付时保存 `canvas/design/resolved-tokens.json` |
-| 设计说明 | `canvas/design/brief.md`、`report.md`、素材清单 |
+| SVG/PNG 导出 | 用画布导出功能生成，保存到 `.dsh-canvas/exports/`；标明直角完整截图边界 |
+| resolved tokens | 需要规范交付时保存 `.dsh-canvas/design/resolved-tokens.json` |
+| 设计说明 | `.dsh-canvas/design/brief.md`、`report.md`、素材清单 |
 | 未完成项 | 未覆盖状态、未验证交互、替代素材和限制 |
 
 ## 约束

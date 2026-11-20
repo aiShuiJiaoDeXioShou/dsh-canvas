@@ -23,7 +23,7 @@ Canvas 不依赖 Python 运行时；Host 端 `src/shared/foundation.ts` 负责�
 { "device": "iphone16", "preset": "neutral", "resolved": { ... } }
 ```
 
-页面和组件消费同一份最终 token。需要持久化时写入 `canvas/design/resolved-tokens.json`，并记录来源与覆盖项。
+页面和组件消费同一份最终 token。需要持久化时写入 `.dsh-canvas/design/resolved-tokens.json`，并记录来源与覆盖项。
 
 ## 检查
 

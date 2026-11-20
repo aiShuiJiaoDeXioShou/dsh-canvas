@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Drafi",
-    "description": "An AI-native design canvas: design UI mockups visually, send the selection to the composer, and let the AI generate or edit designs through canvas/*.canvas.json."
+    "description": "An AI-native design canvas: design UI mockups visually, send the selection to the composer, and let the AI generate or edit designs through .dsh-canvas/*.canvas.json."
   }
 }

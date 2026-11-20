@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-canvas",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Drafi: an AI-native design canvas for DeepSeek Harness with UI design tools, design foundations, deterministic audits, image generation, and selection-to-composer.",

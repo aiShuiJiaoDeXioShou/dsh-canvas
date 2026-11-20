@@ -1,6 +1,6 @@
 // src/host/main.ts
 import { createHash as createHash2, randomUUID } from "node:crypto";
-import { watchFile, unwatchFile } from "node:fs";
+import { existsSync, renameSync, statSync, watchFile, unwatchFile } from "node:fs";
 import { appendFile, mkdir as mkdir2, readFile as readFile2, readdir as readdir2, rename, stat as stat2, unlink, writeFile as writeFile2 } from "node:fs/promises";
 import { dirname, extname as extname2, join as join2, relative, resolve as resolve3, sep } from "node:path";
 
@@ -1434,7 +1434,7 @@ function getDesignSystem(id2 = DEFAULT_DESIGN_SYSTEM) {
   return DESIGN_SYSTEMS[id2] ?? DESIGN_SYSTEMS[DEFAULT_DESIGN_SYSTEM];
 }
 var DESIGN_SYSTEM_PROMPT = [
-  "If the user does not name a design system, use the built-in design system documented in canvas/DESIGN.md:",
+  "If the user does not name a design system, use the built-in design system documented in .dsh-canvas/DESIGN.md:",
   "Material Design 3 tokens for general UI, and Apple Human Interface Guidelines for iOS screens.",
   "For a mobile/iOS screen, start from the foundation (iPhone 16 393\xD7852 by default; iPhone 15 optional) and a page template, then customize it."
 ].join(" ");
@@ -3454,6 +3454,8 @@ function registerCanvasSkills(ctx, disposers) {
 var HEALTH_PATH = "/dsh-canvas/health";
 var API_PREFIX = "/dsh-canvas/api/";
 var DOC_SUFFIX = ".canvas.json";
+var CANVAS_DIR = ".dsh-canvas";
+var LEGACY_CANVAS_DIR = "canvas";
 var PACK_FORMAT = "dsh.canvas.pack";
 var PACK_VERSION = 1;
 var PACK_SUFFIX = ".drafi.json";
@@ -3475,10 +3477,10 @@ var EXAMPLE_URL = new URL("../../examples/login.canvas.json", import.meta.url);
 var FORMAT_URL = new URL("../../FORMAT.md", import.meta.url);
 var DESIGN_URL = new URL("../../DESIGN.md", import.meta.url);
 var TOOL_PROMPT = [
-  "Canvas: the workspace may contain canvas/*.canvas.json (format dsh.canvas@1).",
+  `Canvas: the workspace may contain ${CANVAS_DIR}/*.canvas.json (format dsh.canvas@1).`,
   "Use canvas_read before editing; use canvas_edit for small changes and canvas_write for a new document.",
-  "The canvas file format, node fields, auto-layout, components, styles, fills, effects and comments are documented in canvas/FORMAT.md.",
-  "The design system and built-in templates are documented in canvas/DESIGN.md.",
+  `The canvas file format, node fields, auto-layout, components, styles, fills, effects and comments are documented in ${CANVAS_DIR}/FORMAT.md.`,
+  `The design system and built-in templates are documented in ${CANVAS_DIR}/DESIGN.md.`,
   "Load the canvas-ui-design skill when the user asks for UI design, page/component generation, design review or design handoff.",
   FOUNDATION_PROMPT,
   "canvas_audit runs deterministic design checks; canvas_image probe/generate/import handles image generation (GPT native or local Codex CLI) and imports.",
@@ -3585,8 +3587,24 @@ function admit(ctx, request, response) {
   }
   return true;
 }
+var migratedCanvasRoots = /* @__PURE__ */ new Set();
 function canvasRoot(cwd) {
-  return join2(cwd, "canvas");
+  const root = join2(cwd, CANVAS_DIR);
+  if (!migratedCanvasRoots.has(cwd)) {
+    migratedCanvasRoots.add(cwd);
+    try {
+      const legacy = join2(cwd, LEGACY_CANVAS_DIR);
+      if (!existsSync(root) && existsSync(legacy) && statSync(legacy).isDirectory()) {
+        renameSync(legacy, root);
+      }
+    } catch (error) {
+      console.warn(
+        "[dsh-canvas] could not migrate the legacy canvas/ directory:",
+        error?.message ?? error
+      );
+    }
+  }
+  return root;
 }
 function assertInside(root, target) {
   const rel = relative(root, target);
@@ -4445,13 +4463,13 @@ function createTools(ctx, store) {
           ...Number.isInteger(args?.depth) ? { depth: args.depth } : {},
           ...Number.isInteger(args?.childrenLimit) ? { childrenLimit: args.childrenLimit } : {}
         }),
-        hint: "Use canvas_edit for small changes; read canvas/FORMAT.md only when creating new node structures."
+        hint: `Use canvas_edit for small changes; read ${CANVAS_DIR}/FORMAT.md only when creating new node structures.`
       };
     }
   };
   const write = {
     name: "canvas_write",
-    description: "Create or replace a dsh-canvas document (format dsh.canvas@1). Provide the complete document JSON. Use canvas_edit for small changes and always pass baseRevision when you read an existing document first. Read canvas/FORMAT.md for node, auto-layout, component, style, fill, effect and comment fields.",
+    description: `Create or replace a dsh-canvas document (format dsh.canvas@1). Provide the complete document JSON. Use canvas_edit for small changes and always pass baseRevision when you read an existing document first. Read ${CANVAS_DIR}/FORMAT.md for node, auto-layout, component, style, fill, effect and comment fields.`,
     parameters: {
       type: "object",
       properties: {
@@ -4600,7 +4618,7 @@ function createTools(ctx, store) {
   };
   const template = {
     name: "canvas_template",
-    description: 'List, insert or inspect built-in canvas templates. Pages: ios-screen / ios-form-screen / ios-list-screen / ios-detail-screen; system bars: ios-status-bar / ios-status-bar-light / ios-nav-bar / ios-tab-bar. Templates default to iPhone 16 393\xD7852 and accept device "iphone15". The foundation action returns devices, style presets and resolved tokens; styles loads a fill/text/effect style library. If the user does not specify a design system, use canvas/DESIGN.md defaults.',
+    description: `List, insert or inspect built-in canvas templates. Pages: ios-screen / ios-form-screen / ios-list-screen / ios-detail-screen; system bars: ios-status-bar / ios-status-bar-light / ios-nav-bar / ios-tab-bar. Templates default to iPhone 16 393\xD7852 and accept device "iphone15". The foundation action returns devices, style presets and resolved tokens; styles loads a fill/text/effect style library. If the user does not specify a design system, use ${CANVAS_DIR}/DESIGN.md defaults.`,
     parameters: {
       type: "object",
       properties: {
@@ -4640,7 +4658,7 @@ function createTools(ctx, store) {
           })),
           defaultDesignSystem: "material3",
           iosDesignSystem: "ios",
-          designDoc: "canvas/DESIGN.md"
+          designDoc: `${CANVAS_DIR}/DESIGN.md`
         };
       }
       if (args?.action === "foundation") {
@@ -4757,7 +4775,7 @@ function createTools(ctx, store) {
   };
   const image = {
     name: "canvas_image",
-    description: "Probe, generate or import images for a canvas document. probe reports the current model and whether a local Codex CLI supports image_generation; generate uses Codex when that is the recommended route; import copies an existing image file (for example from the model native image tool) into canvas/assets/. Expected failures are returned, not thrown.",
+    description: `Probe, generate or import images for a canvas document. probe reports the current model and whether a local Codex CLI supports image_generation; generate uses Codex when that is the recommended route; import copies an existing image file (for example from the model native image tool) into ${CANVAS_DIR}/assets/. Expected failures are returned, not thrown.`,
     parameters: {
       type: "object",
       properties: {
@@ -4820,7 +4838,7 @@ function createTools(ctx, store) {
   };
   const exportTool = {
     name: "canvas_export",
-    description: "Pack a canvas document and its assets into one portable file under canvas/exports/.",
+    description: `Pack a canvas document and its assets into one portable file under ${CANVAS_DIR}/exports/.`,
     parameters: {
       type: "object",
       properties: {
@@ -4898,7 +4916,7 @@ function createTools(ctx, store) {
   };
   const snapshotTool = {
     name: "canvas_snapshot",
-    description: "Render a node or the whole page in the open canvas tab and save a PNG under canvas/exports/. Read the returned path with the image tool to actually see the design.",
+    description: `Render a node or the whole page in the open canvas tab and save a PNG under ${CANVAS_DIR}/exports/. Read the returned path with the image tool to actually see the design.`,
     parameters: {
       type: "object",
       properties: {

@@ -1,6 +1,6 @@
 # 素材交接
 
-默认在 `canvas/assets/` 保存实际素材文件；设计源和页面节点仍在 `canvas/*.canvas.json`。
+默认在 `.dsh-canvas/assets/` 保存实际素材文件；设计源和页面节点仍在 `.dsh-canvas/*.canvas.json`。
 
 ## 记录
 
@@ -10,7 +10,7 @@
 - 使用的画布节点/asset 路径；
 - 必要限制：裁切、清晰度、透明边缘、仅特定尺寸使用。
 
-单项修改可随文件说明；批量交付可用 `canvas/design/manifest.json` 的 `assets` 数组。生成素材保留采用的 prompt 和参考，已交付版本另存后再修改。
+单项修改可随文件说明；批量交付可用 `.dsh-canvas/design/manifest.json` 的 `assets` 数组。生成素材保留采用的 prompt 和参考，已交付版本另存后再修改。
 
 ## 交付
 

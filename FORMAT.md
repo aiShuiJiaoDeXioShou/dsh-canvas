@@ -3,11 +3,11 @@
 Canvas documents live in the session workspace:
 
 ```
-<workspace>/canvas/<name>.canvas.json      document (pure JSON)
-<workspace>/canvas/assets/<hash>.<ext>     image assets (png/jpeg/webp/gif)
-<workspace>/canvas/fonts/<hash>.<woff2…>   uploaded font files
-<workspace>/canvas/exports/                PNG/SVG exports written by the editor
-<workspace>/canvas/FORMAT.md               this file (generated on first open)
+<workspace>/.dsh-canvas/<name>.canvas.json      document (pure JSON)
+<workspace>/.dsh-canvas/assets/<hash>.<ext>     image assets (png/jpeg/webp/gif)
+<workspace>/.dsh-canvas/fonts/<hash>.<woff2…>   uploaded font files
+<workspace>/.dsh-canvas/exports/                PNG/SVG exports written by the editor
+<workspace>/.dsh-canvas/FORMAT.md               this file (generated on first open)
 ```
 
 `<name>` must match `^[a-z0-9][a-z0-9-_]{0,63}$`. The default document is `main`.
@@ -121,7 +121,7 @@ A `frame` (or a component root) with `layout` lays out its direct `children`:
 
 - `angle` is degrees clockwise from the bottom→top direction.
 - `crop` is normalized (0–1) and must stay inside the image.
-- Image assets are uploaded by the editor and served from `canvas/assets/`.
+- Image assets are uploaded by the editor and served from `.dsh-canvas/assets/`.
 
 ## Effects
 
@@ -233,7 +233,7 @@ An instance on a page:
 ```
 
 `family` is used by `text.font.family`; weight/style select the face. The
-editor registers `@font-face` from `canvas/fonts/...` and waits for
+editor registers `@font-face` from `.dsh-canvas/fonts/...` and waits for
 `document.fonts.load` before measuring. Exports embed the used font files.
 No server-side conversion or subsetting is performed.
 
@@ -276,7 +276,7 @@ coordinates. `author` is `user` or `ai`. There is no realtime collaboration.
 ## Templates and design system
 
 Built-in templates and the default design system are documented in
-`canvas/DESIGN.md` (`DESIGN.md` in this package). Use the `canvas_template`
+`.dsh-canvas/DESIGN.md` (`DESIGN.md` in this package). Use the `canvas_template`
 tool (or the editor's Templates panel) to insert the iOS screen, status bar,
 navigation bar or tab bar, then edit the result with `canvas_edit`.
 

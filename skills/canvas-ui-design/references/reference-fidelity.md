@@ -16,7 +16,7 @@
 
 ## 形成视觉约定
 
-在 `canvas/design/brief.md` 或 `style-contract.md` 记录本轮相关项：
+在 `.dsh-canvas/design/brief.md` 或 `style-contract.md` 记录本轮相关项：
 
 | 对象 | 内容 |
 | --- | --- |

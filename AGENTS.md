@@ -43,6 +43,16 @@ Do not hand-edit generated files.
 - `schema/` — JSON schema; `FORMAT.md`/`DESIGN.md` are user-facing references.
 - `tests/` — Node test runner tests, executed with `tsx`.
 
+## Workspace storage
+
+- Workspace documents live under `<workspace>/.dsh-canvas/` (`*.canvas.json`,
+  `assets/`, `fonts/`, `exports/`, generated `FORMAT.md` / `DESIGN.md`).
+  The directory is hidden on purpose: designs should not clutter the project
+  root. Legacy workspaces with a visible `canvas/` directory are migrated by a
+  one-time rename on first access; keep that fallback until v2's `design/`
+  layout replaces this storage entirely.
+- Reference document: README "Storage layout".
+
 ## Host/Client boundaries
 
 - Client must not import `node:*` or `src/host/*`.

@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 
 import { apply } from '../src/host/main.js'
+import { emptyDoc } from '../src/shared/format.js'
 
 function fakeHost(cwd) {
   const tools = new Map()
@@ -80,9 +81,9 @@ test('canvas_read fields trims reference tables', async () => {
 
 test('canvas_migrate upgrades a legacy document', async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'drafi-migrate-'))
-  await mkdir(join(cwd, 'canvas'), { recursive: true })
+  await mkdir(join(cwd, '.dsh-canvas'), { recursive: true })
   await writeFile(
-    join(cwd, 'canvas', 'legacy.canvas.json'),
+    join(cwd, '.dsh-canvas', 'legacy.canvas.json'),
     JSON.stringify({ title: 'Legacy', pages: [{ id: 'p1', name: 'Page 1', children: [] }] }),
     'utf8',
   )
@@ -94,8 +95,24 @@ test('canvas_migrate upgrades a legacy document', async () => {
   assert.ok(dry.changes.length > 0)
   const wet = await migrate.execute({ name: 'legacy' }, exec)
   assert.equal(wet.written, true)
-  const saved = JSON.parse(await readFile(join(cwd, 'canvas', 'legacy.canvas.json'), 'utf8'))
+  const saved = JSON.parse(await readFile(join(cwd, '.dsh-canvas', 'legacy.canvas.json'), 'utf8'))
   assert.equal(saved.version, 1)
+})
+
+test('legacy canvas/ directory is migrated to .dsh-canvas on first access', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'drafi-legacy-'))
+  await mkdir(join(cwd, 'canvas'), { recursive: true })
+  await writeFile(
+    join(cwd, 'canvas', 'legacy.canvas.json'),
+    JSON.stringify(emptyDoc('Legacy storage')),
+    'utf8',
+  )
+  const { tools, exec } = fakeHost(cwd)
+  const read = await tools.get('canvas_read').execute({ name: 'legacy' }, exec)
+  assert.equal(read.name, 'legacy')
+  assert.equal(read.path, join('.dsh-canvas', 'legacy.canvas.json'))
+  assert.ok(existsSync(join(cwd, '.dsh-canvas', 'legacy.canvas.json')))
+  assert.equal(existsSync(join(cwd, 'canvas')), false)
 })
 
 test('canvas_export writes a pack and canvas_import restores it', async () => {
@@ -106,7 +123,7 @@ test('canvas_export writes a pack and canvas_import restores it', async () => {
   assert.ok(existsSync(join(cwd, exported.path)))
   const imported = await tools.get('canvas_import').execute({ path: exported.path, name: 'copy' }, exec)
   assert.equal(imported.name, 'copy')
-  assert.ok(existsSync(join(cwd, 'canvas', 'copy.canvas.json')))
+  assert.ok(existsSync(join(cwd, '.dsh-canvas', 'copy.canvas.json')))
 })
 
 test('canvas_snapshot explains that a live canvas is required', async () => {
@@ -130,7 +147,7 @@ test('the pack routes serve the toolbar export and import', async () => {
   const pack = JSON.parse(await readFile(join(cwd, summary.path), 'utf8'))
   const imported = await call('/dsh-canvas/api/pack/import', { sessionId: 'sess-test', name: 'from-ui', pack })
   assert.equal(imported.status, 200)
-  assert.ok(existsSync(join(cwd, 'canvas', 'from-ui.canvas.json')))
+  assert.ok(existsSync(join(cwd, '.dsh-canvas', 'from-ui.canvas.json')))
 })
 
 test('an unknown snapshot request is rejected', async () => {
@@ -149,8 +166,8 @@ test('the read-only pack route returns the pack without writing files', async ()
   const payload = JSON.parse(response.body)
   assert.equal(payload.pack.format, 'dsh.canvas.pack')
   assert.ok(payload.pack.document)
-  const exported = existsSync(join(cwd, 'canvas', 'exports'))
-    ? await (await import('node:fs/promises')).readdir(join(cwd, 'canvas', 'exports'))
+  const exported = existsSync(join(cwd, '.dsh-canvas', 'exports'))
+    ? await (await import('node:fs/promises')).readdir(join(cwd, '.dsh-canvas', 'exports'))
     : []
   assert.equal(exported.some((entry) => entry.endsWith('.drafi.json')), false)
 })

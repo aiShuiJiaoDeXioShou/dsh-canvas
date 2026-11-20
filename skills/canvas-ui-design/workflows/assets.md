@@ -6,8 +6,8 @@
 
 先调用 `canvas_image probe`：
 
-1. `recommended: "native"` 且当前工具列表有原生图片生成工具：使用模型原生生图，结果通过 `canvas_image import` 导入 `canvas/assets/`。
-2. `recommended: "codex"`：使用 `canvas_image generate`；Host 会受控调用本机 Codex CLI 的 `image_generation`，生成文件写入 `canvas/assets/`。
+1. `recommended: "native"` 且当前工具列表有原生图片生成工具：使用模型原生生图，结果通过 `canvas_image import` 导入 `.dsh-canvas/assets/`。
+2. `recommended: "codex"`：使用 `canvas_image generate`；Host 会受控调用本机 Codex CLI 的 `image_generation`，生成文件写入 `.dsh-canvas/assets/`。
 3. `recommended: "none"`：要求用户提供图片或导入已有文件；不要伪造。
 
 生成/编辑时提供已确认参考、对象、构图、配色、材质、比例和用途；需要透明背景时明确要求。失败时说明原因，不用未经同意的色块/简笔画替代需要细节的素材。
@@ -23,7 +23,7 @@
 
 - 图片作为 image fill 或独立图片节点，放在对应区域；文字、按钮、表单、动态数据仍用原生节点。
 - 检查最终显示尺寸下的裁切、缩放、清晰度和透明边缘。
-- 在 `canvas/design/manifest.json` 或素材清单记录：所在区域 → 来源/生成方式 → 实际文件/asset。
+- 在 `.dsh-canvas/design/manifest.json` 或素材清单记录：所在区域 → 来源/生成方式 → 实际文件/asset。
 
 ## 完成
 

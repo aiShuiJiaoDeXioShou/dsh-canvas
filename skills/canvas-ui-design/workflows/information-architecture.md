@@ -4,7 +4,7 @@
 
 ## 页面清单
 
-多页任务在 `canvas/design/manifest.json` 记录：
+多页任务在 `.dsh-canvas/design/manifest.json` 记录：
 
 ```json
 {

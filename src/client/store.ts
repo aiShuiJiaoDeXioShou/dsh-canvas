@@ -1735,7 +1735,7 @@ class CanvasStore {
     const text = [
       '请使用当前模型的原生图片生成能力生成一张图片。',
       `图片描述：${String(prompt || '').trim() || '透明背景的移动 App 插画素材。'}`,
-      '生成后把图片文件通过 canvas_image import 导入 canvas/assets/，再用 canvas_edit 放到当前设计里。',
+      '生成后把图片文件通过 canvas_image import 导入 .dsh-canvas/assets/，再用 canvas_edit 放到当前设计里。',
       '如果当前没有原生图片工具，请改用 canvas_image probe 检查 Codex 路线，或要求用户导入图片。',
     ].join('\n')
     const actions = this.inputActions

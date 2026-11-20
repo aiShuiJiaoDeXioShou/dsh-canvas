@@ -4,7 +4,7 @@ import { buildScene } from '../src/client/editor/resolve.js'
 import { layoutScene } from '../src/client/editor/layout.js'
 import { buildSvg } from '../src/client/editor/export-svg.js'
 
-const raw = JSON.parse(await readFile(new URL('../../canvas/main.canvas.json', import.meta.url), 'utf8'))
+const raw = JSON.parse(await readFile(new URL('../../.dsh-canvas/main.canvas.json', import.meta.url), 'utf8'))
 const doc = normalizeDoc(raw)
 const frame = doc.pages[0].children.find((node) => node.id === 'mood-jar-frame')
 frame.x = 0

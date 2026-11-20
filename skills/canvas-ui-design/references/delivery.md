@@ -6,13 +6,13 @@
 
 | 内容 | 用途 |
 | --- | --- |
-| `canvas/*.canvas.json` + revision | 设计源，后续改稿入口 |
+| `.dsh-canvas/*.canvas.json` + revision | 设计源，后续改稿入口 |
 | 页面/Frame 节点 | 实际交付页面，不只给整页截图 |
-| `canvas/exports/` | SVG/PNG 预览，直角完整截图边界 |
-| `canvas/design/resolved-tokens.json` | 需要规范交付时的最终 token |
-| `canvas/design/brief.md` | 需求来源、范围、设备/预设、参考位置 |
-| `canvas/design/manifest.json` | 多页/工作流交接的页面、状态、节点清单 |
-| `canvas/design/report.md` | 审查/交付报告（需要时） |
+| `.dsh-canvas/exports/` | SVG/PNG 预览，直角完整截图边界 |
+| `.dsh-canvas/design/resolved-tokens.json` | 需要规范交付时的最终 token |
+| `.dsh-canvas/design/brief.md` | 需求来源、范围、设备/预设、参考位置 |
+| `.dsh-canvas/design/manifest.json` | 多页/工作流交接的页面、状态、节点清单 |
+| `.dsh-canvas/design/report.md` | 审查/交付报告（需要时） |
 
 清单可用 `pages` 保存 id、state、version、nodeId 和预览文件；有参考时关联参考图文件与来源。生成参考与实际画布导出预览分别标明，AI 校准和用户确认不混写。
 

@@ -22,7 +22,7 @@ const NS = 'dsh-canvas'
 const zh = {
   'tab.title': 'Drafi',
   'guide.title': 'Drafi',
-  'guide.description': 'AI 原生设计画布：可视化设计 UI 稿，选区插入对话，AI 可通过 canvas/*.canvas.json 生成与修改。',
+  'guide.description': 'AI 原生设计画布：可视化设计 UI 稿，选区插入对话，AI 可通过 .dsh-canvas/*.canvas.json 生成与修改。',
   'dock.open': '打开 Drafi',
   'dock.close': '收起 Drafi',
 }
@@ -30,7 +30,7 @@ const zh = {
 const en = {
   'tab.title': 'Drafi',
   'guide.title': 'Drafi',
-  'guide.description': 'An AI-native design canvas: design UI mockups, send selections to the composer, and let the AI edit canvas/*.canvas.json.',
+  'guide.description': 'An AI-native design canvas: design UI mockups, send selections to the composer, and let the AI edit .dsh-canvas/*.canvas.json.',
   'dock.open': 'Open Drafi',
   'dock.close': 'Hide Drafi',
 }

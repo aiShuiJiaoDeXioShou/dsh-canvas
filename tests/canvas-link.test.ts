@@ -31,7 +31,7 @@ test('finds a link in surrounding text starting at an offset', () => {
 })
 
 test('ignores ordinary text and non-dsh-canvas links', () => {
-  assert.equal(matchCanvasLink('这是一段普通文字 canvas/main.canvas.json', 0), undefined)
+  assert.equal(matchCanvasLink('这是一段普通文字 .dsh-canvas/main.canvas.json', 0), undefined)
   assert.equal(matchCanvasLink('[普通链接](https://example.com)', 0), undefined)
   assert.equal(matchCanvasLink('[x](dsh-canvas://BAD?node=n)', 0), undefined)
 })

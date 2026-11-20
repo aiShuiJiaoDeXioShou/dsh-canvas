@@ -10,7 +10,7 @@ whenToUse: 用户要在 dsh-canvas 画布中直接生成 UI、补页面/状态�
 
 ## 先澄清再制作
 
-先读 `canvas_read` 返回的文档、当前选区、已有页面和 `canvas/DESIGN.md`。只有在目标用户、核心任务、页面范围、已有设计系统或参考保留/修改范围不明确时才追问；每轮只问一个核心问题或 2–3 个相关问题，复用已有决定，不重复提问。
+先读 `canvas_read` 返回的文档、当前选区、已有页面和 `.dsh-canvas/DESIGN.md`。只有在目标用户、核心任务、页面范围、已有设计系统或参考保留/修改范围不明确时才追问；每轮只问一个核心问题或 2–3 个相关问题，复用已有决定，不重复提问。
 
 需要用户选择的场景优先用 `ask_user_question`；工具不可用时直接用文字追问并停止本轮制作。不要用行业惯例或默认值代替产品范围的决定。
 
@@ -39,14 +39,14 @@ whenToUse: 用户要在 dsh-canvas 画布中直接生成 UI、补页面/状态�
 
 先调用 `canvas_image probe`：
 
-- `recommended: "native"` 且当前工具列表有原生图片生成工具：直接让模型生成图片，再用 `canvas_image import` 导入 `canvas/assets/`。
+- `recommended: "native"` 且当前工具列表有原生图片生成工具：直接让模型生成图片，再用 `canvas_image import` 导入 `.dsh-canvas/assets/`。
 - `recommended: "codex"`：调用 `canvas_image generate`，由 Host 受控调用本机 Codex CLI 的 `image_generation` 生成并导入。
 - 都不可用：请用户提供图片；可以用现有图片素材、用户上传或 `canvas_image import` 导入。不要用色块/简笔画冒充需要细节的插画、头像、封面或照片。
 - 图片只承担独立素材角色；页面结构、文字和交互仍用原生节点。不要在 prompt 中放置敏感数据。
 
 ## 设计规范与预设
 
-- 读取现有 `canvas/DESIGN.md`、文档 styles、components 和字体。
+- 读取现有 `.dsh-canvas/DESIGN.md`、文档 styles、components 和字体。
 - 新项目/明确要建规范时：以 Neutral 为起点，按用户需要覆盖 Minimal/Soft/Compact；设备尺寸、间距、圆角、阴影来自 `references/foundation.md`。
 - 用户指定规范时优先用户；参考图只作为局部覆盖，不未经授权重排布局。
 - 大规模规范交付可用 `canvas_template` 的 `styles` action 加样式库；不自动改已有图层。
@@ -76,7 +76,7 @@ whenToUse: 用户要在 dsh-canvas 画布中直接生成 UI、补页面/状态�
 - `canvas_template`：`list` / `insert` / `styles` / `foundation`；页面骨架与设计基础。
 - `canvas_audit`：确定性设计检查（边界、对比度、触控、裁切、引用）。
 - `canvas_image`：`probe` / `generate` / `import`。
-- 图片和字体的实际落盘位置遵循 `canvas/assets/`、`canvas/fonts/`；不要输出插件源码目录。
+- 图片和字体的实际落盘位置遵循 `.dsh-canvas/assets/`、`.dsh-canvas/fonts/`；不要输出插件源码目录。
 
 ## 手动操作入口
 
@@ -91,4 +91,4 @@ Templates 面板提供设备选择（iPhone 16 / iPhone 15）和模板插入；A
 
 ## 交付
 
-按 `references/delivery.md`：说明实际页面/节点、预览、关键设计决定、参考保留项、未完成项和未验证行为。必要时在 `canvas/design/` 写 brief、manifest、report，但不要为简单修改制造审批表。设计源仍是 `canvas/*.canvas.json`。
+按 `references/delivery.md`：说明实际页面/节点、预览、关键设计决定、参考保留项、未完成项和未验证行为。必要时在 `.dsh-canvas/design/` 写 brief、manifest、report，但不要为简单修改制造审批表。设计源仍是 `.dsh-canvas/*.canvas.json`。
