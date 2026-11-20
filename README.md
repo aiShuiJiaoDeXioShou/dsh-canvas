@@ -167,6 +167,11 @@ is named, and the iOS templates use HIG metrics.
 <workspace>/.dsh-canvas/DESIGN.md            default design system and templates
 ```
 
+The directory is hidden so designs never clutter the project root. Workspaces
+created by older versions stored the same files in a visible `canvas/`
+directory; on first access the plugin renames it to `.dsh-canvas/`, so existing
+designs keep working. If both directories exist, `.dsh-canvas/` wins.
+
 The format is plain JSON and is documented in [FORMAT.md](FORMAT.md) and
 [schema/canvas.v1.schema.json](schema/canvas.v1.schema.json). The agent can edit
 it through the canvas tools, or with ordinary `read`/`write` file tools; the
