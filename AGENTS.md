@@ -51,7 +51,7 @@ Do not hand-edit generated files.
   root. Legacy workspaces with a visible `canvas/` directory are migrated by a
   one-time rename on first access; keep that fallback until v2's `design/`
   layout replaces this storage entirely.
-- Reference document: README "The document lives in the workspace".
+- Reference document: README "Workspace Storage & Open Format".
 
 ## Host/Client boundaries
 
