@@ -34,14 +34,10 @@ order is array order (later siblings are on top). Unknown fields are preserved.
 }
 ```
 
-Limits: 2000 nodes, 200 components, 500 styles, 1000 comments, 50 fonts,
-depth 32, document 8 MiB, one image 20 MiB, one font 10 MiB.
+Limits: supports 2,000+ authored layers within the 8 MiB document budget (20,000 expanded instance nodes), 200 components, 500 styles, 1000 comments, 50 fonts,
+depth 32, one image 20 MiB, one font 10 MiB.
 
-`pages` is a Figma-style page list for forward compatibility. The v1 editor
-shows a single page on a neutral workspace; page management and the page
-background control are not exposed. `background` remains an optional,
-export-time page color; when it is null the workspace and exports use the
-Figma default (neutral).
+`pages` is a Figma-style page list. The editor exposes a lightweight multi-page switcher at the top of the Layers panel (`PageSwitcher`) with independent per-page viewport memory. `background` remains an optional export-time page color; when null the workspace and exports use the neutral default.
 
 ## Nodes
 
@@ -285,3 +281,13 @@ navigation bar or tab bar, then edit the result with `canvas_edit`.
 Writes are rejected with a JSON-pointer-like path (`$.pages[0].children[2].width`)
 when a value is malformed. Unknown node types are not accepted by writers; the
 editor renders unknown future types as placeholders after reading.
+
+## Figma ecosystem & additive v1 fields
+
+`dsh.canvas@1` remains backward compatible with the following optional additive fields:
+- `cornerRadii`: `[topLeft, topRight, bottomRight, bottomLeft]` independent corner radii on `frame`, `rect`, and `ellipse`.
+- `layoutPositioning`: `'auto' | 'absolute'` for out-of-flow children inside auto-layout frames.
+- `layout.wrap`: optional boolean for wrapping flex containers; `layout.ignoreHidden`: when `true`, `visible: false` children do not occupy auto-layout space (matching Figma).
+- `pageRef`: optional ID referencing a source node whose interactions a repeated placement shares.
+
+Figma sync metadata is kept out of `<name>.canvas.json` in a dedicated sidecar file `.dsh-canvas/figma/<name>.sync.json` (`dsh.figma.sync@1`), storing 3-tier permanent identities (`logicalPages`, `placements`, `interactions`), dual baselines (`localNodes`, `remoteProjectedNodes`), `passthrough` Figma-native properties, and synced `remoteComments`. Portable lossless exchange uses `.dshfig` ZIP bundles (`manifest.json` + `canvas.json` + optional `figma.sync.json` + `objects/<sha256>`).

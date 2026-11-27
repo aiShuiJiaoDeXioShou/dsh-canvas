@@ -105,10 +105,7 @@ Resources](https://developer.apple.com/design/resources/), a [Figma Community
 iOS UI kit](https://www.figma.com/community/ui-kits/iphone?resource_type=files&editor_type=figma)
 or the [Material 3 Design
 Kit](https://www.figma.com/community/file/1035203688168086460/material-3-design-kit).
-Importing those files is not built in yet: `.fig` is proprietary and community
-files need a Figma account. A Figma REST API importer
-(https://developers.figma.com/docs/rest-api/file-endpoints/) is the realistic
-path for editable conversion; check each file's license before reuse.
+You can bring Figma screens into Drafi via `⌘C` → `⌘V` clipboard paste, local `.fig` import, free Figma REST API URL import (`canvas_figma`), or the free Drafi Companion Plugin (`figma-plugin/`); check each file's license before reuse.
 
 To make the tokens directly selectable, use `canvas_template` with
 `action: "styles"` and `system: "material3" | "ios"` (or the Styles panel's
@@ -118,9 +115,10 @@ does not restyle existing layers automatically.
 
 ## Design skill, audit and image generation
 
-- The plugin registers the `canvas-ui-design` runtime skill. It routes new UI
-  generation, reference rebuilds, components, refactor and review to the
-  adapted workflows under `skills/canvas-ui-design/`.
+- The plugin registers two runtime skills: `canvas-ui-design` (routing new UI
+  generation, reference rebuilds, components, refactor and review to
+  `skills/canvas-ui-design/`) and `canvas-figma-setup` (zero-leak 30-second
+  Figma Token & Companion Plugin onboarding under `skills/canvas-figma-setup/`).
 - `canvas_audit` runs deterministic checks (screenshot boundary, contrast,
   touch targets, clipping, zero-size, missing references, comments, empty
   frames) and reports skipped checks; it is not a substitute for visual review.

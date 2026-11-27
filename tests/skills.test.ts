@@ -102,14 +102,18 @@ test('runtime registration is optional and registers a model+user invocable skil
     },
   }
   assert.equal(registerCanvasSkills(ctx, disposers), true)
-  assert.equal(registered.length, 1)
-  const [entry] = registered
-  assert.equal(entry.name, 'canvas-ui-design')
+  assert.equal(registered.length, 2)
+  const entry = registered.find((item) => item.name === 'canvas-ui-design')
+  assert.ok(entry)
   assert.equal(entry.source, 'dsh-canvas')
   assert.deepEqual(entry.invocation, { modelInvocable: true, userInvocable: true })
   assert.equal(entry.resourceBase.kind, 'directory')
   assert.equal(entry.resourceBase.path, skillRoot)
   assert.equal(typeof entry.content, 'string')
-  assert.equal(disposers.length, 1)
+  const setupEntry = registered.find((item) => item.name === 'canvas-figma-setup')
+  assert.ok(setupEntry)
+  assert.equal(setupEntry.source, 'dsh-canvas')
+  assert.deepEqual(setupEntry.invocation, { modelInvocable: true, userInvocable: true })
+  assert.equal(disposers.length, 2)
   assert.equal(registerCanvasSkills({ get: () => undefined }), false)
 })

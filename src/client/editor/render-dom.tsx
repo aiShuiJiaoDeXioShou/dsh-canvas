@@ -1,9 +1,9 @@
-// @ts-nocheck
 /** DOM renderer for the resolved scene. The scene pipeline computes absolute
  * geometry, text lines and resolved styles; this file only paints. */
 
 import * as React from 'react'
 import { assetUrl } from '../api.js'
+import type { InteractionPresentation } from '../../shared/interactions.js'
 
 const P = 'dshc'
 
@@ -51,10 +51,10 @@ function shadowAndFilter(node) {
       shadows.push(`${effect.x ?? 0}px ${effect.y ?? 0}px ${effect.blur ?? 0}px ${effect.spread ?? 0}px ${effect.color ?? '#00000040'}`)
     } else if (effect.type === 'inner-shadow') {
       shadows.push(`inset ${effect.x ?? 0}px ${effect.y ?? 0}px ${effect.blur ?? 0}px ${effect.spread ?? 0}px ${effect.color ?? '#00000040'}`)
-    } else if (effect.type === 'layer-blur') {
-      filter += ` blur(${effect.radius ?? 0}px)`
+    } else if (effect.type === 'layer-blur' || effect.type === 'blur') {
+      filter += ` blur(${effect.blur ?? effect.radius ?? 0}px)`
     } else if (effect.type === 'background-blur') {
-      backdrop += ` blur(${effect.radius ?? 0}px)`
+      backdrop += ` blur(${effect.blur ?? effect.radius ?? 0}px)`
     }
   }
   for (const stroke of node.strokes ?? []) {
@@ -71,8 +71,11 @@ function shadowAndFilter(node) {
 }
 
 function rounded(node) {
-  const radius = node.cornerRadius ?? 0
   if (node.type === 'ellipse') return '50%'
+  if (Array.isArray(node.cornerRadii) && node.cornerRadii.length === 4) {
+    return node.cornerRadii.map((r) => `${Number(r) || 0}px`).join(' ')
+  }
+  const radius = node.cornerRadius ?? 0
   return radius ? `${radius}px` : undefined
 }
 
@@ -130,7 +133,7 @@ function FillLayers({ node, store }) {
   })
 }
 
-function PathView({ node, baseStyle }: any) {
+function PathView({ node, baseStyle, emphasized, active }: any) {
   const defs = []
   const layers = []
   for (const [index, fill] of (node.fills ?? []).entries()) {
@@ -139,6 +142,9 @@ function PathView({ node, baseStyle }: any) {
         key: `fill-${index}`,
         d: node.d,
         fill: solidCss(fill),
+        stroke: emphasized ? solidCss(fill) : undefined,
+        strokeWidth: emphasized ? 1.5 : undefined,
+        strokeLinejoin: 'round',
         fillRule: node.fillRule === 'evenodd' ? 'evenodd' : 'nonzero',
       }))
     } else if (fill.type === 'linear-gradient' || fill.type === 'radial-gradient') {
@@ -181,7 +187,7 @@ function PathView({ node, baseStyle }: any) {
       d: node.d,
       fill: 'none',
       stroke: stroke.color ?? '#000000',
-      strokeWidth: stroke.width ?? 1,
+      strokeWidth: emphasized ? (stroke.width ?? 1) * 1.5 : stroke.width ?? 1,
       strokeLinejoin: 'round',
     }))
   }
@@ -190,7 +196,9 @@ function PathView({ node, baseStyle }: any) {
     'div',
     {
       className: `${P}-node ${P}-path`,
+      'data-active-connection': active || undefined,
       'data-node-key': node.key,
+      'data-interaction-emphasis': emphasized || undefined,
       style: { ...baseStyle, overflow: 'visible' },
     },
     React.createElement(
@@ -208,12 +216,22 @@ function PathView({ node, baseStyle }: any) {
   )
 }
 
-export const NodeView = React.memo(function NodeView({ node, store, parentAbs }) {
-  if (!node || node.visible === false) return null
+interface NodeViewProps {
+  node: any
+  store: any
+  parentAbs: { x: number; y: number }
+  editingKey?: string
+  visibleChildren?: Map<string | null, any[]>
+  interactions?: InteractionPresentation
+}
+
+export const NodeView = React.memo(function NodeView({ node, store, parentAbs, interactions, editingKey, visibleChildren }: NodeViewProps) {
+  if (!node || node.visible === false || interactions?.hidden.has(node.key)) return null
+  const emphasized = interactions?.emphasized.has(node.key)
   const left = node.absX - (parentAbs?.x ?? 0)
   const top = node.absY - (parentAbs?.y ?? 0)
   const effects = shadowAndFilter(node)
-  const editing = store.state.editingText?.key === node.key
+  const editing = editingKey === node.key
   const baseStyle = {
     position: 'absolute',
     left: `${left}px`,
@@ -232,11 +250,12 @@ export const NodeView = React.memo(function NodeView({ node, store, parentAbs })
     return React.createElement(
       'div',
       { className: `${P}-node ${P}-group`, 'data-node-key': node.key, style: { ...baseStyle, pointerEvents: 'none' } },
-      (node.children ?? []).map((child) =>
+      (visibleChildren ? visibleChildren.get(node.key) ?? [] : node.children ?? []).map((child) =>
         React.createElement(NodeView, {
           key: child.key,
-          node: child,
+          node: child, visibleChildren, editingKey,
           store,
+          interactions,
           parentAbs: { x: node.absX, y: node.absY },
         }),
       ),
@@ -244,7 +263,7 @@ export const NodeView = React.memo(function NodeView({ node, store, parentAbs })
   }
 
   if (node.type === 'path') {
-    return React.createElement(PathView, { node, baseStyle })
+    return React.createElement(PathView, { node, baseStyle, emphasized, active: interactions?.activeEdge === node.key })
   }
 
   if (node.type === 'text') {
@@ -272,6 +291,7 @@ export const NodeView = React.memo(function NodeView({ node, store, parentAbs })
       {
         className: `${P}-node ${P}-text`,
         'data-node-key': node.key,
+        'data-interaction-emphasis': emphasized || undefined,
         style: { ...baseStyle, overflow: node.effects?.length ? 'visible' : 'hidden' },
       },
       React.createElement(FillLayers, { node: { ...node, fills: node.fills?.filter((fill) => fill.type !== 'solid') ?? [] }, store }),
@@ -313,11 +333,12 @@ export const NodeView = React.memo(function NodeView({ node, store, parentAbs })
     )
   }
 
-  const children = (node.children ?? []).map((child) =>
+  const children = (visibleChildren ? visibleChildren.get(node.key) ?? [] : node.children ?? []).map((child) =>
     React.createElement(NodeView, {
       key: child.key,
-      node: child,
+      node: child, visibleChildren, editingKey,
       store,
+      interactions,
       parentAbs: { x: node.absX, y: node.absY },
     }),
   )
@@ -327,6 +348,8 @@ export const NodeView = React.memo(function NodeView({ node, store, parentAbs })
     {
       className: `${P}-node ${P}-${node.type}`,
       'data-node-key': node.key,
+      'data-interaction-emphasis': emphasized || undefined,
+      'data-active-connection': interactions?.activeEdge === node.key || undefined,
       style: { ...baseStyle, overflow: node.clip ? 'hidden' : undefined },
     },
     React.createElement(FillLayers, { node, store }),
@@ -334,11 +357,11 @@ export const NodeView = React.memo(function NodeView({ node, store, parentAbs })
   )
 })
 
-export function SceneView({ scene, store }: any) {
+export const SceneView = React.memo(function SceneView({ scene, store, interactions, visibleChildren, editingKey }: { editingKey?: string; scene: any; store: any; visibleChildren?: Map<string | null, any[]>; interactions?: InteractionPresentation }) {
   if (!scene) return null
   return React.createElement(
     React.Fragment,
     null,
-    (scene.roots ?? []).map((node) => React.createElement(NodeView, { key: node.key, node, store, parentAbs: { x: 0, y: 0 } })),
+    (visibleChildren ? visibleChildren.get(null) ?? [] : scene.roots ?? []).map((node) => React.createElement(NodeView, { key: node.key, node, store, interactions, visibleChildren, editingKey, parentAbs: { x: 0, y: 0 } })),
   )
-}
+})

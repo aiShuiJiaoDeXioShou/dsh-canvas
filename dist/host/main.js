@@ -1,8 +1,8 @@
 // src/host/main.ts
-import { createHash as createHash2, randomUUID } from "node:crypto";
-import { existsSync, renameSync, statSync, watchFile, unwatchFile } from "node:fs";
-import { appendFile, mkdir as mkdir2, readFile as readFile2, readdir as readdir2, rename, stat as stat2, unlink, writeFile as writeFile2 } from "node:fs/promises";
-import { dirname, extname as extname2, join as join2, relative, resolve as resolve3, sep } from "node:path";
+import { createHash as createHash5, randomUUID as randomUUID2 } from "node:crypto";
+import { existsSync as existsSync2, renameSync, statSync, watchFile, unwatchFile } from "node:fs";
+import { appendFile, mkdir as mkdir8, readFile as readFile6, readdir as readdir2, rename as rename2, stat as stat2, unlink as unlink3, writeFile as writeFile8 } from "node:fs/promises";
+import { dirname as dirname4, extname as extname2, join as join8, relative as relative2, resolve as resolve6, sep as sep3 } from "node:path";
 
 // src/shared/path/types.ts
 var PathDataError = class extends Error {
@@ -71,10 +71,10 @@ function parsePathData(data) {
   let boundsMaxX = -Infinity;
   let boundsMaxY = -Infinity;
   let commands = 0;
-  const include = (x, y) => {
-    boundsMinX = Math.min(boundsMinX, x);
+  const include = (x2, y) => {
+    boundsMinX = Math.min(boundsMinX, x2);
     boundsMinY = Math.min(boundsMinY, y);
-    boundsMaxX = Math.max(boundsMaxX, x);
+    boundsMaxX = Math.max(boundsMaxX, x2);
     boundsMaxY = Math.max(boundsMaxY, y);
   };
   include(0, 0);
@@ -93,7 +93,7 @@ function parsePathData(data) {
       throw new PathDataError("path data must begin with a command");
     }
     const upper = command.toUpperCase();
-    const relative2 = command !== upper;
+    const relative3 = command !== upper;
     const arity = ARITY[upper];
     if (arity === void 0) throw new PathDataError(`unsupported path command ${command}`);
     if (arity === 0) {
@@ -107,47 +107,47 @@ function parsePathData(data) {
     if (tokens[index]?.command) throw new PathDataError(`path command ${command} is missing parameters`);
     commands += 1;
     const first = number();
-    const x = relative2 ? currentX + first : first;
+    const x2 = relative3 ? currentX + first : first;
     if (upper === "H") {
-      currentX = x;
+      currentX = x2;
       include(currentX, currentY);
       lastControlX = null;
       lastControlY = null;
       continue;
     }
     if (upper === "V") {
-      currentY = relative2 ? currentY + first : first;
+      currentY = relative3 ? currentY + first : first;
       include(currentX, currentY);
       lastControlX = null;
       lastControlY = null;
       continue;
     }
-    const y = relative2 ? currentY + number() : number();
+    const y = relative3 ? currentY + number() : number();
     switch (upper) {
       case "M":
-        currentX = x;
+        currentX = x2;
         currentY = y;
-        startX = x;
+        startX = x2;
         startY = y;
-        include(x, y);
+        include(x2, y);
         lastControlX = null;
         lastControlY = null;
-        command = relative2 ? "l" : "L";
+        command = relative3 ? "l" : "L";
         break;
       case "L":
-        currentX = x;
+        currentX = x2;
         currentY = y;
-        include(x, y);
+        include(x2, y);
         lastControlX = null;
         lastControlY = null;
         break;
       case "C": {
-        const c1x = x;
+        const c1x = x2;
         const c1y = y;
-        const c2x = relative2 ? currentX + number() : number();
-        const c2y = relative2 ? currentY + number() : number();
-        const ex = relative2 ? currentX + number() : number();
-        const ey = relative2 ? currentY + number() : number();
+        const c2x = relative3 ? currentX + number() : number();
+        const c2y = relative3 ? currentY + number() : number();
+        const ex = relative3 ? currentX + number() : number();
+        const ey = relative3 ? currentY + number() : number();
         include(c1x, c1y);
         include(c2x, c2y);
         include(ex, ey);
@@ -158,10 +158,10 @@ function parsePathData(data) {
         break;
       }
       case "S": {
-        const c2x = x;
+        const c2x = x2;
         const c2y = y;
-        const ex = relative2 ? currentX + number() : number();
-        const ey = relative2 ? currentY + number() : number();
+        const ex = relative3 ? currentX + number() : number();
+        const ey = relative3 ? currentY + number() : number();
         include(c2x, c2y);
         include(ex, ey);
         currentX = ex;
@@ -171,10 +171,10 @@ function parsePathData(data) {
         break;
       }
       case "Q": {
-        const qx = x;
+        const qx = x2;
         const qy = y;
-        const ex = relative2 ? currentX + number() : number();
-        const ey = relative2 ? currentY + number() : number();
+        const ex = relative3 ? currentX + number() : number();
+        const ey = relative3 ? currentY + number() : number();
         include(qx, qy);
         include(ex, ey);
         currentX = ex;
@@ -184,7 +184,7 @@ function parsePathData(data) {
         break;
       }
       case "T": {
-        const qx = x;
+        const qx = x2;
         const qy = y;
         include(qx, qy);
         currentX = qx;
@@ -194,13 +194,13 @@ function parsePathData(data) {
         break;
       }
       case "A": {
-        const rx = x;
+        const rx = x2;
         const ry = y;
         const rotation = number();
         const largeArc = number();
         const sweep = number();
-        const ex = relative2 ? currentX + number() : number();
-        const ey = relative2 ? currentY + number() : number();
+        const ex = relative3 ? currentX + number() : number();
+        const ey = relative3 ? currentY + number() : number();
         if (rx < 0 || ry < 0) throw new PathDataError("path arc radius must be non-negative");
         if (largeArc !== 0 && largeArc !== 1) throw new PathDataError("path arc large-arc flag must be 0 or 1");
         if (sweep !== 0 && sweep !== 1) throw new PathDataError("path arc sweep flag must be 0 or 1");
@@ -227,7 +227,6 @@ function parsePathData(data) {
 var FORMAT = "dsh.canvas";
 var VERSION = 1;
 var LIMITS = {
-  nodes: 2e3,
   components: 200,
   styles: 500,
   comments: 1e3,
@@ -259,6 +258,8 @@ var FONT_ASSET_RE = /^fonts\/[A-Za-z0-9._-]{1,120}$/;
 var COLOR_RE = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 var CanvasError = class extends Error {
   /** @param {string} path @param {string} message @param {string} [code] */
+  path;
+  code;
   constructor(path, message, code = "invalid-document") {
     super(`${path}: ${message}`);
     this.name = "CanvasError";
@@ -279,12 +280,12 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 function finite(value, path, opts = {}) {
-  const { min = -1e6, max = 1e6, int = false } = opts;
+  const { min = -1e6, max: max2 = 1e6, int = false } = opts;
   if (typeof value !== "number" || !Number.isFinite(value)) {
     throw new CanvasError(path, "expected a finite number");
   }
   if (int && Math.round(value) !== value) throw new CanvasError(path, "expected an integer");
-  if (value < min || value > max) throw new CanvasError(path, `expected a number in [${min}, ${max}]`);
+  if (value < min || value > max2) throw new CanvasError(path, `expected a number in [${min}, ${max2}]`);
   return value;
 }
 function unit(value, path) {
@@ -304,7 +305,7 @@ function id(value, path) {
 }
 function oneOf(value, path, allowed) {
   if (typeof value !== "string" || !allowed.includes(value)) {
-    throw new CanvasError(path, `expected one of ${allowed.map((x) => JSON.stringify(x)).join(", ")}`);
+    throw new CanvasError(path, `expected one of ${allowed.map((x2) => JSON.stringify(x2)).join(", ")}`);
   }
   return value;
 }
@@ -330,7 +331,7 @@ function emptyDoc(title = "\u4E3B\u753B\u5E03", docId = newId("doc")) {
     version: VERSION,
     id: docId,
     title,
-    pages: [{ id: newId("page"), name: "Page 1", background: null, children: [] }],
+    pages: [{ id: newId("page"), name: "\u753B\u5E03 1", background: null, children: [] }],
     components: [],
     variantSets: [],
     styles: [],
@@ -450,7 +451,9 @@ function normalizeLayout(value, path) {
       left: finite(padding.left ?? 0, `${path}.padding.left`, { min: 0, max: 1e4 })
     },
     alignPrimary: oneOf(value.alignPrimary ?? "start", `${path}.alignPrimary`, LAYOUT_PRIMARY),
-    alignCounter: oneOf(value.alignCounter ?? "start", `${path}.alignCounter`, LAYOUT_COUNTER)
+    alignCounter: oneOf(value.alignCounter ?? "start", `${path}.alignCounter`, LAYOUT_COUNTER),
+    ...value.wrap === true ? { wrap: true } : {},
+    ...value.ignoreHidden === true ? { ignoreHidden: true } : {}
   };
 }
 function normalizeFont(value, path) {
@@ -483,13 +486,18 @@ function normalizeOverride(value, path) {
 function normalizeNode(raw, path, depth, state2) {
   if (depth > LIMITS.depth) throw new CanvasError(path, `node nesting exceeds ${LIMITS.depth}`);
   if (!isPlainObject(raw)) throw new CanvasError(path, "expected a node object");
-  state2.count += 1;
-  if (state2.count > LIMITS.nodes) throw new CanvasError(path, `document exceeds ${LIMITS.nodes} nodes`);
   const type2 = oneOf(raw.type, `${path}.type`, NODE_TYPES);
   const node = { ...raw, type: type2 };
   node.id = id(raw.id, `${path}.id`);
   if (state2.ids.has(node.id)) throw new CanvasError(`${path}.id`, `duplicate id "${node.id}"`);
   state2.ids.add(node.id);
+  if (isPlainObject(raw.interaction) && raw.interaction.id != null) {
+    id(raw.interaction.id, `${path}.interaction.id`);
+  }
+  if (raw.pageRef != null) {
+    node.pageRef = id(raw.pageRef, `${path}.pageRef`);
+    if (node.pageRef === node.id) throw new CanvasError(`${path}.pageRef`, "a page reference cannot target itself");
+  }
   node.name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim().slice(0, 120) : defaultName(type2);
   node.x = finite(raw.x ?? 0, `${path}.x`);
   node.y = finite(raw.y ?? 0, `${path}.y`);
@@ -500,6 +508,9 @@ function normalizeNode(raw, path, depth, state2) {
   node.visible = raw.visible !== false;
   node.locked = raw.locked === true;
   node.layoutSizing = normalizeSizing(raw.layoutSizing, `${path}.layoutSizing`);
+  if (raw.layoutPositioning != null) {
+    node.layoutPositioning = oneOf(raw.layoutPositioning, `${path}.layoutPositioning`, ["auto", "absolute"]);
+  }
   if (type2 === "frame" || type2 === "group") {
     node.children = [];
     if (Array.isArray(raw.children)) {
@@ -518,6 +529,17 @@ function normalizeNode(raw, path, depth, state2) {
     node.strokes = normalizeStrokes(raw.strokes, `${path}.strokes`);
     node.effects = normalizeEffects(raw.effects, `${path}.effects`);
     node.cornerRadius = finite(raw.cornerRadius ?? 0, `${path}.cornerRadius`, { min: 0, max: 1e6 });
+    if (raw.cornerRadii != null) {
+      if (!Array.isArray(raw.cornerRadii) || raw.cornerRadii.length !== 4) {
+        throw new CanvasError(`${path}.cornerRadii`, "expected a 4-tuple of corner radii");
+      }
+      node.cornerRadii = [
+        finite(raw.cornerRadii[0], `${path}.cornerRadii[0]`, { min: 0, max: 1e6 }),
+        finite(raw.cornerRadii[1], `${path}.cornerRadii[1]`, { min: 0, max: 1e6 }),
+        finite(raw.cornerRadii[2], `${path}.cornerRadii[2]`, { min: 0, max: 1e6 }),
+        finite(raw.cornerRadii[3], `${path}.cornerRadii[3]`, { min: 0, max: 1e6 })
+      ];
+    }
   }
   if (type2 === "instance") {
     node.fills = void 0;
@@ -733,6 +755,7 @@ function normalizeComment(raw, path) {
     comment.replies = raw.replies.slice(0, 100).map((reply, index) => {
       if (!isPlainObject(reply)) throw new CanvasError(`${path}.replies[${index}]`, "expected an object");
       return {
+        ...reply,
         id: id(reply.id ?? newId("r"), `${path}.replies[${index}].id`),
         body: typeof reply.body === "string" ? reply.body.slice(0, 4e3) : "",
         author: oneOf(reply.author ?? "user", `${path}.replies[${index}].author`, COMMENT_AUTHORS),
@@ -752,13 +775,13 @@ function normalizeDoc(input, options = {}) {
   if (!Array.isArray(doc.pages) || doc.pages.length === 0) throw new CanvasError("$.pages", "expected at least one page");
   if (doc.pages.length > 50) throw new CanvasError("$.pages", "expected at most 50 pages");
   const nodeIds = /* @__PURE__ */ new Set();
-  const nodeState = { count: 0, ids: nodeIds };
+  const nodeState = { ids: nodeIds };
   doc.pages = doc.pages.map((page, pageIndex) => {
     if (!isPlainObject(page)) throw new CanvasError(`$.pages[${pageIndex}]`, "expected an object");
     const normalizedPage = {
       ...page,
       id: id(page.id ?? newId("page"), `$.pages[${pageIndex}].id`),
-      name: typeof page.name === "string" && page.name.trim() ? page.name.trim().slice(0, 120) : `Page ${pageIndex + 1}`,
+      name: typeof page.name === "string" && page.name.trim() ? page.name.trim().slice(0, 120) : `\u753B\u5E03 ${pageIndex + 1}`,
       children: []
     };
     if (page.background != null) normalizedPage.background = color(page.background, `$.pages[${pageIndex}].background`);
@@ -771,6 +794,16 @@ function normalizeDoc(input, options = {}) {
     }
     return normalizedPage;
   });
+  const pageNodes = /* @__PURE__ */ new Map();
+  walkNodes({ pages: doc.pages }, (node) => pageNodes.set(node.id, node));
+  for (const node of pageNodes.values()) {
+    if (!node.pageRef) continue;
+    const source = pageNodes.get(node.pageRef);
+    if (source?.pageRef) throw new CanvasError(`node[${node.id}].pageRef`, "expected a direct reference to a source node");
+  }
+  for (const node of pageNodes.values()) {
+    if (node.pageRef && !pageNodes.has(node.pageRef)) delete node.pageRef;
+  }
   const pageIds = new Set(doc.pages.map((page) => page.id));
   if (pageIds.size !== doc.pages.length) throw new CanvasError("$.pages", "duplicate page id");
   doc.components = Array.isArray(doc.components) ? doc.components.map((component, index) => normalizeComponent(component, `$.components[${index}]`, nodeState)) : [];
@@ -1096,7 +1129,7 @@ function migrateDoc(input) {
       changes.push("meta: added timestamps");
     }
     if (!Array.isArray(raw.pages) || raw.pages.length === 0) {
-      raw.pages = [{ id: newId("page"), name: "Page 1", children: [] }];
+      raw.pages = [{ id: newId("page"), name: "\u753B\u5E03 1", children: [] }];
       changes.push("pages: added a default page");
     }
     changes.push(`version: ${from} -> ${VERSION}`);
@@ -1660,13 +1693,13 @@ function type(name) {
     letterSpacing: token.letterSpacing
   };
 }
-function text(id2, name, x, y, width, value, style = "body", color2 = C.label, extra = {}) {
+function text(id2, name, x2, y, width, value, style = "body", color2 = C.label, extra = {}) {
   const font = type(style);
   return {
     id: id2,
     type: "text",
     name,
-    x,
+    x: x2,
     y,
     width,
     height: Math.ceil(font.size * font.lineHeight),
@@ -1683,12 +1716,12 @@ function text(id2, name, x, y, width, value, style = "body", color2 = C.label, e
     autoHeight: true
   };
 }
-function rect(id2, name, x, y, width, height, extra = {}) {
+function rect(id2, name, x2, y, width, height, extra = {}) {
   return {
     id: id2,
     type: "rect",
     name,
-    x,
+    x: x2,
     y,
     width,
     height,
@@ -1702,12 +1735,12 @@ function rect(id2, name, x, y, width, height, extra = {}) {
     effects: extra.effects ?? []
   };
 }
-function ellipse(id2, name, x, y, width, height, extra = {}) {
+function ellipse(id2, name, x2, y, width, height, extra = {}) {
   return {
     id: id2,
     type: "ellipse",
     name,
-    x,
+    x: x2,
     y,
     width,
     height,
@@ -1720,12 +1753,12 @@ function ellipse(id2, name, x, y, width, height, extra = {}) {
     effects: []
   };
 }
-function lineNode(id2, name, x, y, length, extra = {}) {
+function lineNode(id2, name, x2, y, length, extra = {}) {
   return {
     id: id2,
     type: "line",
     name,
-    x,
+    x: x2,
     y,
     width: length,
     height: 0,
@@ -1736,12 +1769,12 @@ function lineNode(id2, name, x, y, length, extra = {}) {
     strokes: [{ color: extra.color ?? C.label, width: extra.width ?? 1, align: "center" }]
   };
 }
-function frame(id2, name, x, y, width, height, children, extra = {}) {
+function frame(id2, name, x2, y, width, height, children, extra = {}) {
   return {
     id: id2,
     type: "frame",
     name,
-    x,
+    x: x2,
     y,
     width,
     height,
@@ -2121,21 +2154,21 @@ function auditDoc(doc, options = {}) {
   if (pages.length === 0) throw new Error("auditDoc: document has no pages");
   const page = selectPage(pages, options);
   const records = indexPage(page);
-  const recordByNode = new Map(records.map((record) => [record.node, record]));
+  const recordByNode = new Map(records.map((record2) => [record2.node, record2]));
   let targetRecord = null;
   if (options.nodeId != null) {
-    targetRecord = records.find((record) => record.node.id === options.nodeId) ?? null;
+    targetRecord = records.find((record2) => record2.node.id === options.nodeId) ?? null;
     if (!targetRecord) throw new Error(`auditDoc: unknown node "${String(options.nodeId)}"`);
   }
   const scopeRecords = targetRecord ? scopeOf(targetRecord, records) : records;
-  const scopeNodes = new Set(scopeRecords.map((record) => record.node));
+  const scopeNodes = new Set(scopeRecords.map((record2) => record2.node));
   const rootFrames = targetRecord ? targetRecord.node.type === "frame" ? [targetRecord.node] : [] : (Array.isArray(page.children) ? page.children : []).filter((node) => isRecord(node) && node.type === "frame");
   const stylesById = mapById(doc.styles);
   const componentsById = mapById(doc.components);
   const system = options.system === "ios" ? "ios" : "material3";
   const findings = [];
   const skipped = new Set(BASE_SKIPPED);
-  if (scopeRecords.some((record) => record.node.type === "instance")) {
+  if (scopeRecords.some((record2) => record2.node.type === "instance")) {
     skipped.add("component instance contents");
   }
   runScreenshotBoundary(rootFrames, recordByNode, stylesById, findings);
@@ -2197,20 +2230,20 @@ function indexPage(page) {
 }
 function scopeOf(targetRecord, records) {
   const target = targetRecord.node;
-  return records.filter((record) => record.node === target || record.ancestors.includes(target));
+  return records.filter((record2) => record2.node === target || record2.ancestors.includes(target));
 }
-function mapById(list) {
+function mapById(list2) {
   const map = /* @__PURE__ */ new Map();
-  if (!Array.isArray(list)) return map;
-  for (const entry of list) {
+  if (!Array.isArray(list2)) return map;
+  for (const entry of list2) {
     if (isRecord(entry) && typeof entry.id === "string") map.set(entry.id, entry);
   }
   return map;
 }
 function runScreenshotBoundary(rootFrames, recordByNode, stylesById, findings) {
   for (const frame2 of rootFrames) {
-    const record = recordByNode.get(frame2);
-    if (record && !record.visible) continue;
+    const record2 = recordByNode.get(frame2);
+    if (record2 && !record2.visible) continue;
     const radius = numberOr(frame2.cornerRadius, 0);
     const fills = resolvedFills(frame2, stylesById);
     const first = fills[0] ?? null;
@@ -2239,9 +2272,9 @@ function runScreenshotBoundary(rootFrames, recordByNode, stylesById, findings) {
   }
 }
 function runContrast(scopeRecords, page, stylesById, skipped, findings) {
-  for (const record of scopeRecords) {
-    const node = record.node;
-    if (node.type !== "text" || !record.visible) continue;
+  for (const record2 of scopeRecords) {
+    const node = record2.node;
+    if (node.type !== "text" || !record2.visible) continue;
     const content = typeof node.text === "string" ? node.text : "";
     if (content.trim() === "") continue;
     const fills = resolvedFills(node, stylesById);
@@ -2253,11 +2286,11 @@ function runContrast(scopeRecords, page, stylesById, skipped, findings) {
     }
     const fillColor = parseColor(first.color);
     if (!fillColor) continue;
-    if (record.opacity < 1 - ALPHA_EPSILON) {
+    if (record2.opacity < 1 - ALPHA_EPSILON) {
       skipped.add("opacity/blur");
       continue;
     }
-    if (hasBlur(node, stylesById) || record.ancestors.some((ancestor) => hasBlur(ancestor, stylesById))) {
+    if (hasBlur(node, stylesById) || record2.ancestors.some((ancestor) => hasBlur(ancestor, stylesById))) {
       skipped.add("opacity/blur");
       continue;
     }
@@ -2270,7 +2303,7 @@ function runContrast(scopeRecords, page, stylesById, skipped, findings) {
       skipped.add("opacity/blur");
       continue;
     }
-    const background = resolveBackdrop(record, page, stylesById, skipped);
+    const background = resolveBackdrop(record2, page, stylesById, skipped);
     if (!background) continue;
     const foreground = compositeOver({ ...fillColor, a: textAlpha }, background);
     const ratio = contrastRatio(foreground, background);
@@ -2313,12 +2346,12 @@ function gradientIsOpaque(fill) {
     return color2 != null && color2.a >= 1 - ALPHA_EPSILON;
   });
 }
-function resolveSiblingBackdrop(record, stylesById) {
-  const parent = record.parent;
+function resolveSiblingBackdrop(record2, stylesById) {
+  const parent = record2.parent;
   if (!parent || !Array.isArray(parent.children)) return null;
-  const index = parent.children.indexOf(record.node);
+  const index = parent.children.indexOf(record2.node);
   if (index <= 0) return null;
-  const node = record.node;
+  const node = record2.node;
   const center = {
     x: numberOr(node.x, 0) + numberOr(node.width, 0) / 2,
     y: numberOr(node.y, 0) + numberOr(node.height, 0) / 2
@@ -2327,12 +2360,12 @@ function resolveSiblingBackdrop(record, stylesById) {
     const sibling = parent.children[siblingIndex];
     if (!isRecord(sibling) || sibling.visible === false) continue;
     if (!["rect", "frame", "ellipse"].includes(sibling.type)) continue;
-    const x = numberOr(sibling.x, 0);
+    const x2 = numberOr(sibling.x, 0);
     const y = numberOr(sibling.y, 0);
     const width = numberOr(sibling.width, 0);
     const height = numberOr(sibling.height, 0);
     if (width <= 0 || height <= 0) continue;
-    if (center.x < x || center.x > x + width || center.y < y || center.y > y + height) continue;
+    if (center.x < x2 || center.x > x2 + width || center.y < y || center.y > y + height) continue;
     const first = resolvedFills(sibling, stylesById)[0];
     if (!first || first.type !== "solid") continue;
     const color2 = parseColor(first.color);
@@ -2343,11 +2376,11 @@ function resolveSiblingBackdrop(record, stylesById) {
   }
   return null;
 }
-function resolveBackdrop(record, page, stylesById, skipped) {
-  const sibling = resolveSiblingBackdrop(record, stylesById);
+function resolveBackdrop(record2, page, stylesById, skipped) {
+  const sibling = resolveSiblingBackdrop(record2, stylesById);
   if (sibling) return sibling;
-  for (let index = record.ancestors.length - 1; index >= 0; index -= 1) {
-    const ancestor = record.ancestors[index];
+  for (let index = record2.ancestors.length - 1; index >= 0; index -= 1) {
+    const ancestor = record2.ancestors[index];
     const first = resolvedFills(ancestor, stylesById)[0];
     if (!first) continue;
     if (first.type !== "solid") {
@@ -2356,7 +2389,7 @@ function resolveBackdrop(record, page, stylesById, skipped) {
     }
     const color2 = parseColor(first.color);
     if (!color2) return null;
-    const alpha = clamp01(color2.a * fillOpacity(first) * pathOpacity(record.ancestors, index));
+    const alpha = clamp01(color2.a * fillOpacity(first) * pathOpacity(record2.ancestors, index));
     if (alpha < 1 - ALPHA_EPSILON) {
       skipped.add("opacity/blur");
       return null;
@@ -2398,9 +2431,9 @@ function isLargeText(font) {
 }
 function runTouchTargets(scopeRecords, componentsById, system, findings) {
   const minimum = system === "ios" ? IOS_TOUCH_TARGET : MATERIAL3_TOUCH_TARGET;
-  for (const record of scopeRecords) {
-    if (!record.visible) continue;
-    const node = record.node;
+  for (const record2 of scopeRecords) {
+    if (!record2.visible) continue;
+    const node = record2.node;
     const width = finiteNumber(node.width);
     const height = finiteNumber(node.height);
     if (width == null || height == null) continue;
@@ -2444,9 +2477,9 @@ function matchInteractiveName(node, componentsById) {
   return null;
 }
 function runClippedChildren(scopeRecords, recordByNode, findings) {
-  for (const record of scopeRecords) {
-    const frame2 = record.node;
-    if (frame2.type !== "frame" || frame2.clip === false || !record.visible) continue;
+  for (const record2 of scopeRecords) {
+    const frame2 = record2.node;
+    if (frame2.type !== "frame" || frame2.clip === false || !record2.visible) continue;
     const frameWidth = finiteNumber(frame2.width);
     const frameHeight = finiteNumber(frame2.height);
     if (frameWidth == null || frameHeight == null) continue;
@@ -2454,15 +2487,15 @@ function runClippedChildren(scopeRecords, recordByNode, findings) {
       if (!isRecord(child)) continue;
       const childRecord = recordByNode.get(child);
       if (!childRecord || !childRecord.visible) continue;
-      const x = numberOr(child.x, 0);
+      const x2 = numberOr(child.x, 0);
       const y = numberOr(child.y, 0);
       const width = finiteNumber(child.width);
       const height = finiteNumber(child.height);
       if (width == null || height == null) continue;
       const overflow = {
-        left: Math.max(0, -x),
+        left: Math.max(0, -x2),
         top: Math.max(0, -y),
-        right: Math.max(0, x + width - frameWidth),
+        right: Math.max(0, x2 + width - frameWidth),
         bottom: Math.max(0, y + height - frameHeight)
       };
       if (Math.max(overflow.left, overflow.top, overflow.right, overflow.bottom) <= EPSILON) continue;
@@ -2493,9 +2526,9 @@ function runClippedChildren(scopeRecords, recordByNode, findings) {
   }
 }
 function runZeroSize(scopeRecords, findings) {
-  for (const record of scopeRecords) {
-    if (!record.visible) continue;
-    const node = record.node;
+  for (const record2 of scopeRecords) {
+    if (!record2.visible) continue;
+    const node = record2.node;
     const width = finiteNumber(node.width);
     const height = finiteNumber(node.height);
     if (width == null || height == null) continue;
@@ -2596,8 +2629,8 @@ function runUnresolvedComments(doc, page, targetRecord, scopeNodes, findings) {
 }
 function runEmptyFrames(rootFrames, recordByNode, findings) {
   for (const frame2 of rootFrames) {
-    const record = recordByNode.get(frame2);
-    if (record && !record.visible) continue;
+    const record2 = recordByNode.get(frame2);
+    if (record2 && !record2.visible) continue;
     const children = Array.isArray(frame2.children) ? frame2.children : [];
     const visibleChildren = children.filter((child) => {
       if (!isRecord(child)) return false;
@@ -3242,30 +3275,30 @@ async function generateWithCodex(options = {}) {
       buildCodexPrompt(prompt, outputPath)
     ];
     const startedAt = Date.now();
-    const run = await runCommand(command, args, { timeoutMs, env, cwd: tmp, spawnImpl: opts.spawnImpl });
-    if (run.spawnError) {
-      if (run.spawnError.code === "ENOENT" && !resolvedBin) {
+    const run2 = await runCommand(command, args, { timeoutMs, env, cwd: tmp, spawnImpl: opts.spawnImpl });
+    if (run2.spawnError) {
+      if (run2.spawnError.code === "ENOENT" && !resolvedBin) {
         return failure(
           "codex-not-found",
           `Codex CLI "${requested}" was not found. Install Codex or set DSH_CANVAS_CODEX_BIN.`
         );
       }
-      return failure("spawn-failed", `Could not start Codex: ${messageOf(run.spawnError)}`);
+      return failure("spawn-failed", `Could not start Codex: ${messageOf(run2.spawnError)}`);
     }
-    if (run.timedOut) {
+    if (run2.timedOut) {
       return failure(
         "timeout",
         `Codex image generation timed out after ${timeoutMs} ms and was stopped.`,
-        run.stdout,
-        run.stderr
+        run2.stdout,
+        run2.stderr
       );
     }
-    if (run.exitCode !== 0) {
+    if (run2.exitCode !== 0) {
       return failure(
         "codex-failed",
-        `Codex image generation failed with exit code ${run.exitCode ?? "unknown"}${run.signal ? ` (signal ${run.signal})` : ""}.`,
-        run.stdout,
-        run.stderr
+        `Codex image generation failed with exit code ${run2.exitCode ?? "unknown"}${run2.signal ? ` (signal ${run2.signal})` : ""}.`,
+        run2.stdout,
+        run2.stderr
       );
     }
     const candidates = await findGeneratedImages(tmp, startedAt);
@@ -3273,8 +3306,8 @@ async function generateWithCodex(options = {}) {
       return failure(
         "no-output",
         "Codex finished without writing a PNG/JPEG/WebP image to its output directory.",
-        run.stdout,
-        run.stderr
+        run2.stdout,
+        run2.stderr
       );
     }
     let oversized = null;
@@ -3307,15 +3340,15 @@ async function generateWithCodex(options = {}) {
       return failure(
         "image-too-large",
         `Codex wrote ${oversized}, which exceeds the ${IMAGE_LIMIT_MIB} MiB image limit.`,
-        run.stdout,
-        run.stderr
+        run2.stdout,
+        run2.stderr
       );
     }
     return failure(
       "invalid-image",
       `Codex wrote ${invalid ?? "a file"}, but it is not a valid PNG/JPEG/WebP image.`,
-      run.stdout,
-      run.stderr
+      run2.stdout,
+      run2.stderr
     );
   } catch (error) {
     return failure("generation-failed", `Image generation failed: ${messageOf(error)}`);
@@ -3392,13 +3425,254 @@ async function importImage(options = {}) {
   }
 }
 
+// src/host/interaction-tools.ts
+import { randomUUID } from "node:crypto";
+
+// src/shared/interactions.ts
+var NODE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+var ASSET = /^assets\/[A-Za-z0-9._-]{1,120}$/;
+function record(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+function list(value) {
+  return Array.isArray(value) ? value : [];
+}
+function isId(value) {
+  return typeof value === "string" && NODE_ID.test(value);
+}
+function imageAsset(fills) {
+  for (const value of list(fills)) {
+    const fill = record(value);
+    if (fill?.type === "image" && typeof fill.asset === "string" && ASSET.test(fill.asset) && !fill.asset.includes("..")) {
+      return fill.asset;
+    }
+  }
+  return null;
+}
+function buildInteractionIndex(doc) {
+  const nodes = /* @__PURE__ */ new Map();
+  const edges = [];
+  const wireIds = /* @__PURE__ */ new Set();
+  const endpointIds = /* @__PURE__ */ new Set();
+  const entries = /* @__PURE__ */ new Map();
+  function visit(value, pageId, parentId, parentVisible) {
+    const node = record(value);
+    if (!node || !isId(node.id)) return null;
+    const screenshot = record(node.screenshot)?.id;
+    const entry = {
+      id: node.id,
+      sourceId: node.id,
+      name: typeof node.name === "string" ? node.name : node.id,
+      pageId,
+      parentId,
+      screenshot: isId(screenshot) ? screenshot : null,
+      previewAsset: imageAsset(node.fills),
+      visible: parentVisible && node.visible !== false
+    };
+    nodes.set(entry.id, entry);
+    entries.set(entry.id, { node, entry });
+    for (const child of list(node.children)) {
+      const childAsset = visit(child, pageId, entry.id, entry.visible);
+      entry.previewAsset ??= childAsset;
+    }
+    return entry.visible ? entry.previewAsset : null;
+  }
+  for (const value of list(record(doc)?.pages)) {
+    const page = record(value);
+    if (!page || !isId(page.id)) continue;
+    for (const node of list(page.children)) visit(node, page.id, null, true);
+  }
+  const placements = /* @__PURE__ */ new Map();
+  for (const { node, entry } of entries.values()) {
+    const source = isId(node.pageRef) ? entries.get(node.pageRef) : null;
+    if (source && !source.node.pageRef) entry.sourceId = source.entry.id;
+    if (!entry.visible) continue;
+    const members = placements.get(entry.sourceId);
+    if (members) members.push(entry.id);
+    else placements.set(entry.sourceId, [entry.id]);
+  }
+  for (const { node, entry } of entries.values()) {
+    if (node.type !== "path" && node.type !== "line") continue;
+    const interaction = record(node.interaction);
+    if (!interaction || !isId(interaction.from) || !isId(interaction.to)) continue;
+    const from = nodes.get(interaction.from);
+    const to = nodes.get(interaction.to);
+    if (!from?.visible || !to?.visible || !entry.visible) continue;
+    const event = typeof interaction.event === "string" && interaction.event.trim() ? interaction.event.trim() : entry.name;
+    const legacyLabel = entry.id.endsWith("-arrow") ? entry.id.replace(/-arrow$/, "-event") : null;
+    const label = entries.get(isId(interaction.labelId) ? interaction.labelId : legacyLabel ?? "");
+    const labelId = label?.node.type === "text" && label.entry.pageId === entry.pageId && (label.entry.id === interaction.labelId || label.entry.parentId === entry.parentId && (label.node.text === event || label.node.name === "\u89E6\u53D1\u4E8B\u4EF6")) ? label.entry.id : null;
+    edges.push({ id: entry.id, from: from.id, to: to.id, event, labelId, interactionId: isId(interaction.id) ? interaction.id : entry.id });
+    endpointIds.add(from.id);
+    endpointIds.add(to.id);
+    wireIds.add(entry.id);
+    if (labelId) wireIds.add(labelId);
+  }
+  for (const id2 of [...endpointIds]) {
+    let node = nodes.get(id2);
+    while (node) {
+      const members = placements.get(node.sourceId);
+      if (members?.length > 1) for (const member of members) endpointIds.add(member);
+      node = nodes.get(node.parentId ?? "");
+    }
+  }
+  return { nodes, edges, wireIds, endpointIds, placements };
+}
+function within(index, node, parentId) {
+  let current = node;
+  while (current) {
+    if (current.id === parentId) return true;
+    current = index.nodes.get(current.parentId ?? "");
+  }
+  return false;
+}
+function interactionScope(index, selection) {
+  const ids = /* @__PURE__ */ new Set();
+  const names = /* @__PURE__ */ new Set();
+  let anchorId = null;
+  for (const key of selection) {
+    const selected = index.nodes.get(key);
+    if (!selected?.visible) continue;
+    const descendants = [...index.endpointIds].filter((id2) => within(index, index.nodes.get(id2), selected.id));
+    let anchor = selected;
+    if (!descendants.length) {
+      while (anchor && !index.endpointIds.has(anchor.id) && !anchor.screenshot) {
+        anchor = index.nodes.get(anchor.parentId ?? "");
+      }
+    }
+    if (!anchor || !descendants.length && !index.endpointIds.has(anchor.id)) continue;
+    names.add(index.nodes.get(anchor.sourceId)?.name ?? anchor.name);
+    anchorId ??= anchor.id;
+    if (descendants.length) {
+      for (const id2 of descendants) ids.add(id2);
+    } else {
+      ids.add(anchor.id);
+    }
+  }
+  for (const key of selection) {
+    let node = index.nodes.get(key);
+    while (node?.visible && !ids.has(node.id)) node = index.nodes.get(node.parentId ?? "");
+    const family = node?.visible && index.placements.get(node.sourceId);
+    if (family && family.length > 1) {
+      for (const member of family) {
+        for (const endpoint of index.endpointIds) {
+          if (within(index, index.nodes.get(endpoint), member)) ids.add(endpoint);
+        }
+      }
+    }
+  }
+  const edges = [];
+  const targets = /* @__PURE__ */ new Map();
+  function addTarget(id2, sourceId, edge, direction) {
+    if (id2 === sourceId) return;
+    let target = targets.get(id2);
+    if (!target) {
+      target = { ...index.nodes.get(id2), key: id2, events: [] };
+      targets.set(id2, target);
+    }
+    target.events.push({ edgeId: edge.id, direction, text: edge.event });
+  }
+  for (const edge of index.edges) {
+    const from = ids.has(edge.from);
+    const to = ids.has(edge.to);
+    if (!from && !to) continue;
+    edges.push(edge);
+    if (from) addTarget(edge.to, edge.from, edge, "outgoing");
+    if (to) addTarget(edge.from, edge.to, edge, "incoming");
+  }
+  const placements = selection.length === 1 && anchorId ? index.placements.get(index.nodes.get(anchorId).sourceId) ?? [] : [];
+  return { ids, edges, targets: [...targets.values()], name: [...names].join("\u3001"), anchorId, placements };
+}
+
+// src/host/interaction-tools.ts
+function createInteractionChannel() {
+  const pending = /* @__PURE__ */ new Map();
+  function request(clients, file, sessionId, action, nodeId) {
+    const client = [...clients].reverse().find((entry) => entry.file === file && entry.sessionId === sessionId);
+    if (!client) return Promise.resolve({ ok: false, error: "no-live-canvas", message: "Open this canvas in the current session first." });
+    const requestId = randomUUID();
+    return new Promise((resolve7) => {
+      const complete = (result) => {
+        clearTimeout(timer);
+        pending.delete(requestId);
+        resolve7(result);
+      };
+      const timer = setTimeout(() => complete({ ok: false, error: "view-timeout", message: "The live canvas did not confirm the interaction request." }), 5e3);
+      pending.set(requestId, { sessionId, complete });
+      try {
+        client.response.write(`data: ${JSON.stringify({ type: "interaction-view-request", requestId, action, nodeId })}
+
+`);
+      } catch {
+        complete({ ok: false, error: "no-live-canvas", message: "The live canvas disconnected." });
+      }
+    });
+  }
+  return {
+    request,
+    reply(sessionId, requestId, result) {
+      const entry = pending.get(requestId);
+      if (!entry || entry.sessionId !== sessionId) return false;
+      entry.complete(result);
+      return true;
+    },
+    dispose() {
+      for (const entry of pending.values()) entry.complete({ ok: false, error: "plugin-unloaded" });
+    }
+  };
+}
+function describeInteractions(doc, options = {}) {
+  const index = buildInteractionIndex(doc);
+  const ids = options.ids ?? [];
+  const scope = ids.length ? interactionScope(index, ids) : null;
+  const all = scope?.edges ?? index.edges;
+  const offset = Math.max(0, Math.floor(options.offset || 0));
+  const limit = Math.min(50, Math.max(1, Math.floor(options.limit || 25)));
+  const page = all.slice(offset, offset + limit);
+  const returned = new Set(page.map((edge) => edge.id));
+  function endpoint(id2) {
+    const node = index.nodes.get(id2);
+    return { nodeId: id2, name: node.name, pageId: node.pageId, sourceNodeId: node.sourceId, screenshotId: node.screenshot, previewAsset: node.previewAsset };
+  }
+  return {
+    anchor: scope?.anchorId ? endpoint(scope.anchorId) : null,
+    total: all.length,
+    offset,
+    nextOffset: offset + page.length < all.length ? offset + page.length : null,
+    connections: page.map((edge) => ({
+      id: edge.id,
+      interactionId: edge.interactionId,
+      type: "interaction",
+      trigger: edge.event,
+      eventNodeId: edge.labelId,
+      from: endpoint(edge.from),
+      to: endpoint(edge.to)
+    })),
+    ...scope ? {
+      placementIds: scope.placements,
+      relatedPages: scope.targets.flatMap((target) => {
+        const events = target.events.filter((event) => returned.has(event.edgeId));
+        return events.length ? [{ ...endpoint(target.id), events: events.map((event) => ({
+          connectionId: event.edgeId,
+          type: "interaction",
+          direction: event.direction,
+          trigger: event.text
+        })) }] : [];
+      })
+    } : {}
+  };
+}
+
 // src/host/skills.ts
 import { readFileSync } from "node:fs";
 import { resolve as resolve2 } from "node:path";
 import { fileURLToPath } from "node:url";
-var SKILL_DIR_URL = new URL("../../skills/canvas-ui-design/", import.meta.url);
-var SKILL_FILE_URL = new URL("SKILL.md", SKILL_DIR_URL);
 var SKILL_NAME = "canvas-ui-design";
+var FIGMA_SETUP_SKILL_NAME = "canvas-figma-setup";
+var BUNDLED_SKILLS = [
+  { name: SKILL_NAME, dirUrl: new URL("../../skills/canvas-ui-design/", import.meta.url) },
+  { name: FIGMA_SETUP_SKILL_NAME, dirUrl: new URL("../../skills/canvas-figma-setup/", import.meta.url) }
+];
 function parseFrontmatter(raw) {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(raw);
   if (!match) throw new Error("SKILL.md is missing YAML frontmatter");
@@ -3412,42 +3686,6055 @@ function parseFrontmatter(raw) {
   }
   return { meta, body: match[2].trim() };
 }
-function loadCanvasSkill() {
-  const raw = readFileSync(SKILL_FILE_URL, "utf8");
+function loadSkillFromDir(expectedName, dirUrl) {
+  const fileUrl = new URL("SKILL.md", dirUrl);
+  const raw = readFileSync(fileUrl, "utf8");
   const { meta, body } = parseFrontmatter(raw);
-  if (meta.name !== SKILL_NAME) throw new Error(`skill name must be "${SKILL_NAME}"`);
-  if (!meta.description) throw new Error(`skill "${SKILL_NAME}" requires a description`);
-  if (!body) throw new Error(`skill "${SKILL_NAME}" has an empty body`);
+  if (meta.name !== expectedName) throw new Error(`skill name must be "${expectedName}"`);
+  if (!meta.description) throw new Error(`skill "${expectedName}" requires a description`);
+  if (!body) throw new Error(`skill "${expectedName}" has an empty body`);
   return {
     name: meta.name,
     description: meta.description,
     ...meta.whenToUse ? { whenToUse: meta.whenToUse } : {},
     content: body,
-    path: fileURLToPath(SKILL_FILE_URL),
-    directory: resolve2(fileURLToPath(SKILL_DIR_URL))
+    path: fileURLToPath(fileUrl),
+    directory: resolve2(fileURLToPath(dirUrl))
   };
+}
+function loadAllCanvasSkills() {
+  return BUNDLED_SKILLS.map((spec) => loadSkillFromDir(spec.name, spec.dirUrl));
 }
 function registerCanvasSkills(ctx, disposers) {
   const skills = ctx?.get?.("skills");
   if (!skills || typeof skills.register !== "function") return false;
-  const skill = loadCanvasSkill();
+  let registered = false;
+  for (const skill of loadAllCanvasSkills()) {
+    try {
+      const dispose = skills.register({
+        name: skill.name,
+        description: skill.description,
+        ...skill.whenToUse ? { whenToUse: skill.whenToUse } : {},
+        source: "dsh-canvas",
+        content: skill.content,
+        path: skill.path,
+        resourceBase: { kind: "directory", path: skill.directory },
+        invocation: { modelInvocable: true, userInvocable: true }
+      });
+      if (typeof dispose === "function") disposers?.push(dispose);
+      registered = true;
+    } catch (error) {
+      console.warn(
+        `[dsh-canvas] could not register skill "${skill.name}":`,
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+  return registered;
+}
+
+// src/host/figma/bridge.ts
+import { randomBytes } from "node:crypto";
+var TOKEN_TTL_MS = 4 * 60 * 60 * 1e3;
+var FigmaPluginBridge = class {
+  byToken = /* @__PURE__ */ new Map();
+  byCode = /* @__PURE__ */ new Map();
+  createPairing(params) {
+    this.pruneExpired();
+    for (const existing of this.byToken.values()) {
+      if (existing.sessionId === params.sessionId && existing.canvasName === params.canvasName) {
+        this.byToken.delete(existing.token);
+        this.byCode.delete(existing.pairingCode);
+      }
+    }
+    const token = `dshb_${randomBytes(24).toString("base64url")}`;
+    const rawCode = randomBytes(4).toString("hex").toUpperCase();
+    const pairingCode = `${rawCode.slice(0, 4)}-${rawCode.slice(4, 8)}`;
+    const now = Date.now();
+    const session = {
+      token,
+      pairingCode,
+      sessionId: params.sessionId,
+      cwd: params.cwd,
+      canvasName: params.canvasName,
+      createdAt: now,
+      expiresAt: now + TOKEN_TTL_MS
+    };
+    this.byToken.set(token, session);
+    this.byCode.set(pairingCode, session);
+    return session;
+  }
+  exchangeCode(pairingCode, pluginClient = "drafi-figma-plugin") {
+    this.pruneExpired();
+    const normalized = String(pairingCode ?? "").trim().toUpperCase();
+    const session = this.byCode.get(normalized);
+    if (!session) return null;
+    session.connectedAt = Date.now();
+    session.pluginClient = pluginClient;
+    return session;
+  }
+  authenticateBearer(request) {
+    this.pruneExpired();
+    const auth = String(request.headers.authorization ?? "").trim();
+    if (!auth.startsWith("Bearer ")) return null;
+    const token = auth.slice(7).trim();
+    const session = this.byToken.get(token);
+    if (!session) return null;
+    session.connectedAt = Date.now();
+    return session;
+  }
+  getForCanvas(sessionId, canvasName) {
+    this.pruneExpired();
+    for (const s of this.byToken.values()) {
+      if (s.sessionId === sessionId && s.canvasName === canvasName) return s;
+    }
+    return null;
+  }
+  queuePatch(sessionId, canvasName, patch) {
+    const session = this.getForCanvas(sessionId, canvasName);
+    if (!session) return false;
+    session.pendingPatch = patch;
+    return true;
+  }
+  consumePatch(tokenSession) {
+    const patch = tokenSession.pendingPatch ?? null;
+    tokenSession.pendingPatch = null;
+    return patch;
+  }
+  revoke(sessionId, canvasName) {
+    let count = 0;
+    for (const [token, s] of this.byToken.entries()) {
+      if (s.sessionId === sessionId && (!canvasName || s.canvasName === canvasName)) {
+        this.byToken.delete(token);
+        this.byCode.delete(s.pairingCode);
+        count += 1;
+      }
+    }
+    return count;
+  }
+  dispose() {
+    this.byToken.clear();
+    this.byCode.clear();
+  }
+  pruneExpired() {
+    const now = Date.now();
+    for (const [token, s] of this.byToken.entries()) {
+      if (s.expiresAt <= now) {
+        this.byToken.delete(token);
+        this.byCode.delete(s.pairingCode);
+      }
+    }
+  }
+};
+function applyBridgeCors(request, response) {
+  const origin = typeof request.headers.origin === "string" ? request.headers.origin : "";
+  const allowed = !origin || origin === "null" || origin === "https://www.figma.com" || /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?$/i.test(origin);
+  if (!allowed) return false;
+  response.setHeader("access-control-allow-origin", origin || "*");
+  response.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
+  response.setHeader("access-control-allow-headers", "authorization, content-type");
+  response.setHeader("access-control-allow-private-network", "true");
+  response.setHeader("vary", "origin");
+  return true;
+}
+
+// src/host/figma/routes.ts
+import { mkdir as mkdir7, readFile as readFile5, writeFile as writeFile7 } from "node:fs/promises";
+import { join as join7, relative, resolve as resolve5, sep as sep2 } from "node:path";
+
+// src/shared/scene/text-measure.ts
+var DEFAULT_FONT = Object.freeze({
+  family: "system-ui",
+  weight: 400,
+  style: "normal",
+  size: 14,
+  lineHeight: 1.4,
+  letterSpacing: 0
+});
+var MAX_CACHE_ENTRIES = 4e3;
+var EPSILON2 = 1e-6;
+var WORD_JOINER = "\u2060";
+var CJK_CHAR_RE = /[\u2E80-\u2FFF\u3000-\u303F\u3040-\u30FF\u3100-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFFEF\u{1F300}-\u{1FAFF}]/u;
+var GENERIC_FAMILIES = /* @__PURE__ */ new Set([
+  "system-ui",
+  "ui-sans-serif",
+  "ui-serif",
+  "ui-monospace",
+  "ui-rounded",
+  "sans-serif",
+  "serif",
+  "monospace",
+  "cursive",
+  "fantasy",
+  "math",
+  "emoji",
+  "fangsong",
+  "-apple-system",
+  "BlinkMacSystemFont",
+  "Segoe UI"
+]);
+function createTextMeasurer() {
+  const cache = /* @__PURE__ */ new Map();
+  let epoch = 0;
+  let canvasContext = null;
+  let canvasTried = false;
+  const document = browserDocument();
+  const fonts = document && document.fonts ? document.fonts : null;
+  let fontsStatus = fonts && typeof fonts.status === "string" ? fonts.status : "loaded";
+  const invalidate = () => {
+    cache.clear();
+    epoch += 1;
+  };
+  if (fonts) {
+    try {
+      if (typeof fonts.addEventListener === "function") {
+        fonts.addEventListener("loadingdone", invalidate);
+        fonts.addEventListener("loadingerror", invalidate);
+      } else if (fonts.ready && typeof fonts.ready.then === "function") {
+        fonts.ready.then(invalidate, () => void 0);
+      }
+    } catch {
+    }
+  }
+  function checkFontStatus() {
+    if (!fonts || typeof fonts.status !== "string") return;
+    if (fonts.status === fontsStatus) return;
+    fontsStatus = fonts.status;
+    if (fontsStatus === "loaded") invalidate();
+  }
+  function getContext() {
+    if (canvasTried) return canvasContext;
+    canvasTried = true;
+    const doc = browserDocument();
+    if (!doc) return null;
+    try {
+      const canvas = doc.createElement("canvas");
+      const context = canvas && typeof canvas.getContext === "function" ? canvas.getContext("2d") : null;
+      if (context && typeof context.measureText === "function") canvasContext = context;
+    } catch {
+      canvasContext = null;
+    }
+    return canvasContext;
+  }
+  function measure(request) {
+    checkFontStatus();
+    const text2 = request && typeof request.text === "string" ? request.text : "";
+    const font = normalizeFont2(request && request.font);
+    const rawMaxWidth = request ? request.maxWidth : Infinity;
+    const maxWidth = typeof rawMaxWidth === "number" && rawMaxWidth > 0 ? rawMaxWidth : Infinity;
+    const key = `${font.family}|${font.weight}|${font.style}|${font.size}|${font.lineHeight}|${font.letterSpacing}|${maxWidth === Infinity ? "inf" : maxWidth}|${text2.length}|${text2}`;
+    const cached = cache.get(key);
+    if (cached) return cached;
+    const context = getContext();
+    const result = context ? measureWithContext(context, text2, font, maxWidth) : measureWithFallback(text2, font, maxWidth);
+    if (!fonts || fonts.status !== "loading") {
+      if (cache.size >= MAX_CACHE_ENTRIES) cache.clear();
+      cache.set(key, result);
+    }
+    return result;
+  }
+  measure.clearCache = invalidate;
+  measure.fontEpoch = () => epoch;
+  measure.fontsReady = () => fonts && fonts.ready ? fonts.ready : Promise.resolve();
+  measure.isCanvasBacked = () => Boolean(getContext());
+  return measure;
+}
+function normalizeFont2(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    family: typeof source.family === "string" && source.family.trim() ? source.family.trim() : DEFAULT_FONT.family,
+    weight: finiteOr(source.weight, DEFAULT_FONT.weight),
+    style: source.style === "italic" ? "italic" : "normal",
+    size: positiveOr(source.size, DEFAULT_FONT.size),
+    lineHeight: positiveOr(source.lineHeight, DEFAULT_FONT.lineHeight),
+    letterSpacing: finiteOr(source.letterSpacing, DEFAULT_FONT.letterSpacing)
+  };
+}
+function finiteOr(value, fallback) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+function positiveOr(value, fallback) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+function browserDocument() {
   try {
-    const dispose = skills.register({
-      name: skill.name,
-      description: skill.description,
-      ...skill.whenToUse ? { whenToUse: skill.whenToUse } : {},
-      source: "dsh-canvas",
-      content: skill.content,
-      path: skill.path,
-      resourceBase: { kind: "directory", path: skill.directory },
-      invocation: { modelInvocable: true, userInvocable: true }
+    const global = typeof globalThis !== "undefined" ? globalThis : void 0;
+    const document = global ? global.document : null;
+    return document && typeof document.createElement === "function" ? document : null;
+  } catch {
+    return null;
+  }
+}
+function measureWithContext(context, text2, font, maxWidth) {
+  try {
+    context.font = cssFont(font);
+  } catch {
+  }
+  const measureWidth = (value) => {
+    try {
+      const metrics = context.measureText(value);
+      return metrics && Number.isFinite(metrics.width) ? metrics.width : 0;
+    } catch {
+      return 0;
+    }
+  };
+  return wrapText(text2, font, maxWidth, measureWidth);
+}
+function measureWithFallback(text2, font, maxWidth) {
+  const measureWidth = (value) => {
+    let width = 0;
+    for (const char of value) width += CJK_CHAR_RE.test(char) ? font.size : font.size * 0.55;
+    return width;
+  };
+  return wrapText(text2, font, maxWidth, measureWidth);
+}
+function cssFont(font) {
+  const style = font.style === "italic" ? "italic " : "";
+  const family = cssFamily(font.family);
+  return `${style}${font.weight} ${font.size}px ${family}`;
+}
+function cssFamily(family) {
+  if (family.includes(",")) return family;
+  if (GENERIC_FAMILIES.has(family)) return family;
+  if (/^[A-Za-z][A-Za-z0-9_-]*$/.test(family)) return family;
+  return JSON.stringify(family);
+}
+function wrapText(text2, font, maxWidth, measureWidth) {
+  const letterSpacing = font.letterSpacing;
+  const lineHeightPx = font.size * font.lineHeight;
+  const wrap = Number.isFinite(maxWidth) && maxWidth > 0;
+  const widthOf = (value) => measureWidth(value) + letterSpacing * codePointLength(value);
+  const lines = [];
+  const emit = (rawLine) => {
+    const trimmed = rawLine.replace(/[ \t\u00A0]+$/u, "");
+    lines.push({ text: trimmed, width: Math.max(0, widthOf(trimmed)) });
+  };
+  const paragraphs = String(text2).replace(/\r\n?/g, "\n").replace(/\t/g, "    ").split("\n");
+  for (const paragraph of paragraphs) {
+    let lineTokens = [];
+    let lineWidth = 0;
+    const flush = () => {
+      emit(lineTokens.join(""));
+      lineTokens = [];
+      lineWidth = 0;
+    };
+    const placeToken = (token) => {
+      const tokenWidth = widthOf(token);
+      if (!wrap) {
+        lineTokens.push(token);
+        lineWidth += tokenWidth;
+        return;
+      }
+      if (lineWidth + tokenWidth <= maxWidth + EPSILON2) {
+        lineTokens.push(token);
+        lineWidth += tokenWidth;
+        return;
+      }
+      if (lineTokens.length > 0) {
+        flush();
+        placeToken(token);
+        return;
+      }
+      let buffer = "";
+      let bufferWidth = 0;
+      for (const char of token) {
+        const charWidth = widthOf(char);
+        if (buffer && bufferWidth + charWidth > maxWidth + EPSILON2) {
+          emit(buffer);
+          buffer = char;
+          bufferWidth = charWidth;
+        } else {
+          buffer += char;
+          bufferWidth += charWidth;
+        }
+      }
+      if (buffer) {
+        lineTokens.push(buffer);
+        lineWidth = bufferWidth;
+      }
+    };
+    for (const token of tokenizeParagraph(paragraph)) {
+      if (lineTokens.length === 0 && /^[ \t\u00A0]+$/u.test(token)) continue;
+      placeToken(token);
+    }
+    flush();
+  }
+  let width = 0;
+  for (const line of lines) width = Math.max(width, line.width);
+  return {
+    lines,
+    width,
+    height: lines.length * lineHeightPx
+  };
+}
+function tokenizeParagraph(paragraph) {
+  const tokens = [];
+  let word = "";
+  for (const char of paragraph) {
+    if (char === WORD_JOINER) continue;
+    if (CJK_CHAR_RE.test(char)) {
+      if (word) {
+        tokens.push(word);
+        word = "";
+      }
+      tokens.push(char);
+    } else if (char === " " || char === "\xA0") {
+      if (word) {
+        tokens.push(word);
+        word = "";
+      }
+      tokens.push(char);
+    } else {
+      word += char;
+    }
+  }
+  if (word) tokens.push(word);
+  return tokens;
+}
+function codePointLength(value) {
+  let length = 0;
+  for (const _char of value) length += 1;
+  return length;
+}
+
+// src/shared/scene/layout.ts
+var DEFAULT_FONT2 = Object.freeze({
+  family: "system-ui",
+  weight: 400,
+  style: "normal",
+  size: 14,
+  lineHeight: 1.4,
+  letterSpacing: 0
+});
+var EPSILON3 = 1e-6;
+function layoutScene(scene) {
+  if (!scene || !Array.isArray(scene.roots)) return scene;
+  const issues = Array.isArray(scene.issues) ? scene.issues : scene.issues = [];
+  let measure = scene.measureText;
+  if (typeof measure !== "function" && scene.options && typeof scene.options.measureText === "function") {
+    measure = scene.options.measureText;
+  }
+  if (typeof measure !== "function") measure = createTextMeasurer();
+  scene.measureText = measure;
+  const state2 = { issues, measure };
+  for (const root of scene.roots) measureNode(root);
+  for (const root of scene.roots) arrangeNode(root, 0, 0);
+  return scene;
+  function measureNode(node) {
+    if (!node || typeof node !== "object") return;
+    if (node.type === "text") {
+      measureTextNode(node);
+      return;
+    }
+    const children = Array.isArray(node.children) ? node.children : [];
+    for (const child of children) measureNode(child);
+    const layout = isObject(node.layout) ? node.layout : null;
+    const sizing = effectiveSizing(node);
+    if (layout) measureAutoLayoutNode(node, layout, sizing, children);
+    else measureFreeformNode(node, sizing, children);
+  }
+  function measureTextNode(node) {
+    const sizing = effectiveSizing(node);
+    const font = isObject(node.font) ? { ...DEFAULT_FONT2, ...node.font } : DEFAULT_FONT2;
+    const wrapWidth = sizing.h === "hug" ? Infinity : Math.max(0, numberOr2(node.width, 0));
+    const result = safeMeasure(state2, {
+      text: typeof node.text === "string" ? node.text : "",
+      font,
+      maxWidth: wrapWidth,
+      autoHeight: node.autoHeight !== false
+    }, node);
+    node.lines = result.lines;
+    if (sizing.h === "hug") node.width = Math.max(0, result.width);
+    if (sizing.v === "hug") node.height = Math.max(0, result.height);
+  }
+  function measureAutoLayoutNode(node, layout, sizing, allChildren) {
+    const ignoreHidden = layout.ignoreHidden === true || scene?.doc?.meta?.layoutIgnoreHidden === true;
+    const children = allChildren.filter((child) => {
+      if (child.layoutPositioning === "absolute") return false;
+      if (ignoreHidden && child.visible === false) return false;
+      return true;
     });
-    if (typeof dispose === "function") disposers?.push(dispose);
+    const direction = layout.direction === "horizontal" ? "horizontal" : "vertical";
+    const horizontal = direction === "horizontal";
+    const padding = normalizePadding(layout.padding);
+    const gap = Math.max(0, numberOr2(layout.gap, 0));
+    const alignCounter = layout.alignCounter ?? "start";
+    const padX = padding.left + padding.right;
+    const padY = padding.top + padding.bottom;
+    const innerWidth = sizing.h === "hug" ? null : Math.max(0, numberOr2(node.width, 0) - padX);
+    const innerHeight = sizing.v === "hug" ? null : Math.max(0, numberOr2(node.height, 0) - padY);
+    const primaryAvailable = horizontal ? innerWidth : innerHeight;
+    const crossAvailable = horizontal ? innerHeight : innerWidth;
+    const primaryAxis = horizontal ? "width" : "height";
+    const crossAxis = horizontal ? "height" : "width";
+    if (crossAvailable != null) {
+      for (const child of children) {
+        const childSizing = effectiveSizing(child);
+        const crossSizing = horizontal ? childSizing.v : childSizing.h;
+        const shouldFill = crossSizing === "fill" || alignCounter === "stretch" && crossSizing === "fixed";
+        if (shouldFill && Math.abs(numberOr2(child[crossAxis], 0) - crossAvailable) > EPSILON3) {
+          child[crossAxis] = crossAvailable;
+          measureNode(child);
+        }
+      }
+    }
+    if (primaryAvailable != null) {
+      const fillChildren = children.filter((child) => {
+        const childSizing = effectiveSizing(child);
+        return (horizontal ? childSizing.h : childSizing.v) === "fill";
+      });
+      if (fillChildren.length) {
+        let fixedTotal = 0;
+        for (const child of children) {
+          if (fillChildren.includes(child)) continue;
+          fixedTotal += Math.max(0, numberOr2(child[primaryAxis], 0));
+        }
+        const gapTotal = gap * Math.max(0, children.length - 1);
+        const fillSize = Math.max(0, (primaryAvailable - fixedTotal - gapTotal) / fillChildren.length);
+        for (const child of fillChildren) {
+          if (Math.abs(numberOr2(child[primaryAxis], 0) - fillSize) > EPSILON3) {
+            child[primaryAxis] = fillSize;
+            measureNode(child);
+          }
+        }
+      }
+    }
+    let contentPrimary = gap * Math.max(0, children.length - 1);
+    let contentCross = 0;
+    for (const child of children) {
+      contentPrimary += Math.max(0, numberOr2(child[primaryAxis], 0));
+      contentCross = Math.max(contentCross, Math.max(0, numberOr2(child[crossAxis], 0)));
+    }
+    if (sizing.h === "hug") {
+      node.width = Math.max(0, horizontal ? contentPrimary + padX : contentCross + padX);
+    }
+    if (sizing.v === "hug") {
+      node.height = Math.max(0, horizontal ? contentCross + padY : contentPrimary + padY);
+    }
+  }
+  function measureFreeformNode(node, sizing, children) {
+    let contentWidth = 0;
+    let contentHeight = 0;
+    for (const child of children) {
+      contentWidth = Math.max(contentWidth, numberOr2(child.x, 0) + Math.max(0, numberOr2(child.width, 0)));
+      contentHeight = Math.max(contentHeight, numberOr2(child.y, 0) + Math.max(0, numberOr2(child.height, 0)));
+    }
+    if (sizing.h === "hug") node.width = Math.max(0, contentWidth);
+    if (sizing.v === "hug") node.height = Math.max(0, contentHeight);
+  }
+  function arrangeNode(node, originX, originY) {
+    if (!node || typeof node !== "object") return;
+    node.absX = originX + numberOr2(node.x, 0);
+    node.absY = originY + numberOr2(node.y, 0);
+    const children = Array.isArray(node.children) ? node.children : [];
+    if (!children.length) return;
+    const layout = isObject(node.layout) ? node.layout : null;
+    if (layout) arrangeAutoLayoutChildren(node, layout, children);
+    for (const child of children) arrangeNode(child, node.absX, node.absY);
+  }
+  function arrangeAutoLayoutChildren(node, layout, allChildren) {
+    const ignoreHidden = layout.ignoreHidden === true || scene?.doc?.meta?.layoutIgnoreHidden === true;
+    const children = allChildren.filter((child) => {
+      if (child.layoutPositioning === "absolute") return false;
+      if (ignoreHidden && child.visible === false) return false;
+      return true;
+    });
+    const horizontal = layout.direction === "horizontal";
+    const padding = normalizePadding(layout.padding);
+    const gap = Math.max(0, numberOr2(layout.gap, 0));
+    const alignPrimary = layout.alignPrimary ?? "start";
+    const alignCounter = layout.alignCounter ?? "start";
+    const primaryAxis = horizontal ? "width" : "height";
+    const crossAxis = horizontal ? "height" : "width";
+    const padPrimaryStart = horizontal ? padding.left : padding.top;
+    const padCrossStart = horizontal ? padding.top : padding.left;
+    const innerPrimary = Math.max(
+      0,
+      numberOr2(node[primaryAxis], 0) - (horizontal ? padding.left + padding.right : padding.top + padding.bottom)
+    );
+    const innerCross = Math.max(
+      0,
+      numberOr2(node[crossAxis], 0) - (horizontal ? padding.top + padding.bottom : padding.left + padding.right)
+    );
+    let contentPrimary = gap * Math.max(0, children.length - 1);
+    for (const child of children) contentPrimary += Math.max(0, numberOr2(child[primaryAxis], 0));
+    const leftover = innerPrimary - contentPrimary;
+    let offset = 0;
+    let effectiveGap = gap;
+    if (alignPrimary === "center") offset = leftover / 2;
+    else if (alignPrimary === "end") offset = leftover;
+    else if (alignPrimary === "space-between" && children.length > 1) {
+      effectiveGap = gap + Math.max(0, leftover) / (children.length - 1);
+    }
+    let cursor = padPrimaryStart + offset;
+    for (const child of children) {
+      const childPrimary = Math.max(0, numberOr2(child[primaryAxis], 0));
+      const childCross = Math.max(0, numberOr2(child[crossAxis], 0));
+      let crossPosition = padCrossStart;
+      if (alignCounter === "center") crossPosition = padCrossStart + (innerCross - childCross) / 2;
+      else if (alignCounter === "end") crossPosition = padCrossStart + innerCross - childCross;
+      if (horizontal) {
+        child.x = cursor;
+        child.y = crossPosition;
+      } else {
+        child.x = crossPosition;
+        child.y = cursor;
+      }
+      cursor += childPrimary + effectiveGap;
+    }
+  }
+}
+function effectiveSizing(node) {
+  const raw = isObject(node.layoutSizing) ? node.layoutSizing : {};
+  const h = raw.h === "hug" || raw.h === "fill" ? raw.h : "fixed";
+  let v;
+  if (raw.v === "hug" || raw.v === "fill") v = raw.v;
+  else if (raw.v === "fixed") v = "fixed";
+  else v = node.type === "text" && node.autoHeight !== false ? "hug" : "fixed";
+  return { h, v };
+}
+function normalizePadding(padding) {
+  const source = isObject(padding) ? padding : {};
+  return {
+    top: numberOr2(source.top, 0),
+    right: numberOr2(source.right, 0),
+    bottom: numberOr2(source.bottom, 0),
+    left: numberOr2(source.left, 0)
+  };
+}
+function safeMeasure(state2, request, node) {
+  try {
+    const result = state2.measure(request);
+    if (result && Array.isArray(result.lines) && Number.isFinite(result.width) && Number.isFinite(result.height)) {
+      return {
+        lines: result.lines.map((line) => ({
+          text: typeof line?.text === "string" ? line.text : "",
+          width: numberOr2(line?.width, 0)
+        })),
+        width: result.width,
+        height: result.height
+      };
+    }
+    throw new Error("measureText returned an invalid result");
+  } catch (error) {
+    state2.issues.push(`text measurement failed for "${node.key ?? node.id ?? "text"}": ${String(error instanceof Error ? error.message : error)}`);
+    return fallbackTextResult(request);
+  }
+}
+function fallbackTextResult(request) {
+  const font = isObject(request.font) ? { ...DEFAULT_FONT2, ...request.font } : DEFAULT_FONT2;
+  const size = numberOr2(font.size, DEFAULT_FONT2.size);
+  const lineHeight = numberOr2(font.lineHeight, DEFAULT_FONT2.lineHeight);
+  const lines = String(request.text ?? "").replace(/\r\n?/g, "\n").split("\n").map((line) => ({ text: line, width: [...line].length * size * 0.55 }));
+  let width = 0;
+  for (const line of lines) width = Math.max(width, line.width);
+  return { lines, width, height: lines.length * size * lineHeight };
+}
+function isObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function numberOr2(value, fallback) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+// src/shared/scene/resolve.ts
+var MAX_COMPONENT_DEPTH = 24;
+var MAX_INSTANCE_NODES = 2e4;
+var DEFAULT_FONT3 = Object.freeze({
+  family: "system-ui",
+  weight: 400,
+  style: "normal",
+  size: 14,
+  lineHeight: 1.4,
+  letterSpacing: 0
+});
+var ALIGNMENTS2 = /* @__PURE__ */ new Set(["left", "center", "right", "justify"]);
+var VERTICAL_ALIGNMENTS2 = /* @__PURE__ */ new Set(["top", "center", "bottom"]);
+var SIZINGS2 = /* @__PURE__ */ new Set(["fixed", "hug", "fill"]);
+function buildScene(doc, options = {}) {
+  const source = isObject2(doc) ? doc : {};
+  const settings = isObject2(options) ? { ...options } : {};
+  const issues = [];
+  if (!isObject2(doc)) issues.push("document is missing or malformed");
+  const mode = settings.mode === "component" ? "component" : "design";
+  const measureText = typeof settings.measureText === "function" ? settings.measureText : createTextMeasurer();
+  const componentById = /* @__PURE__ */ new Map();
+  for (const component of Array.isArray(source.components) ? source.components : []) {
+    if (isObject2(component) && typeof component.id === "string") componentById.set(component.id, component);
+  }
+  const styleById = /* @__PURE__ */ new Map();
+  for (const style of Array.isArray(source.styles) ? source.styles : []) {
+    if (isObject2(style) && typeof style.id === "string") styleById.set(style.id, style);
+  }
+  const variantSetById = /* @__PURE__ */ new Map();
+  for (const set of Array.isArray(source.variantSets) ? source.variantSets : []) {
+    if (isObject2(set) && typeof set.id === "string") variantSetById.set(set.id, set);
+  }
+  const byKey = /* @__PURE__ */ new Map();
+  const bySourceId = /* @__PURE__ */ new Map();
+  const ctx = {
+    issues,
+    componentById,
+    styleById,
+    variantSetById,
+    byKey,
+    bySourceId,
+    expandedNodes: 0,
+    budgetIssued: false,
+    componentStack: []
+  };
+  const roots = [];
+  const page = mode === "design" ? selectPage2(source, settings.pageId, issues) : null;
+  if (mode === "design") {
+    if (page) {
+      const list2 = Array.isArray(page.children) ? page.children : [];
+      for (const child of list2) {
+        if (!isObject2(child)) {
+          issues.push("skipped a malformed page child");
+          continue;
+        }
+        const node = resolveEntry(
+          child,
+          {
+            key: typeof child.id === "string" ? child.id : `node-${roots.length}`,
+            keyPrefix: null,
+            instanceId: null,
+            editable: true,
+            overrides: null,
+            parent: null
+          },
+          ctx
+        );
+        if (node) roots.push(node);
+      }
+    }
+  } else {
+    const componentId = typeof settings.componentId === "string" ? settings.componentId : null;
+    const component = componentId ? componentById.get(componentId) : null;
+    if (!component || !isObject2(component.root)) {
+      issues.push(`component mode: unknown component "${String(componentId)}"`);
+    } else {
+      const root = component.root;
+      const node = resolveEntry(
+        root,
+        {
+          key: typeof root.id === "string" ? root.id : "component-root",
+          keyPrefix: null,
+          instanceId: null,
+          editable: true,
+          overrides: null,
+          parent: null
+        },
+        ctx
+      );
+      if (node) roots.push(node);
+    }
+  }
+  const scene = {
+    pageId: page && typeof page.id === "string" ? page.id : null,
+    title: typeof source.title === "string" ? source.title : "",
+    mode,
+    roots,
+    byKey,
+    bySourceId,
+    componentById,
+    styleById,
+    issues,
+    componentId: mode === "component" && typeof settings.componentId === "string" ? settings.componentId : null,
+    viewportWidth: numberOr3(settings.viewportWidth, null),
+    page,
+    background: page && typeof page.background === "string" ? page.background : null,
+    doc: source,
+    measureText,
+    options: settings
+  };
+  attachRebuild(scene, doc, settings);
+  return scene;
+}
+function resolveEntry(source, env, ctx) {
+  if (!isObject2(source)) {
+    ctx.issues.push(`skipped a malformed node at "${env.key}"`);
+    return null;
+  }
+  if (env.instanceId != null && ++ctx.expandedNodes > MAX_INSTANCE_NODES) {
+    if (!ctx.budgetIssued) {
+      ctx.issues.push(`component expansion exceeds ${MAX_INSTANCE_NODES} nodes; remaining expanded children were skipped`);
+      ctx.budgetIssued = true;
+    }
+    return null;
+  }
+  return source.type === "instance" ? resolveInstance(source, env, ctx) : resolveNode(source, env, ctx);
+}
+function resolveNode(source, env, ctx) {
+  const node = createBaseNode(source, env);
+  const type2 = node.type;
+  const patch = lookupOverride(env.overrides, source.id);
+  if (type2 === "frame" || type2 === "rect" || type2 === "ellipse" || type2 === "path") {
+    applyPaint(node, source, ctx, patch);
+    if (type2 === "frame") node.layout = isObject2(source.layout) ? source.layout : void 0;
+    if (type2 === "path") {
+      node.d = source.d;
+      node.viewBox = source.viewBox;
+      node.fillRule = source.fillRule ?? "nonzero";
+    }
+  } else if (type2 === "text") {
+    const font = applyPaint(node, source, ctx, patch);
+    applyText(node, source, font, patch);
+  } else if (type2 === "line") {
+    node.strokes = Array.isArray(source.strokes) ? source.strokes : [];
+  }
+  if (patch && typeof patch.visible === "boolean") node.visible = patch.visible;
+  if (type2 === "frame" || type2 === "group") {
+    node.children = resolveChildList(
+      source,
+      node,
+      {
+        prefix: env.keyPrefix ?? null,
+        instanceId: env.instanceId ?? null,
+        editable: node.editable,
+        overrides: env.overrides ?? null
+      },
+      ctx
+    );
+  } else {
+    node.children = [];
+  }
+  registerNode(node, ctx);
+  return node;
+}
+function resolveInstance(source, env, ctx) {
+  const node = createBaseNode(source, env);
+  node.type = "instance";
+  node.isInstanceRoot = true;
+  const instanceId = env.instanceId != null ? env.instanceId : env.key;
+  node.instanceId = instanceId;
+  const ownOverrides = isObject2(source.overrides) ? source.overrides : {};
+  node.overrides = ownOverrides;
+  node.variantProps = isObject2(source.variantProps) ? { ...source.variantProps } : {};
+  node.componentId = source.componentId;
+  const outerPatch = lookupOverride(env.overrides, source.id);
+  const component = pinVariant(source, ctx);
+  const rootSource = component && isObject2(component.root) ? component.root : null;
+  if (component) {
+    node.componentId = component.id;
+    node.variantProps = {
+      ...isObject2(component.variantProps) ? component.variantProps : {},
+      ...isObject2(source.variantProps) ? source.variantProps : {}
+    };
+  }
+  if (rootSource) {
+    const rootPatch = lookupOverride(ownOverrides, rootSource.id);
+    const font = applyPaint(node, rootSource, ctx, rootPatch);
+    if (source.cornerRadius != null) node.cornerRadius = Math.max(0, numberOr3(source.cornerRadius, 0));
+    node.visible = node.visible && rootSource.visible !== false;
+    if (rootSource.type === "text") {
+      applyText(node, rootSource, font, rootPatch);
+      node.lines = [];
+    }
+    if (rootSource.type === "path") {
+      node.d = rootSource.d;
+      node.viewBox = rootSource.viewBox;
+      node.fillRule = rootSource.fillRule ?? "nonzero";
+    }
+    node.layout = isObject2(rootSource.layout) ? rootSource.layout : void 0;
+    node.layoutSizing = pickSizing(source.layoutSizing);
+    if (rootPatch && typeof rootPatch.visible === "boolean") node.visible = rootPatch.visible;
+  }
+  if (outerPatch && typeof outerPatch.visible === "boolean") node.visible = outerPatch.visible;
+  if (component && rootSource) {
+    if (ctx.componentStack.includes(component.id)) {
+      ctx.issues.push(
+        `component cycle: ${[...ctx.componentStack, component.id].join(" -> ")}; instance "${String(source.id)}" rendered empty`
+      );
+    } else if (ctx.componentStack.length >= MAX_COMPONENT_DEPTH) {
+      ctx.issues.push(
+        `component nesting exceeds ${MAX_COMPONENT_DEPTH} at instance "${String(source.id)}"; rendered empty`
+      );
+    } else {
+      ctx.componentStack.push(component.id);
+      try {
+        node.children = resolveChildList(
+          rootSource,
+          node,
+          {
+            prefix: node.key,
+            instanceId,
+            editable: false,
+            overrides: ownOverrides
+          },
+          ctx
+        );
+      } finally {
+        ctx.componentStack.pop();
+      }
+    }
+  }
+  registerNode(node, ctx);
+  return node;
+}
+function resolveChildList(ownerSource, ownerNode, options, ctx) {
+  const list2 = Array.isArray(ownerSource.children) ? ownerSource.children : [];
+  const out = [];
+  for (const child of list2) {
+    if (!isObject2(child)) {
+      ctx.issues.push(`skipped a malformed child of "${String(ownerNode.id)}"`);
+      continue;
+    }
+    const childId = typeof child.id === "string" ? child.id : `node-${options.prefix ?? ""}-${out.length}`;
+    const key = options.prefix ? `${options.prefix}::${childId}` : childId;
+    const node = resolveEntry(
+      child,
+      {
+        key,
+        keyPrefix: options.prefix ?? null,
+        instanceId: options.instanceId ?? null,
+        editable: options.editable !== false,
+        overrides: options.overrides ?? null,
+        parent: ownerNode
+      },
+      ctx
+    );
+    if (node) out.push(node);
+  }
+  return out;
+}
+function createBaseNode(source, env) {
+  const type2 = typeof source.type === "string" ? source.type : "rect";
+  const id2 = typeof source.id === "string" ? source.id : String(env.key);
+  const node = {
+    key: env.key,
+    id: id2,
+    sourceId: id2,
+    type: type2,
+    name: typeof source.name === "string" ? source.name : type2,
+    x: numberOr3(source.x, 0),
+    y: numberOr3(source.y, 0),
+    width: Math.max(0, numberOr3(source.width, 0)),
+    height: Math.max(0, numberOr3(source.height, 0)),
+    rotation: numberOr3(source.rotation, 0),
+    opacity: clamp012(numberOr3(source.opacity, 1)),
+    visible: source.visible !== false,
+    locked: source.locked === true,
+    fill: [],
+    fills: [],
+    strokes: [],
+    effects: [],
+    cornerRadius: 0,
+    clip: false,
+    children: [],
+    sourceNode: source,
+    editable: env.editable !== false,
+    isInstanceRoot: false,
+    parent: env.parent ?? null
+  };
+  if (env.instanceId != null) node.instanceId = env.instanceId;
+  const sizing = pickSizing(source.layoutSizing);
+  if (sizing) node.layoutSizing = sizing;
+  if (source.layoutPositioning === "absolute") node.layoutPositioning = "absolute";
+  return node;
+}
+function applyPaint(node, source, ctx, patch) {
+  const resolved = resolveStyles(source, node, ctx);
+  let fills = resolved.fills;
+  let effects = resolved.effects;
+  if (patch) {
+    if (Array.isArray(patch.fills)) fills = patch.fills;
+  }
+  node.fill = fills;
+  node.fills = fills;
+  node.effects = effects;
+  node.strokes = Array.isArray(source.strokes) ? source.strokes : [];
+  node.cornerRadius = Math.max(0, numberOr3(source.cornerRadius, 0));
+  if (Array.isArray(source.cornerRadii) && source.cornerRadii.length === 4) {
+    node.cornerRadii = source.cornerRadii.map((r) => Math.max(0, numberOr3(r, 0)));
+  }
+  node.clip = source.type === "frame" ? source.clip !== false : false;
+  return resolved.font;
+}
+function applyText(node, source, font, patch) {
+  node.text = typeof source.text === "string" ? source.text : "";
+  node.font = isObject2(font) ? font : DEFAULT_FONT3;
+  node.align = ALIGNMENTS2.has(source.align) ? source.align : "left";
+  node.verticalAlign = VERTICAL_ALIGNMENTS2.has(source.verticalAlign) ? source.verticalAlign : "top";
+  node.autoHeight = source.autoHeight !== false;
+  if (patch && typeof patch.text === "string") node.text = patch.text;
+}
+function resolveStyles(source, node, ctx) {
+  let fills = Array.isArray(source.fills) ? source.fills : [];
+  let effects = Array.isArray(source.effects) ? source.effects : [];
+  let font = isObject2(source.font) ? source.font : DEFAULT_FONT3;
+  const label = `node "${String(node.id)}"`;
+  if (source.textStyleId != null) {
+    const style = ctx.styleById.get(source.textStyleId);
+    if (!style) ctx.issues.push(`${label}: unknown text style "${String(source.textStyleId)}"`);
+    else if (style.type !== "text") {
+      ctx.issues.push(`${label}: style "${String(source.textStyleId)}" is a ${String(style.type)} style, expected text`);
+    } else if (isObject2(style.value)) {
+      if (isObject2(style.value.font)) font = style.value.font;
+      if (Array.isArray(style.value.fills)) fills = style.value.fills;
+    }
+  }
+  if (source.fillStyleId != null) {
+    const style = ctx.styleById.get(source.fillStyleId);
+    if (!style) ctx.issues.push(`${label}: unknown fill style "${String(source.fillStyleId)}"`);
+    else if (style.type !== "fill") {
+      ctx.issues.push(`${label}: style "${String(source.fillStyleId)}" is a ${String(style.type)} style, expected fill`);
+    } else if (isObject2(style.value)) {
+      fills = [style.value];
+    }
+  }
+  if (source.effectStyleId != null) {
+    const style = ctx.styleById.get(source.effectStyleId);
+    if (!style) ctx.issues.push(`${label}: unknown effect style "${String(source.effectStyleId)}"`);
+    else if (style.type !== "effect") {
+      ctx.issues.push(`${label}: style "${String(source.effectStyleId)}" is a ${String(style.type)} style, expected effect`);
+    } else if (Array.isArray(style.value)) {
+      effects = style.value;
+    }
+  }
+  return { fills, effects, font };
+}
+function pinVariant(instance, ctx) {
+  const base = ctx.componentById.get(instance.componentId);
+  if (!base) {
+    ctx.issues.push(`instance "${String(instance.id)}" references unknown component "${String(instance.componentId)}"`);
+    return null;
+  }
+  const props = isObject2(instance.variantProps) ? instance.variantProps : {};
+  if (!base.variantSetId || Object.keys(props).length === 0) return base;
+  const set = ctx.variantSetById.get(base.variantSetId);
+  if (!set) {
+    ctx.issues.push(`component "${String(base.id)}" references unknown variant set "${String(base.variantSetId)}"`);
+    return base;
+  }
+  const merged = {
+    ...isObject2(base.variantProps) ? base.variantProps : {},
+    ...props
+  };
+  const properties = Array.isArray(set.properties) ? set.properties : [];
+  for (const componentId of Array.isArray(set.componentIds) ? set.componentIds : []) {
+    const candidate = ctx.componentById.get(componentId);
+    if (!candidate) continue;
+    const values = isObject2(candidate.variantProps) ? candidate.variantProps : {};
+    if (properties.every((property) => values[property?.name] === merged[property?.name])) return candidate;
+  }
+  ctx.issues.push(
+    `instance "${String(instance.id)}" has no variant match (${formatVariantProps(props)}); using "${String(base.id)}"`
+  );
+  return base;
+}
+function formatVariantProps(props) {
+  return Object.entries(props).map(([key, value]) => `${key}=${String(value)}`).join(", ");
+}
+function selectPage2(source, pageId, issues) {
+  const pages = Array.isArray(source.pages) ? source.pages.filter(isObject2) : [];
+  if (!pages.length) {
+    issues.push("document has no pages");
+    return null;
+  }
+  if (pageId == null) return pages[0];
+  const page = pages.find((entry) => entry.id === pageId);
+  if (!page) {
+    issues.push(`unknown page "${String(pageId)}"`);
+    return null;
+  }
+  return page;
+}
+function registerNode(node, ctx) {
+  if (ctx.byKey.has(node.key)) {
+    ctx.issues.push(`duplicate render key "${node.key}"`);
+  } else {
+    ctx.byKey.set(node.key, node);
+  }
+  const list2 = ctx.bySourceId.get(node.sourceId);
+  if (list2) list2.push(node);
+  else ctx.bySourceId.set(node.sourceId, [node]);
+}
+function attachRebuild(scene, doc, options) {
+  scene.rebuild = () => {
+    if (scene.measureText && typeof scene.measureText.clearCache === "function") {
+      scene.measureText.clearCache();
+    }
+    const fresh = buildScene(doc, { ...options, measureText: scene.measureText });
+    scene.pageId = fresh.pageId;
+    scene.title = fresh.title;
+    scene.mode = fresh.mode;
+    scene.componentId = fresh.componentId;
+    scene.roots = fresh.roots;
+    scene.byKey = fresh.byKey;
+    scene.bySourceId = fresh.bySourceId;
+    scene.componentById = fresh.componentById;
+    scene.styleById = fresh.styleById;
+    scene.page = fresh.page;
+    scene.background = fresh.background;
+    scene.doc = fresh.doc;
+    if (Array.isArray(scene.issues)) {
+      scene.issues.length = 0;
+      scene.issues.push(...fresh.issues);
+    } else {
+      scene.issues = fresh.issues;
+    }
+    layoutScene(scene);
+    return scene;
+  };
+}
+function lookupOverride(overrides, sourceId) {
+  if (!isObject2(overrides) || typeof sourceId !== "string") return void 0;
+  const patch = overrides[sourceId];
+  return isObject2(patch) ? patch : void 0;
+}
+function pickSizing(raw) {
+  if (!isObject2(raw)) return void 0;
+  const sizing = {};
+  if (SIZINGS2.has(raw.h)) sizing.h = raw.h;
+  if (SIZINGS2.has(raw.v)) sizing.v = raw.v;
+  return Object.keys(sizing).length ? sizing : void 0;
+}
+function isObject2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function numberOr3(value, fallback) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+function clamp012(value) {
+  return Math.min(1, Math.max(0, value));
+}
+
+// src/shared/figma/sync-types.ts
+var FIGMA_IR_FORMAT = "dsh.figma.ir";
+var FIGMA_IR_VERSION = 1;
+var FIGMA_SYNC_FORMAT = "dsh.figma.sync";
+var FIGMA_SYNC_VERSION = 1;
+
+// src/shared/figma/ir.ts
+var HEX_3 = /^#([0-9a-f]{3})$/i;
+var HEX_4 = /^#([0-9a-f]{4})$/i;
+var HEX_6 = /^#([0-9a-f]{6})$/i;
+var HEX_8 = /^#([0-9a-f]{8})$/i;
+function clamp013(value) {
+  if (!Number.isFinite(value)) return 1;
+  return Math.max(0, Math.min(1, value));
+}
+function round22(value) {
+  if (!Number.isFinite(value)) return 0;
+  const rounded = Math.round(value * 100) / 100;
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+function hexToFigmaRgba(hex, extraOpacity = 1) {
+  const input = String(hex ?? "#000000").trim();
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let a = 1;
+  let m;
+  if (m = HEX_6.exec(input)) {
+    const v = m[1];
+    r = parseInt(v.slice(0, 2), 16) / 255;
+    g = parseInt(v.slice(2, 4), 16) / 255;
+    b = parseInt(v.slice(4, 6), 16) / 255;
+  } else if (m = HEX_8.exec(input)) {
+    const v = m[1];
+    r = parseInt(v.slice(0, 2), 16) / 255;
+    g = parseInt(v.slice(2, 4), 16) / 255;
+    b = parseInt(v.slice(4, 6), 16) / 255;
+    a = parseInt(v.slice(6, 8), 16) / 255;
+  } else if (m = HEX_3.exec(input)) {
+    const v = m[1];
+    r = parseInt(v[0] + v[0], 16) / 255;
+    g = parseInt(v[1] + v[1], 16) / 255;
+    b = parseInt(v[2] + v[2], 16) / 255;
+  } else if (m = HEX_4.exec(input)) {
+    const v = m[1];
+    r = parseInt(v[0] + v[0], 16) / 255;
+    g = parseInt(v[1] + v[1], 16) / 255;
+    b = parseInt(v[2] + v[2], 16) / 255;
+    a = parseInt(v[3] + v[3], 16) / 255;
+  }
+  return { r, g, b, a: clamp013(a * clamp013(extraOpacity)) };
+}
+function figmaRgbaToHex(rgba, paintOpacity = 1) {
+  const r = Math.round(clamp013(rgba?.r ?? 0) * 255);
+  const g = Math.round(clamp013(rgba?.g ?? 0) * 255);
+  const b = Math.round(clamp013(rgba?.b ?? 0) * 255);
+  const a = clamp013((rgba?.a ?? 1) * clamp013(paintOpacity));
+  const hex = "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("");
+  return { color: hex, opacity: round22(a) };
+}
+function splitHexColor(color2, opacity = 1) {
+  const rgba = hexToFigmaRgba(color2, opacity);
+  return figmaRgbaToHex({ r: rgba.r, g: rgba.g, b: rgba.b, a: 1 }, rgba.a);
+}
+function normalizeIrFills(fills) {
+  if (!Array.isArray(fills) || fills.length === 0) return void 0;
+  const out = [];
+  for (const raw of fills) {
+    if (!raw || typeof raw !== "object") continue;
+    const f = raw;
+    if (f.type === "solid" && typeof f.color === "string") {
+      const split = splitHexColor(f.color, typeof f.opacity === "number" ? f.opacity : 1);
+      out.push(split.opacity < 1 ? { type: "solid", color: split.color, opacity: split.opacity } : { type: "solid", color: split.color });
+    } else if ((f.type === "linear-gradient" || f.type === "radial-gradient") && Array.isArray(f.stops)) {
+      const stops = f.stops.filter((s) => Boolean(s && typeof s === "object")).map((s) => {
+        const split = splitHexColor(String(s.color ?? "#000000"), typeof s.opacity === "number" ? s.opacity : 1);
+        return {
+          position: round22(typeof s.position === "number" ? s.position : typeof s.offset === "number" ? s.offset : 0),
+          color: split.color,
+          ...split.opacity < 1 ? { opacity: split.opacity } : {}
+        };
+      });
+      if (stops.length >= 2) {
+        out.push({
+          type: f.type,
+          ...typeof f.angle === "number" ? { angle: round22(f.angle) } : {},
+          stops,
+          ...typeof f.opacity === "number" && f.opacity < 1 ? { opacity: round22(clamp013(f.opacity)) } : {}
+        });
+      }
+    } else if (f.type === "image") {
+      const mode = f.scaleMode === "fit" || f.scaleMode === "stretch" || f.scaleMode === "tile" ? f.scaleMode : "fill";
+      out.push({
+        type: "image",
+        ...typeof f.asset === "string" ? { asset: f.asset } : {},
+        ...typeof f.imageHash === "string" ? { imageHash: f.imageHash } : {},
+        scaleMode: mode,
+        ...typeof f.opacity === "number" && f.opacity < 1 ? { opacity: round22(clamp013(f.opacity)) } : {}
+      });
+    }
+  }
+  return out.length ? out : void 0;
+}
+function normalizeIrStrokes(strokes) {
+  if (!Array.isArray(strokes) || strokes.length === 0) return void 0;
+  const out = [];
+  for (const raw of strokes) {
+    if (!raw || typeof raw !== "object") continue;
+    const s = raw;
+    if (typeof s.color !== "string") continue;
+    const split = splitHexColor(s.color, typeof s.opacity === "number" ? s.opacity : 1);
+    out.push({
+      color: split.color,
+      width: round22(typeof s.width === "number" ? Math.max(0, s.width) : 1),
+      ...split.opacity < 1 ? { opacity: split.opacity } : {},
+      ...s.align === "inside" || s.align === "center" || s.align === "outside" ? { align: s.align } : {},
+      ...Array.isArray(s.dash) && s.dash.length ? { dash: s.dash.map((n) => round22(Number(n) || 0)) } : {}
+    });
+  }
+  return out.length ? out : void 0;
+}
+function normalizeIrEffects(effects) {
+  if (!Array.isArray(effects) || effects.length === 0) return void 0;
+  const out = [];
+  for (const raw of effects) {
+    if (!raw || typeof raw !== "object") continue;
+    const e = raw;
+    if (e.type === "blur" || e.type === "layer-blur") {
+      const blur = typeof e.blur === "number" ? e.blur : typeof e.radius === "number" ? e.radius : 0;
+      out.push({ type: "blur", blur: round22(Math.max(0, blur)) });
+    } else if (e.type === "drop-shadow" || e.type === "inner-shadow") {
+      const split = splitHexColor(typeof e.color === "string" ? e.color : "#000000", typeof e.opacity === "number" ? e.opacity : 0.25);
+      const blur = typeof e.blur === "number" ? e.blur : typeof e.radius === "number" ? e.radius : 4;
+      out.push({
+        type: e.type,
+        color: split.color,
+        opacity: split.opacity,
+        x: round22(typeof e.x === "number" ? e.x : 0),
+        y: round22(typeof e.y === "number" ? e.y : 2),
+        blur: round22(Math.max(0, blur)),
+        ...typeof e.spread === "number" && e.spread !== 0 ? { spread: round22(e.spread) } : {}
+      });
+    }
+  }
+  return out.length ? out : void 0;
+}
+function normalizeIrLayout(layout) {
+  if (!layout || typeof layout !== "object") return void 0;
+  const l = layout;
+  const direction = l.direction === "horizontal" ? "horizontal" : l.direction === "vertical" ? "vertical" : null;
+  if (!direction) return void 0;
+  const p = l.padding && typeof l.padding === "object" ? l.padding : {};
+  return {
+    direction,
+    gap: round22(typeof l.gap === "number" ? Math.max(0, l.gap) : 0),
+    padding: {
+      top: round22(typeof p.top === "number" ? Math.max(0, p.top) : 0),
+      right: round22(typeof p.right === "number" ? Math.max(0, p.right) : 0),
+      bottom: round22(typeof p.bottom === "number" ? Math.max(0, p.bottom) : 0),
+      left: round22(typeof p.left === "number" ? Math.max(0, p.left) : 0)
+    },
+    ...l.alignPrimary === "start" || l.alignPrimary === "center" || l.alignPrimary === "end" || l.alignPrimary === "space-between" ? { alignPrimary: l.alignPrimary } : {},
+    ...l.alignCounter === "start" || l.alignCounter === "center" || l.alignCounter === "end" || l.alignCounter === "stretch" ? { alignCounter: l.alignCounter } : {},
+    ...l.wrap === true ? { wrap: true } : {}
+  };
+}
+function normalizeIrFont(font) {
+  if (!font || typeof font !== "object") return void 0;
+  const f = font;
+  return {
+    family: typeof f.family === "string" && f.family.trim() ? f.family.trim() : "Inter",
+    weight: typeof f.weight === "number" && Number.isFinite(f.weight) ? Math.round(f.weight) : 400,
+    ...f.style === "italic" ? { style: "italic" } : {},
+    size: round22(typeof f.size === "number" && f.size > 0 ? f.size : 14),
+    lineHeight: round22(typeof f.lineHeight === "number" && f.lineHeight > 0 ? f.lineHeight : 1.4),
+    ...typeof f.letterSpacing === "number" && f.letterSpacing !== 0 ? { letterSpacing: round22(f.letterSpacing) } : {}
+  };
+}
+function normalizeCornerRadii(radii) {
+  if (!Array.isArray(radii) || radii.length !== 4) return void 0;
+  const nums = radii.map((v) => round22(Math.max(0, Number(v) || 0)));
+  return [nums[0], nums[1], nums[2], nums[3]];
+}
+function stableHash(value) {
+  const json = canonicalStringify(value);
+  let h1 = 2166136261;
+  let h2 = 16777619;
+  for (let i2 = 0; i2 < json.length; i2++) {
+    const ch = json.charCodeAt(i2);
+    h1 ^= ch;
+    h1 = Math.imul(h1, 16777619);
+    h2 ^= ch ^ i2 & 255;
+    h2 = Math.imul(h2, 2246822507);
+  }
+  return (h1 >>> 0).toString(16).padStart(8, "0") + (h2 >>> 0).toString(16).padStart(8, "0");
+}
+function canonicalStringify(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return "[" + value.map(canonicalStringify).join(",") + "]";
+  const keys = Object.keys(value).sort();
+  const parts = [];
+  for (const key of keys) {
+    const v = value[key];
+    if (v === void 0) continue;
+    parts.push(`${JSON.stringify(key)}:${canonicalStringify(v)}`);
+  }
+  return "{" + parts.join(",") + "}";
+}
+function extractNodeSnapshot(node, parentId) {
+  const radii = normalizeCornerRadii(node.cornerRadii);
+  const baseObj = {
+    type: node.type,
+    name: node.name,
+    parentId,
+    x: round22(node.x),
+    y: round22(node.y),
+    width: round22(Math.max(0, node.width)),
+    height: round22(Math.max(0, node.height)),
+    rotation: round22(node.rotation ?? 0),
+    opacity: round22(clamp013(node.opacity ?? 1)),
+    visible: node.visible !== false,
+    cornerRadius: round22(Math.max(0, node.cornerRadius ?? (radii ? radii[0] : 0))),
+    ...radii ? { cornerRadii: radii } : {},
+    ...node.type === "frame" ? { clip: node.clip !== false } : {},
+    ...normalizeIrFills(node.fills) ? { fills: normalizeIrFills(node.fills) } : {},
+    ...normalizeIrStrokes(node.strokes) ? { strokes: normalizeIrStrokes(node.strokes) } : {},
+    ...normalizeIrEffects(node.effects) ? { effects: normalizeIrEffects(node.effects) } : {},
+    ...normalizeIrLayout(node.layout) ? { layout: normalizeIrLayout(node.layout) } : {},
+    ...node.layoutSizing ? { layoutSizing: { ...node.layoutSizing.h ? { h: node.layoutSizing.h } : {}, ...node.layoutSizing.v ? { v: node.layoutSizing.v } : {} } } : {},
+    ...node.layoutPositioning === "absolute" ? { layoutPositioning: "absolute" } : {},
+    ...node.type === "text" ? { text: String(node.text ?? "") } : {},
+    ...node.type === "text" && normalizeIrFont(node.font) ? { font: normalizeIrFont(node.font) } : {},
+    ...node.type === "text" && node.align ? { align: node.align } : {},
+    ...node.type === "text" && node.verticalAlign ? { verticalAlign: node.verticalAlign } : {},
+    ...node.type === "path" && typeof node.d === "string" ? { d: node.d } : {},
+    ...node.type === "path" && node.fillRule ? { fillRule: node.fillRule } : {}
+  };
+  return {
+    ...baseObj,
+    fingerprint: stableHash(baseObj)
+  };
+}
+function dshNodeToIrNode(node, options = {}) {
+  const id2 = typeof node.id === "string" ? node.id : newId("n");
+  const computed = options.computedById?.get(id2);
+  const type2 = isSupportedNodeType(node.type) ? node.type : "frame";
+  const radii = normalizeCornerRadii(node.cornerRadii);
+  const children = Array.isArray(node.children) ? node.children.filter((c) => Boolean(c && typeof c === "object")).map((c) => dshNodeToIrNode(c, options)) : void 0;
+  const ir = {
+    dshId: id2,
+    ...options.figmaNodeIds?.[id2] ? { figmaId: options.figmaNodeIds[id2] } : {},
+    type: type2,
+    name: typeof node.name === "string" ? node.name : type2,
+    x: round22(computed ? computed.x : Number(node.x ?? 0)),
+    y: round22(computed ? computed.y : Number(node.y ?? 0)),
+    width: round22(Math.max(0, computed ? computed.width : Number(node.width ?? 0))),
+    height: round22(Math.max(0, computed ? computed.height : Number(node.height ?? 0))),
+    ...typeof node.rotation === "number" && node.rotation !== 0 ? { rotation: round22(node.rotation) } : {},
+    ...typeof node.opacity === "number" && node.opacity < 1 ? { opacity: round22(clamp013(node.opacity)) } : {},
+    ...node.visible === false ? { visible: false } : {},
+    ...node.locked === true ? { locked: true } : {},
+    ...type2 === "frame" && node.clip === false ? { clip: false } : {},
+    ...typeof node.cornerRadius === "number" && node.cornerRadius > 0 ? { cornerRadius: round22(node.cornerRadius) } : {},
+    ...radii ? { cornerRadii: radii } : {},
+    ...normalizeIrFills(node.fills) ? { fills: normalizeIrFills(node.fills) } : {},
+    ...normalizeIrStrokes(node.strokes) ? { strokes: normalizeIrStrokes(node.strokes) } : {},
+    ...normalizeIrEffects(node.effects) ? { effects: normalizeIrEffects(node.effects) } : {},
+    ...normalizeIrLayout(node.layout) ? { layout: normalizeIrLayout(node.layout) } : {},
+    ...node.layoutSizing && typeof node.layoutSizing === "object" ? { layoutSizing: node.layoutSizing } : {},
+    ...node.layoutPositioning === "absolute" ? { layoutPositioning: "absolute" } : {},
+    ...type2 === "text" ? { text: typeof node.text === "string" ? node.text : "" } : {},
+    ...type2 === "text" && normalizeIrFont(node.font) ? { font: normalizeIrFont(node.font) } : {},
+    ...type2 === "text" && typeof node.align === "string" ? { align: node.align } : {},
+    ...type2 === "text" && typeof node.verticalAlign === "string" ? { verticalAlign: node.verticalAlign } : {},
+    ...type2 === "text" && node.autoHeight === false ? { autoHeight: false } : {},
+    ...type2 === "path" && typeof node.d === "string" ? { d: node.d } : {},
+    ...type2 === "path" && node.viewBox && typeof node.viewBox === "object" ? { viewBox: node.viewBox } : {},
+    ...type2 === "path" && (node.fillRule === "evenodd" || node.fillRule === "nonzero") ? { fillRule: node.fillRule } : {},
+    ...type2 === "instance" && typeof node.componentId === "string" ? { componentId: node.componentId } : {},
+    ...children && children.length > 0 ? { children } : {},
+    ...options.passthroughByDshId?.[id2] ? { passthrough: options.passthroughByDshId[id2] } : {}
+  };
+  return ir;
+}
+function dshDocToIr(doc, sidecar) {
+  const pagesRaw = Array.isArray(doc.pages) ? doc.pages : [];
+  const pages = pagesRaw.map((page) => {
+    const pageId = typeof page.id === "string" ? page.id : newId("page");
+    const computedById = /* @__PURE__ */ new Map();
+    try {
+      const scene = buildScene(doc, { pageId });
+      layoutScene(scene);
+      const visitScene = (rnode) => {
+        if (typeof rnode.id === "string" && rnode.editable !== false) {
+          computedById.set(rnode.id, {
+            x: Number(rnode.x ?? 0),
+            y: Number(rnode.y ?? 0),
+            width: Number(rnode.width ?? 0),
+            height: Number(rnode.height ?? 0)
+          });
+        }
+        if (Array.isArray(rnode.children)) {
+          for (const c of rnode.children) visitScene(c);
+        }
+      };
+      for (const root of scene.roots ?? []) visitScene(root);
+    } catch {
+    }
+    const children = Array.isArray(page.children) ? page.children.map(
+      (child) => dshNodeToIrNode(child, {
+        figmaNodeIds: sidecar?.binding.nodes,
+        passthroughByDshId: sidecar?.passthrough,
+        computedById
+      })
+    ) : [];
+    return {
+      dshId: pageId,
+      ...sidecar?.binding.pages[pageId] ? { figmaId: sidecar.binding.pages[pageId] } : {},
+      name: typeof page.name === "string" ? page.name : "Page 1",
+      ...typeof page.background === "string" ? { background: page.background } : {},
+      children
+    };
+  });
+  return {
+    format: FIGMA_IR_FORMAT,
+    version: FIGMA_IR_VERSION,
+    ...sidecar?.binding.fileKey ? { fileKey: sidecar.binding.fileKey } : {},
+    ...typeof doc.title === "string" ? { fileName: doc.title } : {},
+    readCompleteness: "complete",
+    pages
+  };
+}
+function irNodeToDshNode(ir, collector) {
+  let id2 = ir.dshId && /^[A-Za-z0-9_-]{1,64}$/.test(ir.dshId) ? ir.dshId : newId(ir.type.slice(0, 2));
+  if (collector) {
+    while (collector.usedIds.has(id2)) id2 = newId(ir.type.slice(0, 2));
+    collector.usedIds.add(id2);
+    if (ir.figmaId) collector.nodeBindings[id2] = ir.figmaId;
+    if (ir.passthrough && Object.keys(ir.passthrough).length > 0) {
+      collector.passthrough[id2] = structuredClone(ir.passthrough);
+    }
+  }
+  const fills = (ir.fills ?? []).flatMap((fill) => {
+    if (fill.type === "solid") {
+      return [{ type: "solid", color: fill.color, ...fill.opacity !== void 0 && fill.opacity < 1 ? { opacity: fill.opacity } : {} }];
+    }
+    if (fill.type === "linear-gradient" || fill.type === "radial-gradient") {
+      return [{
+        type: fill.type,
+        ...fill.angle !== void 0 ? { angle: fill.angle } : {},
+        stops: fill.stops.map((s) => ({ position: s.position, color: s.color, ...s.opacity !== void 0 && s.opacity < 1 ? { opacity: s.opacity } : {} })),
+        ...fill.opacity !== void 0 && fill.opacity < 1 ? { opacity: fill.opacity } : {}
+      }];
+    }
+    if (fill.type === "image") {
+      const asset = fill.asset ?? (fill.imageHash ? collector?.imageHashes[fill.imageHash] : void 0);
+      if (!asset) return [];
+      if (fill.imageHash && collector) collector.imageHashes[fill.imageHash] = asset;
+      return [{
+        type: "image",
+        asset,
+        scaleMode: fill.scaleMode ?? "fill",
+        ...fill.opacity !== void 0 && fill.opacity < 1 ? { opacity: fill.opacity } : {}
+      }];
+    }
+    return [];
+  });
+  const strokes = (ir.strokes ?? []).map((s) => ({
+    color: s.color,
+    width: s.width,
+    ...s.opacity !== void 0 && s.opacity < 1 ? { opacity: s.opacity } : {},
+    ...s.align ? { align: s.align } : {},
+    ...s.dash ? { dash: s.dash } : {}
+  }));
+  const effects = (ir.effects ?? []).map(
+    (e) => e.type === "blur" ? { type: "blur", blur: e.blur } : {
+      type: e.type,
+      color: e.color ?? "#000000",
+      x: e.x ?? 0,
+      y: e.y ?? 2,
+      blur: e.blur,
+      ...e.spread !== void 0 ? { spread: e.spread } : {},
+      ...e.opacity !== void 0 ? { opacity: e.opacity } : {}
+    }
+  );
+  const node = {
+    id: id2,
+    type: ir.type === "instance" && !ir.componentId ? "frame" : ir.type,
+    name: ir.name || ir.type,
+    x: round22(ir.x),
+    y: round22(ir.y),
+    width: round22(Math.max(0, ir.width)),
+    height: round22(Math.max(0, ir.height)),
+    ...ir.rotation ? { rotation: round22(ir.rotation) } : {},
+    ...ir.opacity !== void 0 && ir.opacity < 1 ? { opacity: round22(clamp013(ir.opacity)) } : {},
+    ...ir.visible === false ? { visible: false } : {},
+    ...ir.locked === true ? { locked: true } : {},
+    ...ir.layoutSizing ? { layoutSizing: ir.layoutSizing } : {},
+    ...ir.layoutPositioning === "absolute" ? { layoutPositioning: "absolute" } : {}
+  };
+  if (node.type === "frame" || node.type === "rect" || node.type === "ellipse" || node.type === "path") {
+    if (fills.length) node.fills = fills;
+    if (strokes.length) node.strokes = strokes;
+    if (effects.length) node.effects = effects;
+    if (ir.cornerRadius && ir.cornerRadius > 0) node.cornerRadius = round22(ir.cornerRadius);
+    if (ir.cornerRadii) node.cornerRadii = ir.cornerRadii;
+  }
+  if (node.type === "frame") {
+    node.clip = ir.clip !== false;
+    if (ir.layout) node.layout = ir.layout;
+    node.children = (ir.children ?? []).map((child) => irNodeToDshNode(child, collector));
+  } else if (node.type === "group") {
+    node.children = (ir.children ?? []).map((child) => irNodeToDshNode(child, collector));
+  } else if (node.type === "line") {
+    node.strokes = strokes.length ? strokes : [{ color: "#111827", width: 1 }];
+  } else if (node.type === "text") {
+    node.text = ir.text ?? "";
+    node.font = ir.font ?? { family: "Inter", weight: 400, size: 14, lineHeight: 1.4 };
+    node.fills = fills.length ? fills : [{ type: "solid", color: "#111827" }];
+    if (ir.align) node.align = ir.align;
+    if (ir.verticalAlign) node.verticalAlign = ir.verticalAlign;
+    node.autoHeight = ir.autoHeight !== false;
+    if (effects.length) node.effects = effects;
+  } else if (node.type === "path") {
+    node.d = ir.d || "M 0 0 L 1 0";
+    node.viewBox = ir.viewBox ?? { x: 0, y: 0, width: Math.max(1, ir.width), height: Math.max(1, ir.height) };
+    node.fillRule = ir.fillRule ?? "nonzero";
+    if (Array.isArray(node.fills)) {
+      node.fills = node.fills.filter((f) => f.type !== "image");
+    }
+  } else if (node.type === "instance" && ir.componentId) {
+    node.componentId = ir.componentId;
+  }
+  return node;
+}
+function createInitialSidecar(params) {
+  const localNodes = {};
+  const remoteProjectedNodes = {};
+  const order = {};
+  const figmaToDsh = /* @__PURE__ */ new Map();
+  for (const [dshId, figmaId2] of Object.entries(params.nodeBindings)) figmaToDsh.set(figmaId2, dshId);
+  const recordTree = (irDoc, target, recordOrder) => {
+    for (const page of irDoc.pages) {
+      const pageKey = page.dshId ?? (page.figmaId ? findKeyByVal(params.pageBindings, page.figmaId) : void 0) ?? "page-1";
+      const visitList = (nodes, parentId) => {
+        const ids = [];
+        for (const n of nodes) {
+          const id2 = n.dshId ?? (n.figmaId ? figmaToDsh.get(n.figmaId) : void 0);
+          if (!id2) continue;
+          ids.push(id2);
+          target[id2] = extractNodeSnapshot(n, parentId);
+          if (n.children?.length) visitList(n.children, id2);
+        }
+        if (recordOrder) order[parentId ?? `page:${pageKey}`] = ids;
+      };
+      visitList(page.children, null);
+    }
+  };
+  recordTree(params.remoteIr, remoteProjectedNodes, true);
+  recordTree(params.localIr ?? params.remoteIr, localNodes, false);
+  return {
+    format: FIGMA_SYNC_FORMAT,
+    version: FIGMA_SYNC_VERSION,
+    canvasName: params.canvasName,
+    canvasDocId: params.canvasDocId,
+    identities: {
+      logicalPages: {},
+      placements: {},
+      interactions: {}
+    },
+    binding: {
+      bindingId: newId("bind"),
+      fileKey: params.fileKey,
+      ...params.fileName ? { fileName: params.fileName } : {},
+      ...params.fileUrl ? { fileUrl: params.fileUrl } : {},
+      scope: { kind: "document" },
+      transport: params.transport,
+      lastSyncedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      lastCanvasRevision: params.canvasRevision,
+      ...params.remoteIr.remoteVersion ? { lastRemoteVersion: params.remoteIr.remoteVersion } : {},
+      pages: { ...params.pageBindings },
+      nodes: { ...params.nodeBindings },
+      styles: {},
+      components: {},
+      imageHashes: { ...params.imageHashes ?? {} }
+    },
+    base: {
+      localNodes,
+      remoteProjectedNodes,
+      order
+    },
+    passthrough: structuredClone(params.passthrough)
+  };
+}
+function findKeyByVal(record2, val) {
+  for (const [k, v] of Object.entries(record2)) {
+    if (v === val) return k;
+  }
+  return void 0;
+}
+function isSupportedNodeType(value) {
+  return value === "frame" || value === "group" || value === "rect" || value === "ellipse" || value === "line" || value === "text" || value === "path" || value === "instance";
+}
+
+// src/shared/figma/reconcile.ts
+var NUMERIC_TOLERANCE = 0.01;
+var COMPARED_FIELDS = [
+  { field: "name", category: "content" },
+  { field: "x", category: "geometry" },
+  { field: "y", category: "geometry" },
+  { field: "width", category: "geometry" },
+  { field: "height", category: "geometry" },
+  { field: "rotation", category: "geometry" },
+  { field: "opacity", category: "style" },
+  { field: "visible", category: "style" },
+  { field: "cornerRadius", category: "style" },
+  { field: "cornerRadii", category: "style" },
+  { field: "clip", category: "layout" },
+  { field: "fills", category: "style" },
+  { field: "strokes", category: "style" },
+  { field: "effects", category: "style" },
+  { field: "layout", category: "layout" },
+  { field: "layoutSizing", category: "layout" },
+  { field: "layoutPositioning", category: "layout" },
+  { field: "text", category: "content" },
+  { field: "font", category: "content" },
+  { field: "align", category: "content" },
+  { field: "verticalAlign", category: "content" },
+  { field: "d", category: "geometry" },
+  { field: "fillRule", category: "style" }
+];
+function valuesEquivalent(a, b, fieldName) {
+  if (Object.is(a, b)) return true;
+  if (a === void 0 && b === void 0) return true;
+  if (typeof a === "number" && typeof b === "number") {
+    return Math.abs(a - b) <= NUMERIC_TOLERANCE;
+  }
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    return a.every((item, idx) => valuesEquivalent(item, b[idx], fieldName));
+  }
+  if (a && b && typeof a === "object" && typeof b === "object") {
+    const ka = Object.keys(a).filter((k) => a[k] !== void 0);
+    const kb = Object.keys(b).filter((k) => b[k] !== void 0);
+    if (ka.length !== kb.length) return false;
+    return ka.every((k) => valuesEquivalent(a[k], b[k], k));
+  }
+  return false;
+}
+function indexIr(ir, figmaToDsh, figmaPageToDsh) {
+  const map = /* @__PURE__ */ new Map();
+  for (const page of ir.pages) {
+    const pageId = page.dshId ?? (page.figmaId ? figmaPageToDsh.get(page.figmaId) : void 0) ?? page.figmaId ?? "page-1";
+    const visit = (nodes, parentId, rootFrameId) => {
+      for (const node of nodes) {
+        const dshId = node.dshId ?? (node.figmaId ? figmaToDsh.get(node.figmaId) : void 0) ?? (node.figmaId ? `figma_${node.figmaId.replace(/[^A-Za-z0-9_-]/g, "_")}` : newId("n"));
+        const ownRoot = rootFrameId ?? (parentId === null ? dshId : void 0);
+        const snapshot = extractNodeSnapshot(node, parentId);
+        map.set(dshId, {
+          dshId,
+          figmaId: node.figmaId,
+          pageId,
+          rootFrameId: ownRoot,
+          parentId,
+          node,
+          snapshot
+        });
+        if (node.children?.length) visit(node.children, dshId, ownRoot);
+      }
+    };
+    visit(page.children, null, void 0);
+  }
+  return map;
+}
+function diffSnapshots(before, after) {
+  const changes = [];
+  for (const { field: field2, category } of COMPARED_FIELDS) {
+    const prev = before[field2];
+    const next = after[field2];
+    if (!valuesEquivalent(prev, next, field2)) {
+      changes.push({ field: field2, before: prev, after: next, category });
+    }
+  }
+  if (before.parentId !== after.parentId) {
+    changes.push({ field: "parentId", before: before.parentId, after: after.parentId, category: "structure" });
+  }
+  return changes;
+}
+function planPullDiff(doc, sidecar, remoteIr, options = {
+  canvasName: sidecar.canvasName,
+  baseCanvasRevision: sidecar.binding.lastCanvasRevision
+}) {
+  const figmaToDsh = /* @__PURE__ */ new Map();
+  for (const [dshId, figmaId2] of Object.entries(sidecar.binding.nodes)) figmaToDsh.set(figmaId2, dshId);
+  const figmaPageToDsh = /* @__PURE__ */ new Map();
+  for (const [dshId, figmaId2] of Object.entries(sidecar.binding.pages)) figmaPageToDsh.set(figmaId2, dshId);
+  const localIr = dshDocToIr(doc, sidecar);
+  const localMap = indexIr(localIr, figmaToDsh, figmaPageToDsh);
+  const remoteMap = indexIr(remoteIr, figmaToDsh, figmaPageToDsh);
+  const entries = [];
+  const conflicts = [];
+  const notices = [...remoteIr.notices ?? []];
+  if (remoteIr.readCompleteness === "partial") {
+    notices.push("\u8FDC\u7AEF\u4E3A\u5C40\u90E8/\u4E0D\u5B8C\u6574\u8BFB\u53D6\uFF08partial\uFF09\uFF0C\u5DF2\u542F\u7528\u5220\u9664\u5B89\u5168\u9600\uFF1A\u8DF3\u8FC7\u6240\u6709\u5220\u9664\u9879\u3002");
+  }
+  const allIds = /* @__PURE__ */ new Set([
+    ...localMap.keys(),
+    ...remoteMap.keys(),
+    ...Object.keys(sidecar.base.localNodes),
+    ...Object.keys(sidecar.base.remoteProjectedNodes)
+  ]);
+  for (const dshId of allIds) {
+    const local = localMap.get(dshId);
+    const remote = remoteMap.get(dshId);
+    const localBase = sidecar.base.localNodes[dshId];
+    const remoteBase = sidecar.base.remoteProjectedNodes[dshId] ?? localBase;
+    const figmaNodeId = remote?.figmaId ?? sidecar.binding.nodes[dshId];
+    const passthroughPreserved = Object.keys(sidecar.passthrough[dshId] ?? {});
+    if (remote && !local) {
+      if (localBase) {
+        const remoteChanges = remoteBase ? diffSnapshots(remoteBase, remote.snapshot) : [];
+        if (remoteChanges.length > 0) {
+          conflicts.push({
+            conflictKey: `${dshId}:deleted-locally`,
+            dshId,
+            figmaNodeId,
+            nodeName: remote.node.name,
+            field: "*",
+            reason: "deleted-locally",
+            baseValue: remoteBase,
+            localValue: null,
+            remoteValue: remote.snapshot
+          });
+        }
+        continue;
+      }
+      entries.push({
+        dshId,
+        figmaNodeId,
+        nodeName: remote.node.name,
+        nodeType: remote.node.type,
+        pageId: remote.pageId,
+        rootFrameId: remote.rootFrameId,
+        kind: "added",
+        fields: [],
+        passthroughPreserved: Object.keys(remote.node.passthrough ?? {}),
+        expectedRemoteHash: remote.snapshot.fingerprint,
+        selected: true
+      });
+      continue;
+    }
+    if (local && !remote) {
+      if (remoteIr.readCompleteness === "partial") continue;
+      if (!figmaNodeId || !remoteBase) continue;
+      const localChanges = localBase ? diffSnapshots(localBase, local.snapshot) : [];
+      if (localChanges.length > 0) {
+        conflicts.push({
+          conflictKey: `${dshId}:deleted-remotely`,
+          dshId,
+          figmaNodeId,
+          nodeName: local.node.name,
+          field: "*",
+          reason: "deleted-remotely",
+          baseValue: localBase,
+          localValue: local.snapshot,
+          remoteValue: null
+        });
+      } else {
+        entries.push({
+          dshId,
+          figmaNodeId,
+          nodeName: local.node.name,
+          nodeType: local.node.type,
+          pageId: local.pageId,
+          rootFrameId: local.rootFrameId,
+          kind: "deleted",
+          fields: [],
+          passthroughPreserved,
+          selected: true
+        });
+      }
+      continue;
+    }
+    if (local && remote) {
+      if (local.snapshot.type !== remote.snapshot.type) {
+        conflicts.push({
+          conflictKey: `${dshId}:type`,
+          dshId,
+          figmaNodeId,
+          nodeName: local.node.name,
+          field: "type",
+          reason: "type-changed",
+          baseValue: localBase?.type,
+          localValue: local.snapshot.type,
+          remoteValue: remote.snapshot.type
+        });
+        continue;
+      }
+      const localChanges = localBase ? diffSnapshots(localBase, local.snapshot) : [];
+      const remoteChanges = remoteBase ? diffSnapshots(remoteBase, remote.snapshot) : diffSnapshots(local.snapshot, remote.snapshot);
+      if (remoteChanges.length === 0) continue;
+      const localChangedMap = new Map(localChanges.map((c) => [c.field, c]));
+      const effectiveChanges = [];
+      for (const rc of remoteChanges) {
+        const lc2 = localChangedMap.get(rc.field);
+        if (lc2) {
+          if (valuesEquivalent(lc2.after, rc.after, rc.field)) continue;
+          conflicts.push({
+            conflictKey: `${dshId}:${rc.field}`,
+            dshId,
+            figmaNodeId,
+            nodeName: local.node.name,
+            field: rc.field,
+            reason: rc.field === "parentId" ? "reparented" : "both-modified",
+            baseValue: lc2.before,
+            localValue: lc2.after,
+            remoteValue: rc.after
+          });
+        } else {
+          effectiveChanges.push({
+            ...rc,
+            before: local.snapshot[rc.field]
+          });
+        }
+      }
+      if (effectiveChanges.length > 0) {
+        const onlyMoved = effectiveChanges.every((c) => c.field === "x" || c.field === "y" || c.field === "parentId");
+        entries.push({
+          dshId,
+          figmaNodeId,
+          nodeName: remote.node.name,
+          nodeType: remote.node.type,
+          pageId: remote.pageId,
+          rootFrameId: remote.rootFrameId,
+          kind: onlyMoved ? "moved" : "modified",
+          fields: effectiveChanges,
+          passthroughPreserved,
+          expectedRemoteHash: remote.snapshot.fingerprint,
+          selected: true
+        });
+      }
+    }
+  }
+  return buildPlanObject("pull", remoteIr.readCompleteness, options.canvasName, options.baseCanvasRevision, sidecar.binding.fileKey, entries, conflicts, notices);
+}
+function applyPullPlan(doc, sidecar, remoteIr, plan, options = {}) {
+  for (const conflict of plan.conflicts) {
+    const resolved = options.resolutions?.[conflict.conflictKey] ?? conflict.resolution;
+    if (!resolved) {
+      throw new Error(`Unresolved sync conflict on "${conflict.nodeName}" (${conflict.field}); choose keep-drafi, take-figma, or skip`);
+    }
+  }
+  const nextDoc = structuredClone(doc);
+  const nextSidecar = structuredClone(sidecar);
+  const figmaToDsh = /* @__PURE__ */ new Map();
+  for (const [dshId, figmaId2] of Object.entries(nextSidecar.binding.nodes)) figmaToDsh.set(figmaId2, dshId);
+  const figmaPageToDsh = /* @__PURE__ */ new Map();
+  for (const [dshId, figmaId2] of Object.entries(nextSidecar.binding.pages)) figmaPageToDsh.set(figmaId2, dshId);
+  const remoteMap = indexIr(remoteIr, figmaToDsh, figmaPageToDsh);
+  const usedIds = /* @__PURE__ */ new Set();
+  walkNodes(nextDoc, (n) => {
+    if (typeof n.id === "string") usedIds.add(n.id);
+  });
+  const isSelected = (entry) => options.selectedIds ? options.selectedIds.has(entry.dshId) : entry.selected;
+  let appliedCount = 0;
+  let skippedCount = 0;
+  const deletedIds = /* @__PURE__ */ new Set();
+  const touchedDshIds = /* @__PURE__ */ new Set();
+  for (const entry of plan.entries) {
+    if (!isSelected(entry)) {
+      skippedCount += 1;
+      continue;
+    }
+    const remote = remoteMap.get(entry.dshId);
+    if (entry.kind === "added" && remote) {
+      const targetPage = findOrCreatePage(nextDoc, nextSidecar, entry.pageId, remoteIr);
+      const created = irNodeToDshNode(
+        { ...remote.node, dshId: entry.dshId },
+        {
+          nodeBindings: nextSidecar.binding.nodes,
+          passthrough: nextSidecar.passthrough,
+          imageHashes: nextSidecar.binding.imageHashes,
+          usedIds
+        }
+      );
+      insertNodeIntoParent(targetPage, created, remote.parentId);
+      touchedDshIds.add(entry.dshId);
+      appliedCount += 1;
+    } else if (entry.kind === "deleted") {
+      if (removeNodeById(nextDoc, entry.dshId)) {
+        deletedIds.add(entry.dshId);
+        delete nextSidecar.binding.nodes[entry.dshId];
+        delete nextSidecar.base.localNodes[entry.dshId];
+        delete nextSidecar.base.remoteProjectedNodes[entry.dshId];
+        delete nextSidecar.passthrough[entry.dshId];
+        appliedCount += 1;
+      }
+    } else if ((entry.kind === "modified" || entry.kind === "moved") && remote) {
+      const localNode = findMutableNode(nextDoc, entry.dshId);
+      if (localNode) {
+        for (const change of entry.fields) {
+          applyFieldToDshNode(localNode, change.field, change.after);
+        }
+        if (remote.node.passthrough) {
+          nextSidecar.passthrough[entry.dshId] = {
+            ...nextSidecar.passthrough[entry.dshId] ?? {},
+            ...structuredClone(remote.node.passthrough)
+          };
+        }
+        syncEventLabelText(nextDoc, nextSidecar, entry.dshId, localNode);
+        touchedDshIds.add(entry.dshId);
+        appliedCount += 1;
+      }
+    }
+  }
+  for (const conflict of plan.conflicts) {
+    const resolution = options.resolutions?.[conflict.conflictKey] ?? conflict.resolution;
+    if (resolution === "skip") {
+      skippedCount += 1;
+      continue;
+    }
+    const remote = remoteMap.get(conflict.dshId);
+    if (resolution === "take-figma") {
+      if (conflict.reason === "deleted-remotely") {
+        if (removeNodeById(nextDoc, conflict.dshId)) {
+          deletedIds.add(conflict.dshId);
+          delete nextSidecar.binding.nodes[conflict.dshId];
+          delete nextSidecar.base.localNodes[conflict.dshId];
+          delete nextSidecar.base.remoteProjectedNodes[conflict.dshId];
+          appliedCount += 1;
+        }
+      } else if (conflict.reason === "deleted-locally" && remote) {
+        const targetPage = findOrCreatePage(nextDoc, nextSidecar, remote.pageId, remoteIr);
+        const created = irNodeToDshNode(
+          { ...remote.node, dshId: conflict.dshId },
+          {
+            nodeBindings: nextSidecar.binding.nodes,
+            passthrough: nextSidecar.passthrough,
+            imageHashes: nextSidecar.binding.imageHashes,
+            usedIds
+          }
+        );
+        insertNodeIntoParent(targetPage, created, remote.parentId);
+        touchedDshIds.add(conflict.dshId);
+        appliedCount += 1;
+      } else {
+        const localNode = findMutableNode(nextDoc, conflict.dshId);
+        if (localNode) {
+          applyFieldToDshNode(localNode, conflict.field, conflict.remoteValue);
+          syncEventLabelText(nextDoc, nextSidecar, conflict.dshId, localNode);
+          touchedDshIds.add(conflict.dshId);
+          appliedCount += 1;
+        }
+      }
+    } else if (resolution === "keep-drafi") {
+      if (remote) {
+        nextSidecar.base.remoteProjectedNodes[conflict.dshId] = remote.snapshot;
+      }
+      appliedCount += 1;
+    }
+  }
+  if (deletedIds.size > 0) {
+    reconcileDeletedPlacementsAndComments(nextDoc, nextSidecar, deletedIds);
+  }
+  const updatedLocalIr = dshDocToIr(nextDoc, nextSidecar);
+  const updatedLocalMap = indexIr(updatedLocalIr, figmaToDsh, figmaPageToDsh);
+  for (const dshId of touchedDshIds) {
+    const localSnap = updatedLocalMap.get(dshId)?.snapshot;
+    const remoteSnap = remoteMap.get(dshId)?.snapshot;
+    if (localSnap) nextSidecar.base.localNodes[dshId] = localSnap;
+    if (remoteSnap) nextSidecar.base.remoteProjectedNodes[dshId] = remoteSnap;
+  }
+  nextSidecar.binding.lastSyncedAt = (/* @__PURE__ */ new Date()).toISOString();
+  if (remoteIr.remoteVersion) nextSidecar.binding.lastRemoteVersion = remoteIr.remoteVersion;
+  return { doc: nextDoc, sidecar: nextSidecar, appliedCount, skippedCount };
+}
+function reconcileDeletedPlacementsAndComments(doc, sidecar, deletedIds) {
+  const survivingByLogical = /* @__PURE__ */ new Map();
+  for (const [placementId, placement] of Object.entries(sidecar.identities.placements)) {
+    if (deletedIds.has(placementId)) {
+      delete sidecar.identities.placements[placementId];
+      continue;
+    }
+    const list2 = survivingByLogical.get(placement.logicalPageId) ?? [];
+    list2.push(placementId);
+    survivingByLogical.set(placement.logicalPageId, list2);
+  }
+  const nodesById = /* @__PURE__ */ new Map();
+  walkNodes(doc, (n) => {
+    if (typeof n.id === "string") nodesById.set(n.id, n);
+  });
+  const refsToDeleted = /* @__PURE__ */ new Map();
+  for (const node of nodesById.values()) {
+    if (typeof node.pageRef === "string" && deletedIds.has(node.pageRef)) {
+      const list2 = refsToDeleted.get(node.pageRef) ?? [];
+      list2.push(node);
+      refsToDeleted.set(node.pageRef, list2);
+    }
+  }
+  for (const [, orphans] of refsToDeleted) {
+    const [newAnchor, ...rest] = orphans;
+    if (!newAnchor || typeof newAnchor.id !== "string") continue;
+    delete newAnchor.pageRef;
+    for (const sibling of rest) {
+      sibling.pageRef = newAnchor.id;
+    }
+  }
+  if (sidecar.remoteComments) {
+    for (const item of sidecar.remoteComments.items) {
+      if (item.canvasNodeId && deletedIds.has(item.canvasNodeId)) {
+        item.anchorState = "unanchored-needs-relocate";
+      }
+    }
+  }
+  if (Array.isArray(doc.comments)) {
+    for (const comment of doc.comments) {
+      if (typeof comment.nodeId === "string" && deletedIds.has(comment.nodeId)) {
+        comment.anchorState = "unanchored-needs-relocate";
+        comment.formerNodeId = comment.nodeId;
+        delete comment.nodeId;
+      }
+    }
+  }
+}
+function syncEventLabelText(doc, sidecar, changedDshId, changedNode) {
+  if (changedNode.type !== "text" || typeof changedNode.text !== "string") return;
+  for (const interaction of Object.values(sidecar.identities.interactions)) {
+    if (!interaction.labelIds.includes(changedDshId)) continue;
+    interaction.event = changedNode.text;
+    for (const labelId of interaction.labelIds) {
+      if (labelId === changedDshId) continue;
+      const sibling = findMutableNode(doc, labelId);
+      if (sibling && sibling.type === "text") sibling.text = changedNode.text;
+    }
+  }
+}
+function applyFieldToDshNode(node, field2, value) {
+  if (field2 === "parentId") return;
+  if (value === void 0) {
+    delete node[field2];
+    return;
+  }
+  if (field2 === "x" || field2 === "y" || field2 === "width" || field2 === "height" || field2 === "rotation" || field2 === "cornerRadius" || field2 === "opacity") {
+    node[field2] = typeof value === "number" ? round22(value) : value;
+    return;
+  }
+  node[field2] = structuredClone(value);
+}
+function findMutableNode(doc, id2) {
+  let found = null;
+  walkNodes(doc, (n) => {
+    if (n.id === id2) found = n;
+  });
+  return found;
+}
+function removeNodeById(doc, id2) {
+  const pages = Array.isArray(doc.pages) ? doc.pages : [];
+  const removeFromList = (list2) => {
+    const idx = list2.findIndex((n) => n.id === id2);
+    if (idx >= 0) {
+      list2.splice(idx, 1);
+      return true;
+    }
+    for (const item of list2) {
+      if (Array.isArray(item.children) && removeFromList(item.children)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  for (const page of pages) {
+    if (Array.isArray(page.children) && removeFromList(page.children)) {
+      return true;
+    }
+  }
+  return false;
+}
+function findOrCreatePage(doc, sidecar, pageId, remoteIr) {
+  const pages = Array.isArray(doc.pages) ? doc.pages : doc.pages = [];
+  const existing = pages.find((p) => p.id === pageId);
+  if (existing) return existing;
+  const remotePage = remoteIr.pages.find((p) => p.dshId === pageId || p.figmaId === pageId);
+  const newPageId = /^[A-Za-z0-9_-]{1,64}$/.test(pageId) ? pageId : newId("page");
+  const page = {
+    id: newPageId,
+    name: remotePage?.name ?? "Page",
+    background: remotePage?.background ?? "#f5f5f5",
+    children: []
+  };
+  pages.push(page);
+  if (remotePage?.figmaId) sidecar.binding.pages[newPageId] = remotePage.figmaId;
+  return page;
+}
+function insertNodeIntoParent(page, node, parentId) {
+  if (parentId) {
+    const parent = findMutableNode({ pages: [page] }, parentId);
+    if (parent && (parent.type === "frame" || parent.type === "group")) {
+      const children2 = Array.isArray(parent.children) ? parent.children : parent.children = [];
+      children2.push(node);
+      return;
+    }
+  }
+  const children = Array.isArray(page.children) ? page.children : page.children = [];
+  children.push(node);
+}
+function buildPlanObject(direction, readCompleteness, canvasName, baseCanvasRevision, fileKey, entries, conflicts, notices, assetsToTransfer = 0) {
+  let added = 0;
+  let modified = 0;
+  let moved = 0;
+  let deleted = 0;
+  for (const e of entries) {
+    if (e.kind === "added") added += 1;
+    else if (e.kind === "modified") modified += 1;
+    else if (e.kind === "moved") moved += 1;
+    else if (e.kind === "deleted") deleted += 1;
+  }
+  const planId = `plan_${canonicalStringify({ direction, baseCanvasRevision, added, modified, moved, deleted, conflicts: conflicts.length }).length}_${newId("p")}`;
+  return {
+    planId,
+    direction,
+    readCompleteness,
+    canvasName,
+    baseCanvasRevision,
+    fileKey,
+    summary: { added, modified, moved, deleted, conflicts: conflicts.length, assetsToTransfer },
+    entries,
+    conflicts,
+    notices
+  };
+}
+
+// src/host/figma/bundle.ts
+import { createHash as createHash2 } from "node:crypto";
+
+// node_modules/.pnpm/fflate@0.8.3/node_modules/fflate/esm/index.mjs
+import { createRequire } from "module";
+var require2 = createRequire("/");
+var _a;
+var Worker;
+var isMarkedAsUntransferable;
+try {
+  _a = require2("worker_threads"), Worker = _a.Worker, isMarkedAsUntransferable = _a.isMarkedAsUntransferable;
+} catch (e) {
+}
+var u8 = Uint8Array;
+var u16 = Uint16Array;
+var i32 = Int32Array;
+var fleb = new u8([
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  1,
+  1,
+  1,
+  1,
+  2,
+  2,
+  2,
+  2,
+  3,
+  3,
+  3,
+  3,
+  4,
+  4,
+  4,
+  4,
+  5,
+  5,
+  5,
+  5,
+  0,
+  /* unused */
+  0,
+  0,
+  /* impossible */
+  0
+]);
+var fdeb = new u8([
+  0,
+  0,
+  0,
+  0,
+  1,
+  1,
+  2,
+  2,
+  3,
+  3,
+  4,
+  4,
+  5,
+  5,
+  6,
+  6,
+  7,
+  7,
+  8,
+  8,
+  9,
+  9,
+  10,
+  10,
+  11,
+  11,
+  12,
+  12,
+  13,
+  13,
+  /* unused */
+  0,
+  0
+]);
+var clim = new u8([16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]);
+var freb = function(eb, start) {
+  var b = new u16(31);
+  for (var i2 = 0; i2 < 31; ++i2) {
+    b[i2] = start += 1 << eb[i2 - 1];
+  }
+  var r = new i32(b[30]);
+  for (var i2 = 1; i2 < 30; ++i2) {
+    for (var j = b[i2]; j < b[i2 + 1]; ++j) {
+      r[j] = j - b[i2] << 5 | i2;
+    }
+  }
+  return { b, r };
+};
+var _a = freb(fleb, 2);
+var fl = _a.b;
+var revfl = _a.r;
+fl[28] = 258, revfl[258] = 28;
+var _b = freb(fdeb, 0);
+var fd = _b.b;
+var revfd = _b.r;
+var rev = new u16(32768);
+for (i = 0; i < 32768; ++i) {
+  x = (i & 43690) >> 1 | (i & 21845) << 1;
+  x = (x & 52428) >> 2 | (x & 13107) << 2;
+  x = (x & 61680) >> 4 | (x & 3855) << 4;
+  rev[i] = ((x & 65280) >> 8 | (x & 255) << 8) >> 1;
+}
+var x;
+var i;
+var hMap = (function(cd, mb, r) {
+  var s = cd.length;
+  var i2 = 0;
+  var l = new u16(mb);
+  for (; i2 < s; ++i2) {
+    if (cd[i2])
+      ++l[cd[i2] - 1];
+  }
+  var le = new u16(mb);
+  for (i2 = 1; i2 < mb; ++i2) {
+    le[i2] = le[i2 - 1] + l[i2 - 1] << 1;
+  }
+  var co;
+  if (r) {
+    co = new u16(1 << mb);
+    var rvb = 15 - mb;
+    for (i2 = 0; i2 < s; ++i2) {
+      if (cd[i2]) {
+        var sv = i2 << 4 | cd[i2];
+        var r_1 = mb - cd[i2];
+        var v = le[cd[i2] - 1]++ << r_1;
+        for (var m = v | (1 << r_1) - 1; v <= m; ++v) {
+          co[rev[v] >> rvb] = sv;
+        }
+      }
+    }
+  } else {
+    co = new u16(s);
+    for (i2 = 0; i2 < s; ++i2) {
+      if (cd[i2]) {
+        co[i2] = rev[le[cd[i2] - 1]++] >> 15 - cd[i2];
+      }
+    }
+  }
+  return co;
+});
+var flt = new u8(288);
+for (i = 0; i < 144; ++i)
+  flt[i] = 8;
+var i;
+for (i = 144; i < 256; ++i)
+  flt[i] = 9;
+var i;
+for (i = 256; i < 280; ++i)
+  flt[i] = 7;
+var i;
+for (i = 280; i < 288; ++i)
+  flt[i] = 8;
+var i;
+var fdt = new u8(32);
+for (i = 0; i < 32; ++i)
+  fdt[i] = 5;
+var i;
+var flm = /* @__PURE__ */ hMap(flt, 9, 0);
+var flrm = /* @__PURE__ */ hMap(flt, 9, 1);
+var fdm = /* @__PURE__ */ hMap(fdt, 5, 0);
+var fdrm = /* @__PURE__ */ hMap(fdt, 5, 1);
+var max = function(a) {
+  var m = a[0];
+  for (var i2 = 1; i2 < a.length; ++i2) {
+    if (a[i2] > m)
+      m = a[i2];
+  }
+  return m;
+};
+var bits = function(d, p, m) {
+  var o = p / 8 | 0;
+  return (d[o] | d[o + 1] << 8) >> (p & 7) & m;
+};
+var bits16 = function(d, p) {
+  var o = p / 8 | 0;
+  return (d[o] | d[o + 1] << 8 | d[o + 2] << 16) >> (p & 7);
+};
+var shft = function(p) {
+  return (p + 7) / 8 | 0;
+};
+var slc = function(v, s, e) {
+  if (s == null || s < 0)
+    s = 0;
+  if (e == null || e > v.length)
+    e = v.length;
+  return new u8(v.subarray(s, e));
+};
+var ec = [
+  "unexpected EOF",
+  "invalid block type",
+  "invalid length/literal",
+  "invalid distance",
+  "stream finished",
+  "no stream handler",
+  ,
+  // determined by compression function
+  "no callback",
+  "invalid UTF-8 data",
+  "extra field too long",
+  "date not in range 1980-2099",
+  "filename too long",
+  "stream finishing",
+  "invalid zip data"
+  // determined by unknown compression method
+];
+var err = function(ind, msg, nt) {
+  var e = new Error(msg || ec[ind]);
+  e.code = ind;
+  if (Error.captureStackTrace)
+    Error.captureStackTrace(e, err);
+  if (!nt)
+    throw e;
+  return e;
+};
+var inflt = function(dat, st, buf, dict) {
+  var sl = dat.length, dl = dict ? dict.length : 0;
+  if (!sl || st.f && !st.l)
+    return buf || new u8(0);
+  var noBuf = !buf;
+  var resize = noBuf || st.i != 2;
+  var noSt = st.i;
+  if (noBuf)
+    buf = new u8(sl * 3);
+  var cbuf = function(l2) {
+    var bl = buf.length;
+    if (l2 > bl) {
+      var nbuf = new u8(Math.max(bl * 2, l2));
+      nbuf.set(buf);
+      buf = nbuf;
+    }
+  };
+  var final = st.f || 0, pos = st.p || 0, bt = st.b || 0, lm = st.l, dm = st.d, lbt = st.m, dbt = st.n;
+  var tbts = sl * 8;
+  do {
+    if (!lm) {
+      final = bits(dat, pos, 1);
+      var type2 = bits(dat, pos + 1, 3);
+      pos += 3;
+      if (!type2) {
+        var s = shft(pos) + 4, l = dat[s - 4] | dat[s - 3] << 8, t = s + l;
+        if (t > sl) {
+          if (noSt)
+            err(0);
+          break;
+        }
+        if (resize)
+          cbuf(bt + l);
+        buf.set(dat.subarray(s, t), bt);
+        st.b = bt += l, st.p = pos = t * 8, st.f = final;
+        continue;
+      } else if (type2 == 1)
+        lm = flrm, dm = fdrm, lbt = 9, dbt = 5;
+      else if (type2 == 2) {
+        var hLit = bits(dat, pos, 31) + 257, hcLen = bits(dat, pos + 10, 15) + 4;
+        var tl = hLit + bits(dat, pos + 5, 31) + 1;
+        pos += 14;
+        var ldt = new u8(tl);
+        var clt = new u8(19);
+        for (var i2 = 0; i2 < hcLen; ++i2) {
+          clt[clim[i2]] = bits(dat, pos + i2 * 3, 7);
+        }
+        pos += hcLen * 3;
+        var clb = max(clt), clbmsk = (1 << clb) - 1;
+        var clm = hMap(clt, clb, 1);
+        for (var i2 = 0; i2 < tl; ) {
+          var r = clm[bits(dat, pos, clbmsk)];
+          pos += r & 15;
+          var s = r >> 4;
+          if (s < 16) {
+            ldt[i2++] = s;
+          } else {
+            var c = 0, n = 0;
+            if (s == 16)
+              n = 3 + bits(dat, pos, 3), pos += 2, c = ldt[i2 - 1];
+            else if (s == 17)
+              n = 3 + bits(dat, pos, 7), pos += 3;
+            else if (s == 18)
+              n = 11 + bits(dat, pos, 127), pos += 7;
+            while (n--)
+              ldt[i2++] = c;
+          }
+        }
+        var lt = ldt.subarray(0, hLit), dt = ldt.subarray(hLit);
+        lbt = max(lt);
+        dbt = max(dt);
+        lm = hMap(lt, lbt, 1);
+        dm = hMap(dt, dbt, 1);
+      } else
+        err(1);
+      if (pos > tbts) {
+        if (noSt)
+          err(0);
+        break;
+      }
+    }
+    if (resize)
+      cbuf(bt + 131072);
+    var lms = (1 << lbt) - 1, dms = (1 << dbt) - 1;
+    var lpos = pos;
+    for (; ; lpos = pos) {
+      var c = lm[bits16(dat, pos) & lms], sym = c >> 4;
+      pos += c & 15;
+      if (pos > tbts) {
+        if (noSt)
+          err(0);
+        break;
+      }
+      if (!c)
+        err(2);
+      if (sym < 256)
+        buf[bt++] = sym;
+      else if (sym == 256) {
+        lpos = pos, lm = null;
+        break;
+      } else {
+        var add = sym - 254;
+        if (sym > 264) {
+          var i2 = sym - 257, b = fleb[i2];
+          add = bits(dat, pos, (1 << b) - 1) + fl[i2];
+          pos += b;
+        }
+        var d = dm[bits16(dat, pos) & dms], dsym = d >> 4;
+        if (!d)
+          err(3);
+        pos += d & 15;
+        var dt = fd[dsym];
+        if (dsym > 3) {
+          var b = fdeb[dsym];
+          dt += bits16(dat, pos) & (1 << b) - 1, pos += b;
+        }
+        if (pos > tbts) {
+          if (noSt)
+            err(0);
+          break;
+        }
+        if (resize)
+          cbuf(bt + 131072);
+        var end = bt + add;
+        if (bt < dt) {
+          var shift = dl - dt, dend = Math.min(dt, end);
+          if (shift + bt < 0)
+            err(3);
+          for (; bt < dend; ++bt)
+            buf[bt] = dict[shift + bt];
+        }
+        for (; bt < end; ++bt)
+          buf[bt] = buf[bt - dt];
+      }
+    }
+    st.l = lm, st.p = lpos, st.b = bt, st.f = final;
+    if (lm)
+      final = 1, st.m = lbt, st.d = dm, st.n = dbt;
+  } while (!final);
+  return bt != buf.length && noBuf ? slc(buf, 0, bt) : buf.subarray(0, bt);
+};
+var wbits = function(d, p, v) {
+  v <<= p & 7;
+  var o = p / 8 | 0;
+  d[o] |= v;
+  d[o + 1] |= v >> 8;
+};
+var wbits16 = function(d, p, v) {
+  v <<= p & 7;
+  var o = p / 8 | 0;
+  d[o] |= v;
+  d[o + 1] |= v >> 8;
+  d[o + 2] |= v >> 16;
+};
+var hTree = function(d, mb) {
+  var t = [];
+  for (var i2 = 0; i2 < d.length; ++i2) {
+    if (d[i2])
+      t.push({ s: i2, f: d[i2] });
+  }
+  var s = t.length;
+  var t2 = t.slice();
+  if (!s)
+    return { t: et, l: 0 };
+  if (s == 1) {
+    var v = new u8(t[0].s + 1);
+    v[t[0].s] = 1;
+    return { t: v, l: 1 };
+  }
+  t.sort(function(a, b) {
+    return a.f - b.f;
+  });
+  t.push({ s: -1, f: 25001 });
+  var l = t[0], r = t[1], i0 = 0, i1 = 1, i22 = 2;
+  t[0] = { s: -1, f: l.f + r.f, l, r };
+  while (i1 != s - 1) {
+    l = t[t[i0].f < t[i22].f ? i0++ : i22++];
+    r = t[i0 != i1 && t[i0].f < t[i22].f ? i0++ : i22++];
+    t[i1++] = { s: -1, f: l.f + r.f, l, r };
+  }
+  var maxSym = t2[0].s;
+  for (var i2 = 1; i2 < s; ++i2) {
+    if (t2[i2].s > maxSym)
+      maxSym = t2[i2].s;
+  }
+  var tr = new u16(maxSym + 1);
+  var mbt = ln(t[i1 - 1], tr, 0);
+  if (mbt > mb) {
+    var i2 = 0, dt = 0;
+    var lft = mbt - mb, cst = 1 << lft;
+    t2.sort(function(a, b) {
+      return tr[b.s] - tr[a.s] || a.f - b.f;
+    });
+    for (; i2 < s; ++i2) {
+      var i2_1 = t2[i2].s;
+      if (tr[i2_1] > mb) {
+        dt += cst - (1 << mbt - tr[i2_1]);
+        tr[i2_1] = mb;
+      } else
+        break;
+    }
+    dt >>= lft;
+    while (dt > 0) {
+      var i2_2 = t2[i2].s;
+      if (tr[i2_2] < mb)
+        dt -= 1 << mb - tr[i2_2]++ - 1;
+      else
+        ++i2;
+    }
+    for (; i2 >= 0 && dt; --i2) {
+      var i2_3 = t2[i2].s;
+      if (tr[i2_3] == mb) {
+        --tr[i2_3];
+        ++dt;
+      }
+    }
+    mbt = mb;
+  }
+  return { t: new u8(tr), l: mbt };
+};
+var ln = function(n, l, d) {
+  return n.s == -1 ? Math.max(ln(n.l, l, d + 1), ln(n.r, l, d + 1)) : l[n.s] = d;
+};
+var lc = function(c) {
+  var s = c.length;
+  while (s && !c[--s])
+    ;
+  var cl = new u16(++s);
+  var cli = 0, cln = c[0], cls = 1;
+  var w = function(v) {
+    cl[cli++] = v;
+  };
+  for (var i2 = 1; i2 <= s; ++i2) {
+    if (c[i2] == cln && i2 != s)
+      ++cls;
+    else {
+      if (!cln && cls > 2) {
+        for (; cls > 138; cls -= 138)
+          w(32754);
+        if (cls > 2) {
+          w(cls > 10 ? cls - 11 << 5 | 28690 : cls - 3 << 5 | 12305);
+          cls = 0;
+        }
+      } else if (cls > 3) {
+        w(cln), --cls;
+        for (; cls > 6; cls -= 6)
+          w(8304);
+        if (cls > 2)
+          w(cls - 3 << 5 | 8208), cls = 0;
+      }
+      while (cls--)
+        w(cln);
+      cls = 1;
+      cln = c[i2];
+    }
+  }
+  return { c: cl.subarray(0, cli), n: s };
+};
+var clen = function(cf, cl) {
+  var l = 0;
+  for (var i2 = 0; i2 < cl.length; ++i2)
+    l += cf[i2] * cl[i2];
+  return l;
+};
+var wfblk = function(out, pos, dat) {
+  var s = dat.length;
+  var o = shft(pos + 2);
+  out[o] = s & 255;
+  out[o + 1] = s >> 8;
+  out[o + 2] = out[o] ^ 255;
+  out[o + 3] = out[o + 1] ^ 255;
+  for (var i2 = 0; i2 < s; ++i2)
+    out[o + i2 + 4] = dat[i2];
+  return (o + 4 + s) * 8;
+};
+var wblk = function(dat, out, final, syms, lf, df, eb, li, bs, bl, p) {
+  wbits(out, p++, final);
+  ++lf[256];
+  var _a2 = hTree(lf, 15), dlt = _a2.t, mlb = _a2.l;
+  var _b2 = hTree(df, 15), ddt = _b2.t, mdb = _b2.l;
+  var _c = lc(dlt), lclt = _c.c, nlc = _c.n;
+  var _d = lc(ddt), lcdt = _d.c, ndc = _d.n;
+  var lcfreq = new u16(19);
+  for (var i2 = 0; i2 < lclt.length; ++i2)
+    ++lcfreq[lclt[i2] & 31];
+  for (var i2 = 0; i2 < lcdt.length; ++i2)
+    ++lcfreq[lcdt[i2] & 31];
+  var _e = hTree(lcfreq, 7), lct = _e.t, mlcb = _e.l;
+  var nlcc = 19;
+  for (; nlcc > 4 && !lct[clim[nlcc - 1]]; --nlcc)
+    ;
+  var flen = bl + 5 << 3;
+  var ftlen = clen(lf, flt) + clen(df, fdt) + eb;
+  var dtlen = clen(lf, dlt) + clen(df, ddt) + eb + 14 + 3 * nlcc + clen(lcfreq, lct) + 2 * lcfreq[16] + 3 * lcfreq[17] + 7 * lcfreq[18];
+  if (bs >= 0 && flen <= ftlen && flen <= dtlen)
+    return wfblk(out, p, dat.subarray(bs, bs + bl));
+  var lm, ll, dm, dl;
+  wbits(out, p, 1 + (dtlen < ftlen)), p += 2;
+  if (dtlen < ftlen) {
+    lm = hMap(dlt, mlb, 0), ll = dlt, dm = hMap(ddt, mdb, 0), dl = ddt;
+    var llm = hMap(lct, mlcb, 0);
+    wbits(out, p, nlc - 257);
+    wbits(out, p + 5, ndc - 1);
+    wbits(out, p + 10, nlcc - 4);
+    p += 14;
+    for (var i2 = 0; i2 < nlcc; ++i2)
+      wbits(out, p + 3 * i2, lct[clim[i2]]);
+    p += 3 * nlcc;
+    var lcts = [lclt, lcdt];
+    for (var it = 0; it < 2; ++it) {
+      var clct = lcts[it];
+      for (var i2 = 0; i2 < clct.length; ++i2) {
+        var len = clct[i2] & 31;
+        wbits(out, p, llm[len]), p += lct[len];
+        if (len > 15)
+          wbits(out, p, clct[i2] >> 5 & 127), p += clct[i2] >> 12;
+      }
+    }
+  } else {
+    lm = flm, ll = flt, dm = fdm, dl = fdt;
+  }
+  for (var i2 = 0; i2 < li; ++i2) {
+    var sym = syms[i2];
+    if (sym > 255) {
+      var len = sym >> 18 & 31;
+      wbits16(out, p, lm[len + 257]), p += ll[len + 257];
+      if (len > 7)
+        wbits(out, p, sym >> 23 & 31), p += fleb[len];
+      var dst = sym & 31;
+      wbits16(out, p, dm[dst]), p += dl[dst];
+      if (dst > 3)
+        wbits16(out, p, sym >> 5 & 8191), p += fdeb[dst];
+    } else {
+      wbits16(out, p, lm[sym]), p += ll[sym];
+    }
+  }
+  wbits16(out, p, lm[256]);
+  return p + ll[256];
+};
+var deo = /* @__PURE__ */ new i32([65540, 131080, 131088, 131104, 262176, 1048704, 1048832, 2114560, 2117632]);
+var et = /* @__PURE__ */ new u8(0);
+var dflt = function(dat, lvl, plvl, pre, post, st) {
+  var s = st.z || dat.length;
+  var o = new u8(pre + s + 5 * (1 + Math.ceil(s / 7e3)) + post);
+  var w = o.subarray(pre, o.length - post);
+  var lst = st.l;
+  var pos = (st.r || 0) & 7;
+  if (lvl) {
+    if (pos)
+      w[0] = st.r >> 3;
+    var opt = deo[lvl - 1];
+    var n = opt >> 13, c = opt & 8191;
+    var msk_1 = (1 << plvl) - 1;
+    var prev = st.p || new u16(32768), head = st.h || new u16(msk_1 + 1);
+    var bs1_1 = Math.ceil(plvl / 3), bs2_1 = 2 * bs1_1;
+    var hsh = function(i3) {
+      return (dat[i3] ^ dat[i3 + 1] << bs1_1 ^ dat[i3 + 2] << bs2_1) & msk_1;
+    };
+    var syms = new i32(25e3);
+    var lf = new u16(288), df = new u16(32);
+    var lc_1 = 0, eb = 0, i2 = st.i || 0, li = 0, wi = st.w || 0, bs = 0;
+    for (; i2 + 2 < s; ++i2) {
+      var hv = hsh(i2);
+      var imod = i2 & 32767, pimod = head[hv];
+      prev[imod] = pimod;
+      head[hv] = imod;
+      if (wi <= i2) {
+        var rem = s - i2;
+        if ((lc_1 > 7e3 || li > 24576) && (rem > 423 || !lst)) {
+          pos = wblk(dat, w, 0, syms, lf, df, eb, li, bs, i2 - bs, pos);
+          li = lc_1 = eb = 0, bs = i2;
+          for (var j = 0; j < 286; ++j)
+            lf[j] = 0;
+          for (var j = 0; j < 30; ++j)
+            df[j] = 0;
+        }
+        var l = 2, d = 0, ch_1 = c, dif = imod - pimod & 32767;
+        if (rem > 2 && hv == hsh(i2 - dif)) {
+          var maxn = Math.min(n, rem) - 1;
+          var maxd = Math.min(32767, i2);
+          var ml = Math.min(258, rem);
+          while (dif <= maxd && --ch_1 && imod != pimod) {
+            if (dat[i2 + l] == dat[i2 + l - dif]) {
+              var nl = 0;
+              for (; nl < ml && dat[i2 + nl] == dat[i2 + nl - dif]; ++nl)
+                ;
+              if (nl > l) {
+                l = nl, d = dif;
+                if (nl > maxn)
+                  break;
+                var mmd = Math.min(dif, nl - 2);
+                var md = 0;
+                for (var j = 0; j < mmd; ++j) {
+                  var ti = i2 - dif + j & 32767;
+                  var pti = prev[ti];
+                  var cd = ti - pti & 32767;
+                  if (cd > md)
+                    md = cd, pimod = ti;
+                }
+              }
+            }
+            imod = pimod, pimod = prev[imod];
+            dif += imod - pimod & 32767;
+          }
+        }
+        if (d) {
+          syms[li++] = 268435456 | revfl[l] << 18 | revfd[d];
+          var lin = revfl[l] & 31, din = revfd[d] & 31;
+          eb += fleb[lin] + fdeb[din];
+          ++lf[257 + lin];
+          ++df[din];
+          wi = i2 + l;
+          ++lc_1;
+        } else {
+          syms[li++] = dat[i2];
+          ++lf[dat[i2]];
+        }
+      }
+    }
+    for (i2 = Math.max(i2, wi); i2 < s; ++i2) {
+      syms[li++] = dat[i2];
+      ++lf[dat[i2]];
+    }
+    pos = wblk(dat, w, lst, syms, lf, df, eb, li, bs, i2 - bs, pos);
+    if (!lst) {
+      st.r = pos & 7 | w[pos / 8 | 0] << 3;
+      pos -= 7;
+      st.h = head, st.p = prev, st.i = i2, st.w = wi;
+    }
+  } else {
+    for (var i2 = st.w || 0; i2 < s + lst; i2 += 65535) {
+      var e = i2 + 65535;
+      if (e >= s) {
+        w[pos / 8 | 0] = lst;
+        e = s;
+      }
+      pos = wfblk(w, pos + 1, dat.subarray(i2, e));
+    }
+    st.i = s;
+  }
+  return slc(o, 0, pre + shft(pos) + post);
+};
+var crct = /* @__PURE__ */ (function() {
+  var t = new Int32Array(256);
+  for (var i2 = 0; i2 < 256; ++i2) {
+    var c = i2, k = 9;
+    while (--k)
+      c = (c & 1 && -306674912) ^ c >>> 1;
+    t[i2] = c;
+  }
+  return t;
+})();
+var crc = function() {
+  var c = -1;
+  return {
+    p: function(d) {
+      var cr = c;
+      for (var i2 = 0; i2 < d.length; ++i2)
+        cr = crct[cr & 255 ^ d[i2]] ^ cr >>> 8;
+      c = cr;
+    },
+    d: function() {
+      return ~c;
+    }
+  };
+};
+var dopt = function(dat, opt, pre, post, st) {
+  if (!st) {
+    st = { l: 1 };
+    if (opt.dictionary) {
+      var dict = opt.dictionary.subarray(-32768);
+      var newDat = new u8(dict.length + dat.length);
+      newDat.set(dict);
+      newDat.set(dat, dict.length);
+      dat = newDat;
+      st.w = dict.length;
+    }
+  }
+  return dflt(dat, opt.level == null ? 6 : opt.level, opt.mem == null ? st.l ? Math.ceil(Math.max(8, Math.min(13, Math.log(dat.length))) * 1.5) : 20 : 12 + opt.mem, pre, post, st);
+};
+var mrg = function(a, b) {
+  var o = {};
+  for (var k in a)
+    o[k] = a[k];
+  for (var k in b)
+    o[k] = b[k];
+  return o;
+};
+var b2 = function(d, b) {
+  return d[b] | d[b + 1] << 8;
+};
+var b4 = function(d, b) {
+  return (d[b] | d[b + 1] << 8 | d[b + 2] << 16 | d[b + 3] << 24) >>> 0;
+};
+var b8 = function(d, b) {
+  return b4(d, b) + b4(d, b + 4) * 4294967296;
+};
+var wbytes = function(d, b, v) {
+  for (; v; ++b)
+    d[b] = v, v >>>= 8;
+};
+function deflateSync(data, opts) {
+  return dopt(data, opts || {}, 0, 0);
+}
+function inflateSync(data, opts) {
+  return inflt(data, { i: 2 }, opts && opts.out, opts && opts.dictionary);
+}
+var fltn = function(d, p, t, o) {
+  for (var k in d) {
+    var val = d[k], n = p + k, op = o;
+    if (Array.isArray(val))
+      op = mrg(o, val[1]), val = val[0];
+    if (ArrayBuffer.isView(val))
+      t[n] = [val, op];
+    else {
+      t[n += "/"] = [new u8(0), op];
+      fltn(val, n, t, o);
+    }
+  }
+};
+var te = typeof TextEncoder != "undefined" && /* @__PURE__ */ new TextEncoder();
+var td = typeof TextDecoder != "undefined" && /* @__PURE__ */ new TextDecoder();
+var tds = 0;
+try {
+  td.decode(et, { stream: true });
+  tds = 1;
+} catch (e) {
+}
+var dutf8 = function(d) {
+  for (var r = "", i2 = 0; ; ) {
+    var c = d[i2++];
+    var eb = (c > 127) + (c > 223) + (c > 239);
+    if (i2 + eb > d.length)
+      return { s: r, r: slc(d, i2 - 1) };
+    if (!eb)
+      r += String.fromCharCode(c);
+    else if (eb == 3) {
+      c = ((c & 15) << 18 | (d[i2++] & 63) << 12 | (d[i2++] & 63) << 6 | d[i2++] & 63) - 65536, r += String.fromCharCode(55296 | c >> 10, 56320 | c & 1023);
+    } else if (eb & 1)
+      r += String.fromCharCode((c & 31) << 6 | d[i2++] & 63);
+    else
+      r += String.fromCharCode((c & 15) << 12 | (d[i2++] & 63) << 6 | d[i2++] & 63);
+  }
+};
+function strToU8(str, latin1) {
+  if (latin1) {
+    var ar_1 = new u8(str.length);
+    for (var i2 = 0; i2 < str.length; ++i2)
+      ar_1[i2] = str.charCodeAt(i2);
+    return ar_1;
+  }
+  if (te)
+    return te.encode(str);
+  var l = str.length;
+  var ar = new u8(str.length + (str.length >> 1));
+  var ai = 0;
+  var w = function(v) {
+    ar[ai++] = v;
+  };
+  for (var i2 = 0; i2 < l; ++i2) {
+    if (ai + 5 > ar.length) {
+      var n = new u8(ai + 8 + (l - i2 << 1));
+      n.set(ar);
+      ar = n;
+    }
+    var c = str.charCodeAt(i2);
+    if (c < 128 || latin1)
+      w(c);
+    else if (c < 2048)
+      w(192 | c >> 6), w(128 | c & 63);
+    else if (c > 55295 && c < 57344)
+      c = 65536 + (c & 1023 << 10) | str.charCodeAt(++i2) & 1023, w(240 | c >> 18), w(128 | c >> 12 & 63), w(128 | c >> 6 & 63), w(128 | c & 63);
+    else
+      w(224 | c >> 12), w(128 | c >> 6 & 63), w(128 | c & 63);
+  }
+  return slc(ar, 0, ai);
+}
+function strFromU8(dat, latin1) {
+  if (latin1) {
+    var r = "";
+    for (var i2 = 0; i2 < dat.length; i2 += 16384)
+      r += String.fromCharCode.apply(null, dat.subarray(i2, i2 + 16384));
+    return r;
+  } else if (td) {
+    return td.decode(dat);
+  } else {
+    var _a2 = dutf8(dat), s = _a2.s, r = _a2.r;
+    if (r.length)
+      err(8);
+    return s;
+  }
+}
+var slzh = function(d, b) {
+  return b + 30 + b2(d, b + 26) + b2(d, b + 28);
+};
+var zh = function(d, b, z) {
+  var fnl = b2(d, b + 28), efl = b2(d, b + 30), fn = strFromU8(d.subarray(b + 46, b + 46 + fnl), !(b2(d, b + 8) & 2048)), es = b + 46 + fnl;
+  var _a2 = z64hs(d, es, efl, z, b4(d, b + 20), b4(d, b + 24), b4(d, b + 42)), sc = _a2[0], su = _a2[1], off = _a2[2];
+  return [b2(d, b + 10), sc, su, fn, es + efl + b2(d, b + 32), off];
+};
+var z64hs = function(d, b, l, z, sc, su, off) {
+  var nsc = sc == 4294967295, nsu = su == 4294967295, noff = off == 4294967295, e = b + l;
+  var nf = nsc + nsu + noff;
+  if (z && nf) {
+    for (; b + 4 < e; b += 4 + b2(d, b + 2)) {
+      if (b2(d, b) == 1) {
+        return [
+          nsc ? b8(d, b + 4 + 8 * nsu) : sc,
+          nsu ? b8(d, b + 4) : su,
+          noff ? b8(d, b + 4 + 8 * (nsu + nsc)) : off,
+          1
+        ];
+      }
+    }
+    if (z < 2)
+      err(13);
+  }
+  return [sc, su, off, 0];
+};
+var exfl = function(ex) {
+  var le = 0;
+  if (ex) {
+    for (var k in ex) {
+      var l = ex[k].length;
+      if (l > 65535)
+        err(9);
+      le += l + 4;
+    }
+  }
+  return le;
+};
+var wzh = function(d, b, f, fn, u, c, ce, co) {
+  var fl2 = fn.length, ex = f.extra, col = co && co.length;
+  var exl = exfl(ex);
+  wbytes(d, b, ce != null ? 33639248 : 67324752), b += 4;
+  if (ce != null)
+    d[b++] = 20, d[b++] = f.os;
+  d[b] = 20, b += 2;
+  d[b++] = f.flag << 1 | (c < 0 && 8), d[b++] = u && 8;
+  d[b++] = f.compression & 255, d[b++] = f.compression >> 8;
+  var dt = new Date(f.mtime == null ? Date.now() : f.mtime), y = dt.getFullYear() - 1980;
+  if (y < 0 || y > 119)
+    err(10);
+  wbytes(d, b, y << 25 | dt.getMonth() + 1 << 21 | dt.getDate() << 16 | dt.getHours() << 11 | dt.getMinutes() << 5 | dt.getSeconds() >> 1), b += 4;
+  if (c != -1) {
+    wbytes(d, b, f.crc);
+    wbytes(d, b + 4, c < 0 ? -c - 2 : c);
+    wbytes(d, b + 8, f.size);
+  }
+  wbytes(d, b + 12, fl2);
+  wbytes(d, b + 14, exl), b += 16;
+  if (ce != null) {
+    wbytes(d, b, col);
+    wbytes(d, b + 6, f.attrs);
+    wbytes(d, b + 10, ce), b += 14;
+  }
+  d.set(fn, b);
+  b += fl2;
+  if (exl) {
+    for (var k in ex) {
+      var exf = ex[k], l = exf.length;
+      wbytes(d, b, +k);
+      wbytes(d, b + 2, l);
+      d.set(exf, b + 4), b += 4 + l;
+    }
+  }
+  if (col)
+    d.set(co, b), b += col;
+  return b;
+};
+var wzf = function(o, b, c, d, e) {
+  wbytes(o, b, 101010256);
+  wbytes(o, b + 8, c);
+  wbytes(o, b + 10, c);
+  wbytes(o, b + 12, d);
+  wbytes(o, b + 16, e);
+};
+function zipSync(data, opts) {
+  if (!opts)
+    opts = {};
+  var r = {};
+  var files = [];
+  fltn(data, "", r, opts);
+  var o = 0;
+  var tot = 0;
+  for (var fn in r) {
+    var _a2 = r[fn], file = _a2[0], p = _a2[1];
+    var compression = p.level == 0 ? 0 : 8;
+    var f = strToU8(fn), s = f.length;
+    var com = p.comment, m = com && strToU8(com), ms = m && m.length;
+    var exl = exfl(p.extra);
+    if (s > 65535)
+      err(11);
+    var d = compression ? deflateSync(file, p) : file, l = d.length;
+    var c = crc();
+    c.p(file);
+    files.push(mrg(p, {
+      size: file.length,
+      crc: c.d(),
+      c: d,
+      f,
+      m,
+      u: s != fn.length || m && com.length != ms,
+      o,
+      compression
+    }));
+    o += 30 + s + exl + l;
+    tot += 76 + 2 * (s + exl) + (ms || 0) + l;
+  }
+  var out = new u8(tot + 22), oe = o, cdl = tot - o;
+  for (var i2 = 0; i2 < files.length; ++i2) {
+    var f = files[i2];
+    wzh(out, f.o, f, f.f, f.u, f.c.length);
+    var badd = 30 + f.f.length + exfl(f.extra);
+    out.set(f.c, f.o + badd);
+    wzh(out, o, f, f.f, f.u, f.c.length, f.o, f.m), o += 16 + badd + (f.m ? f.m.length : 0);
+  }
+  wzf(out, o, files.length, cdl, oe);
+  return out;
+}
+function unzipSync(data, opts) {
+  var files = {};
+  var e = data.length - 22;
+  for (; b4(data, e) != 101010256; --e) {
+    if (!e || data.length - e > 65558)
+      err(13);
+  }
+  ;
+  var c = b2(data, e + 8);
+  if (!c)
+    return {};
+  var o = b4(data, e + 16);
+  var z = b4(data, e - 20) == 117853008;
+  if (z) {
+    var ze = b4(data, e - 12);
+    z = b4(data, ze) == 101075792;
+    if (z) {
+      c = b4(data, ze + 32);
+      o = b4(data, ze + 48);
+    }
+  }
+  var fltr = opts && opts.filter;
+  for (var i2 = 0; i2 < c; ++i2) {
+    var _a2 = zh(data, o, z), c_2 = _a2[0], sc = _a2[1], su = _a2[2], fn = _a2[3], no = _a2[4], off = _a2[5], b = slzh(data, off);
+    o = no;
+    if (!fltr || fltr({
+      name: fn,
+      size: sc,
+      originalSize: su,
+      compression: c_2
+    })) {
+      if (!c_2)
+        files[fn] = slc(data, b, b + sc);
+      else if (c_2 == 8)
+        files[fn] = inflateSync(data.subarray(b, b + sc), { out: new u8(su) });
+      else
+        err(14, "unknown compression type " + c_2);
+    }
+  }
+  return files;
+}
+
+// src/host/figma/sidecar.ts
+import { mkdir as mkdir2, readFile as readFile2, rename, unlink, writeFile as writeFile2 } from "node:fs/promises";
+import { dirname, join as join2, resolve as resolve3, sep } from "node:path";
+var SYNC_SUFFIX = ".sync.json";
+var LEGACY_ARCHIVE_FORMAT = "dsh.canvas.figma@1";
+function assertInside(root, target) {
+  const base = resolve3(root);
+  const full = resolve3(target);
+  if (full !== base && !full.startsWith(base + sep)) {
+    throw new Error("path escapes .dsh-canvas directory");
+  }
+  return full;
+}
+function sidecarFile(canvasDir, name) {
+  if (!isSlug(name)) throw new Error(`invalid canvas name "${name}"`);
+  return assertInside(canvasDir, join2(canvasDir, "figma", `${name}${SYNC_SUFFIX}`));
+}
+async function readSidecar(canvasDir, name) {
+  const file = sidecarFile(canvasDir, name);
+  let raw;
+  try {
+    raw = await readFile2(file, "utf8");
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
+  const parsed = JSON.parse(raw);
+  if (parsed?.format !== FIGMA_SYNC_FORMAT || parsed?.version !== FIGMA_SYNC_VERSION) {
+    throw new Error(`Unsupported Figma sync sidecar format in ${name}${SYNC_SUFFIX}`);
+  }
+  return parsed;
+}
+async function writeSidecar(canvasDir, name, sidecar) {
+  const file = sidecarFile(canvasDir, name);
+  await mkdir2(dirname(file), { recursive: true });
+  const normalized = {
+    ...sidecar,
+    format: FIGMA_SYNC_FORMAT,
+    version: FIGMA_SYNC_VERSION,
+    canvasName: name
+  };
+  const temp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  await writeFile2(temp, JSON.stringify(normalized, null, 2) + "\n", "utf8");
+  await rename(temp, file);
+  return file;
+}
+async function deleteSidecar(canvasDir, name) {
+  const file = sidecarFile(canvasDir, name);
+  try {
+    await unlink(file);
     return true;
   } catch (error) {
-    console.warn(`[dsh-canvas] could not register skill "${skill.name}":`, error?.message ?? error);
-    return false;
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+      return false;
+    }
+    throw error;
   }
+}
+async function renameSidecar(canvasDir, from, to) {
+  const existing = await readSidecar(canvasDir, from);
+  if (!existing) return false;
+  existing.canvasName = to;
+  await writeSidecar(canvasDir, to, existing);
+  await deleteSidecar(canvasDir, from);
+  return true;
+}
+function isLegacyFigmaArchive(value) {
+  return Boolean(value && typeof value === "object" && value.format === LEGACY_ARCHIVE_FORMAT);
+}
+function extractDocFromLegacyArchive(raw) {
+  const dsh = raw.dsh && typeof raw.dsh === "object" ? raw.dsh : {};
+  const docTree = raw.document && typeof raw.document === "object" ? raw.document : {};
+  const nodesById = dsh.nodes && typeof dsh.nodes === "object" ? dsh.nodes : {};
+  const figmaPages = Array.isArray(docTree.children) ? docTree.children : [];
+  const pages = figmaPages.map((page, index) => {
+    const convertChildren = (children) => {
+      if (!Array.isArray(children)) return [];
+      const result = [];
+      for (const child of children) {
+        if (!child || typeof child !== "object") continue;
+        const c = child;
+        const figId = typeof c.id === "string" ? c.id : "";
+        const ext = nodesById[figId];
+        const base = ext ? structuredClone(ext) : {
+          id: figId.replace(/[^A-Za-z0-9_-]/g, "_") || `node_${index}`,
+          type: "frame",
+          name: typeof c.name === "string" ? c.name : "Frame",
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 100
+        };
+        if (base.type === "frame" || base.type === "group") {
+          base.children = convertChildren(c.children);
+        }
+        result.push(base);
+      }
+      return result;
+    };
+    return {
+      id: typeof page.id === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(page.id) ? page.id : `page-${index + 1}`,
+      name: typeof page.name === "string" ? page.name : `Page ${index + 1}`,
+      background: "#f5f5f5",
+      children: convertChildren(page.children)
+    };
+  });
+  return normalizeDoc(
+    {
+      format: "dsh.canvas",
+      version: 1,
+      id: typeof dsh.id === "string" ? dsh.id : "canvas_migrated",
+      title: typeof docTree.name === "string" ? docTree.name : "Migrated Canvas",
+      pages: pages.length ? pages : [{ id: "page-1", name: "Page 1", background: "#f5f5f5", children: [] }],
+      styles: Array.isArray(dsh.styles) ? dsh.styles : [],
+      components: Array.isArray(dsh.components) ? dsh.components : [],
+      variantSets: Array.isArray(dsh.variantSets) ? dsh.variantSets : [],
+      fonts: Array.isArray(dsh.fonts) ? dsh.fonts : [],
+      comments: Array.isArray(dsh.comments) ? dsh.comments : []
+    },
+    { touch: false }
+  );
+}
+
+// src/host/figma/bundle.ts
+var BUNDLE_FORMAT = "dsh.fig.bundle";
+var BUNDLE_VERSION = 1;
+var BUNDLE_SUFFIX = ".dshfig";
+var MAX_BUNDLE_BYTES = 256 * 1024 * 1024;
+var MAX_JSON_BYTES = 48 * 1024 * 1024;
+var ASSET_PATH_RE = /^(?:assets|fonts)\/[A-Za-z0-9._-]{1,120}$/;
+var OBJECT_PATH_RE = /^objects\/[0-9a-f]{64}$/;
+function sha256Hex(bytes) {
+  return createHash2("sha256").update(bytes).digest("hex");
+}
+function collectReferencedAssets(doc) {
+  const files = /* @__PURE__ */ new Set();
+  const visit = (value) => {
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item);
+    } else if (value && typeof value === "object") {
+      const rec = value;
+      if (typeof rec.asset === "string" && ASSET_PATH_RE.test(rec.asset) && !rec.asset.includes("..")) {
+        files.add(rec.asset);
+      }
+      for (const item of Object.values(rec)) visit(item);
+    }
+  };
+  visit(doc);
+  return files;
+}
+async function exportDshFigBundle(params) {
+  const normalizedDoc = normalizeDoc(params.doc, { touch: false });
+  const assetPaths = collectReferencedAssets(normalizedDoc);
+  const index = {};
+  const parts = {};
+  let totalBytes = 0;
+  for (const relPath of assetPaths) {
+    const data = await params.loadAsset(relPath);
+    const hash = sha256Hex(data);
+    index[relPath] = hash;
+    const objectKey = `objects/${hash}`;
+    if (!parts[objectKey]) {
+      totalBytes += data.byteLength;
+      if (totalBytes > MAX_BUNDLE_BYTES) throw new Error("Bundle exceeds 256 MiB limit");
+      parts[objectKey] = [data, { level: 0 }];
+    }
+  }
+  const canvasBytes = strToU8(JSON.stringify(normalizedDoc));
+  if (canvasBytes.byteLength > MAX_JSON_BYTES) throw new Error("Canvas document exceeds bundle JSON limit");
+  parts["canvas.json"] = [canvasBytes, { level: 1 }];
+  if (params.sidecar) {
+    const sidecarBytes = strToU8(JSON.stringify(params.sidecar));
+    if (sidecarBytes.byteLength > MAX_JSON_BYTES) throw new Error("Figma sync sidecar exceeds bundle JSON limit");
+    parts["figma.sync.json"] = [sidecarBytes, { level: 1 }];
+  }
+  const manifestBytes = strToU8(
+    JSON.stringify({
+      format: BUNDLE_FORMAT,
+      version: BUNDLE_VERSION,
+      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      hasSidecar: Boolean(params.sidecar),
+      index
+    })
+  );
+  parts["manifest.json"] = [manifestBytes, { level: 1 }];
+  const bytes = zipSync(parts);
+  return {
+    bytes,
+    objects: Object.keys(parts).filter((k) => k.startsWith("objects/")).length,
+    assetCount: assetPaths.size
+  };
+}
+function importDshFigBundle(bytes) {
+  if (bytes.byteLength > MAX_BUNDLE_BYTES) throw new Error("Bundle exceeds 256 MiB limit");
+  let total = 0;
+  const seen = /* @__PURE__ */ new Set();
+  const parts = unzipSync(bytes, {
+    filter: (member) => {
+      const allowed = member.name === "manifest.json" || member.name === "canvas.json" || member.name === "figma.sync.json" || OBJECT_PATH_RE.test(member.name);
+      if (!allowed) return false;
+      if (seen.has(member.name)) throw new Error(`Duplicate entry "${member.name}" in .dshfig bundle`);
+      seen.add(member.name);
+      total += member.originalSize;
+      if (total > MAX_BUNDLE_BYTES) throw new Error("Bundle exceeds 256 MiB decompressed limit");
+      if (!member.name.startsWith("objects/") && member.originalSize > MAX_JSON_BYTES) {
+        throw new Error(`Bundle JSON member "${member.name}" exceeds size limit`);
+      }
+      return true;
+    }
+  });
+  if (!parts["manifest.json"]) throw new Error("Invalid .dshfig bundle: missing manifest.json");
+  const manifest = JSON.parse(strFromU8(parts["manifest.json"]));
+  if (manifest.format === "dsh.canvas.figma.bundle" && isLegacyFigmaArchive(manifest.archive)) {
+    const doc2 = extractDocFromLegacyArchive(manifest.archive);
+    const files2 = extractIndexedFiles(manifest.index, parts);
+    return { doc: doc2, sidecar: null, files: files2 };
+  }
+  if (manifest.format !== BUNDLE_FORMAT || manifest.version !== BUNDLE_VERSION) {
+    throw new Error(`Unsupported .dshfig bundle format: ${String(manifest.format)}`);
+  }
+  if (!parts["canvas.json"]) throw new Error("Invalid .dshfig bundle: missing canvas.json");
+  const doc = normalizeDoc(JSON.parse(strFromU8(parts["canvas.json"])), { touch: false });
+  let sidecar = null;
+  if (parts["figma.sync.json"]) {
+    const parsedSidecar = JSON.parse(strFromU8(parts["figma.sync.json"]));
+    if (parsedSidecar.format === FIGMA_SYNC_FORMAT && parsedSidecar.version === FIGMA_SYNC_VERSION) {
+      sidecar = parsedSidecar;
+    }
+  }
+  const files = extractIndexedFiles(manifest.index, parts);
+  return { doc, sidecar, files };
+}
+function extractIndexedFiles(indexRaw, parts) {
+  const index = indexRaw && typeof indexRaw === "object" ? indexRaw : {};
+  const files = /* @__PURE__ */ new Map();
+  for (const [relPath, hash] of Object.entries(index)) {
+    if (!ASSET_PATH_RE.test(relPath) || relPath.includes("..")) {
+      throw new Error(`Invalid asset path "${relPath}" in bundle`);
+    }
+    if (typeof hash !== "string" || !/^[0-9a-f]{64}$/.test(hash)) {
+      throw new Error(`Invalid checksum for "${relPath}" in bundle`);
+    }
+    const data = parts[`objects/${hash}`];
+    if (!data || sha256Hex(data) !== hash) {
+      throw new Error(`Checksum mismatch for "${relPath}" in bundle`);
+    }
+    files.set(relPath, data);
+  }
+  return files;
+}
+
+// src/host/figma/fig-reader.ts
+import * as zlib from "node:zlib";
+function asProps(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return /* @__PURE__ */ Object.create(null);
+  return value;
+}
+var maxTransportBytes = 256 * 1024 * 1024;
+var maxCanvasBytes = 96 * 1024 * 1024;
+var maxSchemaBytes = 4 * 1024 * 1024;
+var maxValueCount = 16e6;
+var utf8 = new TextDecoder("utf-8", { fatal: true });
+var Cursor = class {
+  constructor(data) {
+    this.data = data;
+  }
+  data;
+  offset = 0;
+  floatBytes = new DataView(new ArrayBuffer(4));
+  get remaining() {
+    return this.data.length - this.offset;
+  }
+  take(length) {
+    if (length < 0 || length > this.data.length - this.offset) throw new Error("Truncated Figma archive");
+    const slice = this.data.subarray(this.offset, this.offset + length);
+    this.offset += length;
+    return slice;
+  }
+  byte() {
+    return this.take(1)[0];
+  }
+  uint() {
+    let value = 0;
+    for (let shift = 0; shift <= 28; shift += 7) {
+      const byte = this.byte();
+      value += (byte & 127) * 2 ** shift;
+      if (byte < 128 && value <= 4294967295) return value;
+    }
+    throw new Error("Invalid Figma integer");
+  }
+  int() {
+    const value = this.uint();
+    return value & 1 ? -(value + 1) / 2 : value / 2;
+  }
+  wide(signed) {
+    let value = 0n;
+    for (let shift = 0n; shift <= 63n; shift += 7n) {
+      const byte = this.byte();
+      value |= BigInt(byte & 127) << shift;
+      if (byte < 128) return (signed ? value >> 1n ^ -(value & 1n) : value).toString();
+    }
+    throw new Error("Invalid Figma 64-bit integer");
+  }
+  float() {
+    const first = this.byte();
+    if (first === 0) return 0;
+    const bits2 = first | this.byte() << 8 | this.byte() << 16 | this.byte() << 24;
+    this.floatBytes.setUint32(0, bits2 << 23 | bits2 >>> 9);
+    return this.floatBytes.getFloat32(0);
+  }
+  string() {
+    const end = this.data.indexOf(0, this.offset);
+    if (end < 0 || end - this.offset > 2e6) throw new Error("Invalid Figma string");
+    const bytes = this.take(end - this.offset);
+    this.byte();
+    return utf8.decode(bytes);
+  }
+  segment(limit) {
+    const word = this.take(4);
+    const length = new DataView(word.buffer, word.byteOffset, word.byteLength).getUint32(0, true);
+    const compressed = this.take(length);
+    if (compressed[0] !== 40 || compressed[1] !== 181 || compressed[2] !== 47 || compressed[3] !== 253) {
+      return zlib.inflateRawSync(compressed, { maxOutputLength: limit });
+    }
+    if (typeof zlib.zstdDecompressSync !== "function") {
+      throw new Error("This Figma copy requires a Host runtime with Zstandard support");
+    }
+    return zlib.zstdDecompressSync(compressed, { maxOutputLength: limit });
+  }
+};
+function decodeSchema(schemaData) {
+  const cursor = new Cursor(schemaData);
+  const count = cursor.uint();
+  if (count < 1 || count > 12e3) throw new Error("Unsupported Figma schema size");
+  const types = [];
+  for (let i2 = 0; i2 < count; i2++) {
+    const name = cursor.string();
+    const kind = cursor.byte();
+    const fieldCount = cursor.uint();
+    if (kind > 2 || fieldCount > 3e4) throw new Error("Invalid Figma schema declaration");
+    const fields = /* @__PURE__ */ new Map();
+    for (let j = 0; j < fieldCount; j++) {
+      const fieldName = cursor.string();
+      const type2 = cursor.int();
+      const array = Boolean(cursor.byte());
+      const id2 = cursor.uint();
+      if (fields.has(id2)) throw new Error("Duplicate Figma schema field");
+      fields.set(id2, { id: id2, name: fieldName, type: type2, array });
+    }
+    types.push({ name, kind, fields });
+  }
+  return types;
+}
+function decodeMessage(data, types) {
+  const cursor = new Cursor(data);
+  let budget = maxValueCount;
+  const root = types.findIndex((type2) => type2.name === "Message");
+  function read(typeId, depth) {
+    if (--budget < 0 || depth > 100) throw new Error("Figma archive exceeds decode limits");
+    switch (typeId) {
+      case -1:
+        return Boolean(cursor.byte());
+      case -2:
+        return cursor.byte();
+      case -3:
+        return cursor.int();
+      case -4:
+        return cursor.uint();
+      case -5:
+        return cursor.float();
+      case -6:
+        return cursor.string();
+      case -7:
+        return cursor.wide(true);
+      case -8:
+        return cursor.wide(false);
+    }
+    const type2 = types[typeId];
+    if (!type2) throw new Error("Unknown Figma schema type");
+    if (type2.kind === 0) return type2.fields.get(cursor.uint())?.name ?? "UNKNOWN";
+    const output = /* @__PURE__ */ Object.create(null);
+    function fieldValue(field2) {
+      if (!field2.array) return read(field2.type, depth + 1);
+      const length = cursor.uint();
+      if (field2.type === -2) return cursor.take(length);
+      if (length > budget || length > 1e6) throw new Error("Figma array exceeds decode limits");
+      return Array.from({ length }, () => read(field2.type, depth + 1));
+    }
+    if (type2.kind === 1) {
+      for (const field2 of type2.fields.values()) output[field2.name] = fieldValue(field2);
+      return output;
+    }
+    for (let id2 = cursor.uint(); id2 !== 0; id2 = cursor.uint()) {
+      const field2 = type2.fields.get(id2);
+      if (!field2) throw new Error("Figma archive references an undeclared field");
+      output[field2.name] = fieldValue(field2);
+    }
+    return output;
+  }
+  if (root < 0) throw new Error("Missing Figma document message");
+  return asProps(read(root, 0));
+}
+function readNativeFig(bytes) {
+  if (bytes.length > maxTransportBytes) throw new Error("Figma transport exceeds 256 MiB");
+  let canvas = bytes;
+  const images = /* @__PURE__ */ new Map();
+  if (bytes[0] === 80 && bytes[1] === 75) {
+    let total = 0;
+    const names = /* @__PURE__ */ new Set();
+    const files = unzipSync(bytes, {
+      filter: (entry) => {
+        const wanted = entry.name === "canvas.fig" || /^images\/[a-f\d]{40}(?:\.(?:png|jpe?g|gif|webp))?$/i.test(entry.name);
+        if (!wanted) return false;
+        if (names.has(entry.name) || entry.originalSize > maxCanvasBytes || (total += entry.originalSize) > maxTransportBytes) {
+          throw new Error("Figma ZIP exceeds archive limits or contains duplicate members");
+        }
+        names.add(entry.name);
+        return true;
+      }
+    });
+    canvas = files["canvas.fig"];
+    if (!canvas) throw new Error("Missing canvas.fig in archive");
+    for (const [name, image] of Object.entries(files)) {
+      if (!name.startsWith("images/")) continue;
+      images.set(name.slice(7, 47).toLowerCase(), image);
+    }
+  }
+  const cursor = new Cursor(canvas);
+  const magic = utf8.decode(cursor.take(8));
+  if (magic !== "fig-kiwi" && magic !== "fig-jam.") throw new Error("Not a native Figma Design copy");
+  const version = cursor.take(4);
+  const schemaVersion = new DataView(version.buffer, version.byteOffset, version.byteLength).getUint32(0, true);
+  if (schemaVersion < 15) throw new Error("Unsupported Figma schema version");
+  const schema = decodeSchema(cursor.segment(maxSchemaBytes));
+  const message = decodeMessage(cursor.segment(maxCanvasBytes), schema);
+  if (!Array.isArray(message.nodeChanges)) throw new Error("Figma archive has no node tree");
+  const blobs = Array.isArray(message.blobs) ? message.blobs.map((b) => b && typeof b === "object" && "bytes" in b && b.bytes instanceof Uint8Array ? b.bytes : null).filter((b) => b !== null) : void 0;
+  return { schemaVersion, nodes: message.nodeChanges.map(asProps), images, blobs };
+}
+function figmaId(value) {
+  if (!value) return void 0;
+  const guid = asProps(value);
+  if (typeof guid.sessionID !== "number" || typeof guid.localID !== "number") return void 0;
+  return `${guid.sessionID}:${guid.localID}`;
+}
+
+// src/host/figma/fig-adapter.ts
+import { createHash as createHash3 } from "node:crypto";
+import { mkdir as mkdir3, writeFile as writeFile3 } from "node:fs/promises";
+import { join as join3 } from "node:path";
+var WEIGHT_BY_STYLE = [
+  [/thin|hairline/i, 100],
+  [/extra\s*light|ultra\s*light/i, 200],
+  [/light/i, 300],
+  [/medium/i, 500],
+  [/semi\s*bold|demi\s*bold/i, 600],
+  [/extra\s*bold|ultra\s*bold/i, 800],
+  [/black|heavy/i, 900],
+  [/bold/i, 700]
+];
+function detectImageExt(bytes) {
+  if (bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) return ".png";
+  if (bytes[0] === 255 && bytes[1] === 216) return ".jpg";
+  if (bytes[0] === 71 && bytes[1] === 73 && bytes[2] === 70) return ".gif";
+  if (bytes[0] === 82 && bytes[1] === 73 && bytes[2] === 70 && bytes[3] === 70) return ".webp";
+  return ".png";
+}
+async function persistFigmaImages(canvasDir, images) {
+  const hashMap = {};
+  if (images.size === 0) return hashMap;
+  const assetsDir = join3(canvasDir, "assets");
+  await mkdir3(assetsDir, { recursive: true });
+  for (const [figmaHash, bytes] of images) {
+    if (!bytes.byteLength) continue;
+    const ext = detectImageExt(bytes);
+    const sha24 = createHash3("sha256").update(bytes).digest("hex").slice(0, 24);
+    const rel = `assets/${sha24}${ext}`;
+    await writeFile3(join3(canvasDir, rel), bytes);
+    hashMap[figmaHash.toLowerCase()] = rel;
+  }
+  return hashMap;
+}
+function bytesToHex(bytes) {
+  if (bytes instanceof Uint8Array) {
+    return Buffer.from(bytes).toString("hex").toLowerCase();
+  }
+  if (Array.isArray(bytes)) {
+    return Buffer.from(bytes.map((b) => Number(b) & 255)).toString("hex").toLowerCase();
+  }
+  if (typeof bytes === "string" && /^[0-9a-f]{40}$/i.test(bytes)) return bytes.toLowerCase();
+  return void 0;
+}
+function convertPaints(paints, imageAssets) {
+  if (!Array.isArray(paints)) return void 0;
+  const out = [];
+  for (const raw of paints) {
+    const p = asProps(raw);
+    if (p.visible === false) continue;
+    const paintOpacity = typeof p.opacity === "number" ? p.opacity : 1;
+    if (p.type === "SOLID") {
+      const c = asProps(p.color);
+      const conv = figmaRgbaToHex(
+        { r: Number(c.r ?? 0), g: Number(c.g ?? 0), b: Number(c.b ?? 0), a: Number(c.a ?? 1) },
+        paintOpacity
+      );
+      out.push(conv.opacity < 1 ? { type: "solid", color: conv.color, opacity: conv.opacity } : { type: "solid", color: conv.color });
+    } else if (p.type === "GRADIENT_LINEAR" || p.type === "GRADIENT_RADIAL") {
+      const stopsRaw = Array.isArray(p.stops) ? p.stops : [];
+      const stops = stopsRaw.map((s) => {
+        const sp = asProps(s);
+        const c = asProps(sp.color);
+        const conv = figmaRgbaToHex({ r: Number(c.r ?? 0), g: Number(c.g ?? 0), b: Number(c.b ?? 0), a: Number(c.a ?? 1) }, 1);
+        return {
+          position: round22(Number(sp.position ?? 0)),
+          color: conv.color,
+          ...conv.opacity < 1 ? { opacity: conv.opacity } : {}
+        };
+      });
+      if (stops.length >= 2) {
+        out.push({
+          type: p.type === "GRADIENT_LINEAR" ? "linear-gradient" : "radial-gradient",
+          angle: 180,
+          stops,
+          ...paintOpacity < 1 ? { opacity: round22(paintOpacity) } : {}
+        });
+      }
+    } else if (p.type === "IMAGE") {
+      const img = asProps(p.image);
+      const hash = bytesToHex(img.hash);
+      const asset = hash ? imageAssets[hash] : void 0;
+      const scaleModeRaw = String(p.imageScaleMode ?? "FILL").toUpperCase();
+      const scaleMode = scaleModeRaw === "FIT" ? "fit" : scaleModeRaw === "STRETCH" ? "stretch" : scaleModeRaw === "TILE" ? "tile" : "fill";
+      if (asset || hash) {
+        out.push({
+          type: "image",
+          ...asset ? { asset } : {},
+          ...hash ? { imageHash: hash } : {},
+          scaleMode,
+          ...paintOpacity < 1 ? { opacity: round22(paintOpacity) } : {}
+        });
+      }
+    }
+  }
+  return out.length ? out : void 0;
+}
+function convertStrokes(node) {
+  const paints = Array.isArray(node.strokePaints) ? node.strokePaints : [];
+  const weight = typeof node.strokeWeight === "number" ? node.strokeWeight : 1;
+  const alignRaw = String(node.strokeAlign ?? "CENTER").toUpperCase();
+  const align = alignRaw === "INSIDE" ? "inside" : alignRaw === "OUTSIDE" ? "outside" : "center";
+  const out = [];
+  for (const raw of paints) {
+    const p = asProps(raw);
+    if (p.visible === false || p.type !== "SOLID") continue;
+    const c = asProps(p.color);
+    const conv = figmaRgbaToHex(
+      { r: Number(c.r ?? 0), g: Number(c.g ?? 0), b: Number(c.b ?? 0), a: Number(c.a ?? 1) },
+      typeof p.opacity === "number" ? p.opacity : 1
+    );
+    out.push({
+      color: conv.color,
+      width: round22(Math.max(0, weight)),
+      ...conv.opacity < 1 ? { opacity: conv.opacity } : {},
+      align
+    });
+  }
+  return out.length ? out : void 0;
+}
+function convertEffects(node) {
+  const effects = Array.isArray(node.effects) ? node.effects : [];
+  const out = [];
+  for (const raw of effects) {
+    const e = asProps(raw);
+    if (e.visible === false) continue;
+    const radius = typeof e.radius === "number" ? round22(Math.max(0, e.radius)) : 0;
+    if (e.type === "FOREGROUND_BLUR" || e.type === "LAYER_BLUR" || e.type === "BACKGROUND_BLUR") {
+      out.push({ type: "blur", blur: radius });
+    } else if (e.type === "DROP_SHADOW" || e.type === "INNER_SHADOW") {
+      const c = asProps(e.color);
+      const offset = asProps(e.offset);
+      const conv = figmaRgbaToHex({ r: Number(c.r ?? 0), g: Number(c.g ?? 0), b: Number(c.b ?? 0), a: Number(c.a ?? 0.25) });
+      out.push({
+        type: e.type === "INNER_SHADOW" ? "inner-shadow" : "drop-shadow",
+        color: conv.color,
+        opacity: conv.opacity,
+        x: round22(Number(offset.x ?? 0)),
+        y: round22(Number(offset.y ?? 2)),
+        blur: radius,
+        ...typeof e.spread === "number" && e.spread !== 0 ? { spread: round22(e.spread) } : {}
+      });
+    }
+  }
+  return out.length ? out : void 0;
+}
+function convertFont(node) {
+  const fn = asProps(node.fontName);
+  const family = typeof fn.family === "string" && fn.family.trim() ? fn.family.trim() : "Inter";
+  const styleStr = typeof fn.style === "string" ? fn.style : "Regular";
+  let weight = 400;
+  for (const [re, w] of WEIGHT_BY_STYLE) {
+    if (re.test(styleStr)) {
+      weight = w;
+      break;
+    }
+  }
+  const size = typeof node.fontSize === "number" && node.fontSize > 0 ? round22(node.fontSize) : 14;
+  let lineHeight = 1.4;
+  const lh = asProps(node.lineHeight);
+  if (typeof lh.value === "number" && lh.value > 0) {
+    if (lh.units === "PIXELS") lineHeight = round22(lh.value / size);
+    else if (lh.units === "PERCENT") lineHeight = round22(lh.value / 100);
+  }
+  const ls = asProps(node.letterSpacing);
+  const letterSpacing = typeof ls.value === "number" && ls.value !== 0 ? round22(ls.units === "PERCENT" ? ls.value / 100 * size : ls.value) : void 0;
+  return {
+    family,
+    weight,
+    .../italic|oblique/i.test(styleStr) ? { style: "italic" } : {},
+    size,
+    lineHeight: Math.max(0.5, Math.min(10, lineHeight)),
+    ...letterSpacing ? { letterSpacing } : {}
+  };
+}
+function convertLayout(node) {
+  const mode = String(node.stackMode ?? "NONE");
+  if (mode !== "HORIZONTAL" && mode !== "VERTICAL") return void 0;
+  const mapPrimary = (v) => {
+    if (v === "CENTER") return "center";
+    if (v === "MAX") return "end";
+    if (v === "SPACE_EVENLY" || v === "SPACE_BETWEEN") return "space-between";
+    return "start";
+  };
+  const mapCounter = (v) => {
+    if (v === "CENTER") return "center";
+    if (v === "MAX") return "end";
+    if (v === "STRETCH") return "stretch";
+    return "start";
+  };
+  return {
+    direction: mode === "HORIZONTAL" ? "horizontal" : "vertical",
+    gap: round22(typeof node.stackSpacing === "number" ? Math.max(0, node.stackSpacing) : 0),
+    padding: {
+      top: round22(Number(node.stackVerticalPadding ?? node.stackPaddingTop ?? 0)),
+      right: round22(Number(node.stackPaddingRight ?? node.stackHorizontalPadding ?? 0)),
+      bottom: round22(Number(node.stackPaddingBottom ?? node.stackVerticalPadding ?? 0)),
+      left: round22(Number(node.stackHorizontalPadding ?? node.stackPaddingLeft ?? 0))
+    },
+    alignPrimary: mapPrimary(node.stackPrimaryAlignItems),
+    alignCounter: mapCounter(node.stackCounterAlignItems),
+    ...node.stackWrap === "WRAP" ? { wrap: true } : {}
+  };
+}
+function mapFigmaNodeType(rawType) {
+  switch (rawType) {
+    case "FRAME":
+    case "COMPONENT":
+    case "COMPONENT_SET":
+    case "SECTION":
+    case "SYMBOL":
+      return { type: "frame" };
+    case "GROUP":
+      return { type: "group" };
+    case "RECTANGLE":
+    case "ROUNDED_RECTANGLE":
+      return { type: "rect" };
+    case "ELLIPSE":
+      return { type: "ellipse" };
+    case "LINE":
+      return { type: "line" };
+    case "TEXT":
+      return { type: "text" };
+    case "VECTOR":
+    case "STAR":
+    case "REGULAR_POLYGON":
+    case "BOOLEAN_OPERATION":
+      return { type: "rect", degraded: String(rawType) };
+    case "INSTANCE":
+      return { type: "frame", degraded: "INSTANCE" };
+    default:
+      return { type: "frame", degraded: String(rawType ?? "UNKNOWN") };
+  }
+}
+function extractTransform(node) {
+  const t = asProps(node.transform);
+  const m00 = typeof t.m00 === "number" ? t.m00 : 1;
+  const m10 = typeof t.m10 === "number" ? t.m10 : 0;
+  const x2 = typeof t.m02 === "number" ? round22(t.m02) : 0;
+  const y = typeof t.m12 === "number" ? round22(t.m12) : 0;
+  const rotation = round22(Math.atan2(m10, m00) * 180 / Math.PI);
+  return { x: x2, y, rotation: Math.abs(rotation) < 0.01 ? 0 : rotation };
+}
+function nativeFigToIr(native, options = {}) {
+  const imageAssets = options.imageAssets ?? {};
+  const byId = /* @__PURE__ */ new Map();
+  const childrenByParent = /* @__PURE__ */ new Map();
+  const notices = [];
+  let degradedCount = 0;
+  for (const raw of native.nodes) {
+    const id2 = figmaId(raw.guid);
+    if (!id2) continue;
+    if (raw.phase === "REMOVED") continue;
+    byId.set(id2, raw);
+    const parentIndex = asProps(raw.parentIndex);
+    const parentId = figmaId(parentIndex.guid);
+    if (parentId) {
+      const list2 = childrenByParent.get(parentId) ?? [];
+      list2.push({ position: typeof parentIndex.position === "string" ? parentIndex.position : "", node: raw });
+      childrenByParent.set(parentId, list2);
+    }
+  }
+  for (const list2 of childrenByParent.values()) {
+    list2.sort((a, b) => a.position < b.position ? -1 : a.position > b.position ? 1 : 0);
+  }
+  const convertNode = (raw) => {
+    const id2 = figmaId(raw.guid) ?? "0:0";
+    const mapped = mapFigmaNodeType(raw.type);
+    if (mapped.degraded) degradedCount += 1;
+    const size = asProps(raw.size);
+    const transform = extractTransform(raw);
+    const pluginData = Array.isArray(raw.pluginData) ? raw.pluginData : [];
+    let dshId;
+    for (const entry of pluginData) {
+      const pe = asProps(entry);
+      if (pe.key === "dshId" && typeof pe.value === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(pe.value)) {
+        dshId = pe.value;
+      }
+    }
+    const passthrough = {};
+    if (raw.blendMode && raw.blendMode !== "PASS_THROUGH" && raw.blendMode !== "NORMAL") {
+      passthrough.blendMode = raw.blendMode;
+    }
+    if (Array.isArray(raw.prototypeInteractions) && raw.prototypeInteractions.length > 0) {
+      passthrough.reactions = raw.prototypeInteractions;
+    }
+    if (mapped.degraded) passthrough.originalFigmaType = mapped.degraded;
+    const cornerRadii = raw.rectangleCornerRadiiIndependent === true ? [
+      round22(Number(raw.rectangleTopLeftCornerRadius ?? 0)),
+      round22(Number(raw.rectangleTopRightCornerRadius ?? 0)),
+      round22(Number(raw.rectangleBottomRightCornerRadius ?? 0)),
+      round22(Number(raw.rectangleBottomLeftCornerRadius ?? 0))
+    ] : void 0;
+    const textData = asProps(raw.textData);
+    const kids = (childrenByParent.get(id2) ?? []).map((item) => convertNode(item.node));
+    const ir = {
+      figmaId: id2,
+      ...dshId ? { dshId } : {},
+      type: mapped.type,
+      name: typeof raw.name === "string" && raw.name.trim() ? raw.name : mapped.type,
+      x: transform.x,
+      y: transform.y,
+      width: round22(Math.max(0, Number(size.x ?? 0))),
+      height: round22(Math.max(0, Number(size.y ?? 0))),
+      ...transform.rotation ? { rotation: transform.rotation } : {},
+      ...typeof raw.opacity === "number" && raw.opacity < 1 ? { opacity: round22(raw.opacity) } : {},
+      ...raw.visible === false ? { visible: false } : {},
+      ...raw.locked === true ? { locked: true } : {},
+      ...mapped.type === "frame" ? { clip: raw.frameMaskDisabled !== true } : {},
+      ...typeof raw.cornerRadius === "number" && raw.cornerRadius > 0 ? { cornerRadius: round22(raw.cornerRadius) } : {},
+      ...cornerRadii ? { cornerRadii } : {},
+      ...convertPaints(raw.fillPaints, imageAssets) ? { fills: convertPaints(raw.fillPaints, imageAssets) } : {},
+      ...convertStrokes(raw) ? { strokes: convertStrokes(raw) } : {},
+      ...convertEffects(raw) ? { effects: convertEffects(raw) } : {},
+      ...convertLayout(raw) ? { layout: convertLayout(raw) } : {},
+      ...raw.stackPositioning === "ABSOLUTE" ? { layoutPositioning: "absolute" } : {},
+      ...mapped.type === "text" ? {
+        text: typeof textData.characters === "string" ? textData.characters : "",
+        font: convertFont(raw),
+        align: raw.textAlignHorizontal === "CENTER" ? "center" : raw.textAlignHorizontal === "RIGHT" ? "right" : raw.textAlignHorizontal === "JUSTIFIED" ? "justify" : "left",
+        verticalAlign: raw.textAlignVertical === "CENTER" ? "center" : raw.textAlignVertical === "BOTTOM" ? "bottom" : "top"
+      } : {},
+      ...kids.length > 0 && (mapped.type === "frame" || mapped.type === "group") ? { children: kids } : {},
+      ...Object.keys(passthrough).length > 0 ? { passthrough } : {}
+    };
+    return ir;
+  };
+  const docRoot = [...byId.values()].find((n) => n.type === "DOCUMENT");
+  const docId = docRoot ? figmaId(docRoot.guid) : void 0;
+  const canvasNodes = (docId ? (childrenByParent.get(docId) ?? []).map((i2) => i2.node) : [...byId.values()]).filter(
+    (n) => n.type === "CANVAS" && n.internalOnly !== true
+  );
+  const pages = [];
+  if (canvasNodes.length > 0) {
+    for (const canvas of canvasNodes) {
+      const cId = figmaId(canvas.guid) ?? "0:1";
+      const bg = asProps(canvas.backgroundColor);
+      const bgHex = canvas.backgroundColor ? figmaRgbaToHex({ r: Number(bg.r ?? 0.96), g: Number(bg.g ?? 0.96), b: Number(bg.b ?? 0.96), a: 1 }).color : "#f5f5f5";
+      const children = (childrenByParent.get(cId) ?? []).map((item) => convertNode(item.node));
+      pages.push({
+        figmaId: cId,
+        name: typeof canvas.name === "string" ? canvas.name : "Page 1",
+        background: bgHex,
+        children
+      });
+    }
+  } else {
+    const topNodes = [...byId.values()].filter((n) => {
+      if (n.type === "DOCUMENT" || n.type === "CANVAS") return false;
+      const parentId = figmaId(asProps(n.parentIndex).guid);
+      return !parentId || !byId.has(parentId) || byId.get(parentId)?.type === "CANVAS" || byId.get(parentId)?.type === "DOCUMENT";
+    });
+    pages.push({
+      name: "Pasted from Figma",
+      background: "#f5f5f5",
+      children: topNodes.map(convertNode)
+    });
+  }
+  if (degradedCount > 0) {
+    notices.push(`${degradedCount} \u4E2A Figma \u539F\u751F\u590D\u6742\u8282\u70B9\u5DF2\u964D\u7EA7\u4E3A\u5BB9\u5668/\u77E9\u5F62\u5360\u4F4D\uFF0C\u539F\u7C7B\u578B\u5DF2\u5B58\u5165 passthrough \u900F\u4F20\u8868\u3002`);
+  }
+  return {
+    format: FIGMA_IR_FORMAT,
+    version: FIGMA_IR_VERSION,
+    ...options.fileKey ? { fileKey: options.fileKey } : {},
+    ...options.fileName || (typeof docRoot?.name === "string" ? docRoot.name : void 0) ? { fileName: options.fileName ?? String(docRoot?.name) } : {},
+    readCompleteness: "complete",
+    pages,
+    ...notices.length ? { notices } : {}
+  };
+}
+async function decodeFigBytesToIr(bytes, canvasDir, options = {}) {
+  const native = readNativeFig(bytes);
+  const imageHashes = await persistFigmaImages(canvasDir, native.images);
+  const ir = nativeFigToIr(native, { ...options, imageAssets: imageHashes });
+  return { ir, schemaVersion: native.schemaVersion, imageHashes };
+}
+
+// src/host/figma/service.ts
+import { existsSync } from "node:fs";
+import { mkdir as mkdir6, readFile as readFile4, writeFile as writeFile6 } from "node:fs/promises";
+import { dirname as dirname3, join as join6, resolve as resolve4 } from "node:path";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+
+// src/shared/figma/patch.ts
+function indexLocalDoc(doc, sidecar) {
+  const ir = dshDocToIr(doc, sidecar);
+  const map = /* @__PURE__ */ new Map();
+  for (const page of ir.pages) {
+    const pageDshId = page.dshId ?? "page-1";
+    const pageFigmaId = sidecar.binding.pages[pageDshId];
+    const visit = (nodes, parentId, rootFrameId) => {
+      nodes.forEach((node, index) => {
+        const dshId = node.dshId ?? "";
+        if (!dshId) return;
+        const ownRoot = rootFrameId ?? (parentId === null ? dshId : void 0);
+        map.set(dshId, {
+          dshId,
+          figmaId: sidecar.binding.nodes[dshId],
+          pageDshId,
+          pageFigmaId,
+          parentId,
+          rootFrameId: ownRoot,
+          index,
+          node,
+          snapshot: extractNodeSnapshot(node, parentId)
+        });
+        if (node.children?.length) visit(node.children, dshId, ownRoot);
+      });
+    };
+    visit(page.children, null, void 0);
+  }
+  return map;
+}
+function planPushDiff(doc, sidecar, options = {}) {
+  const localMap = indexLocalDoc(doc, sidecar);
+  const entries = [];
+  const notices = [];
+  const missingAssets = /* @__PURE__ */ new Set();
+  const knownAssets = new Set(Object.values(sidecar.binding.imageHashes));
+  for (const [dshId, item] of localMap) {
+    const base = sidecar.base.localNodes[dshId];
+    const remoteBase = sidecar.base.remoteProjectedNodes[dshId] ?? base;
+    const passthroughPreserved = Object.keys(sidecar.passthrough[dshId] ?? {});
+    for (const fill of item.node.fills ?? []) {
+      if (fill.type === "image" && fill.asset && !knownAssets.has(fill.asset)) {
+        missingAssets.add(fill.asset);
+      }
+    }
+    if (!base || !item.figmaId) {
+      entries.push({
+        dshId,
+        figmaNodeId: item.figmaId,
+        nodeName: item.node.name,
+        nodeType: item.node.type,
+        pageId: item.pageDshId,
+        rootFrameId: item.rootFrameId,
+        kind: "added",
+        fields: [],
+        passthroughPreserved,
+        selected: true
+      });
+      continue;
+    }
+    const fields = diffSnapshots(base, item.snapshot);
+    if (fields.length === 0) continue;
+    const onlyMoved = fields.every((f) => f.field === "x" || f.field === "y" || f.field === "parentId");
+    entries.push({
+      dshId,
+      figmaNodeId: item.figmaId,
+      nodeName: item.node.name,
+      nodeType: item.node.type,
+      pageId: item.pageDshId,
+      rootFrameId: item.rootFrameId,
+      kind: onlyMoved ? "moved" : "modified",
+      fields,
+      passthroughPreserved,
+      expectedRemoteHash: remoteBase?.fingerprint,
+      selected: true
+    });
+  }
+  for (const [dshId, base] of Object.entries(sidecar.base.localNodes)) {
+    if (localMap.has(dshId)) continue;
+    const figmaNodeId = sidecar.binding.nodes[dshId];
+    if (!figmaNodeId) continue;
+    entries.push({
+      dshId,
+      figmaNodeId,
+      nodeName: base.name,
+      nodeType: base.type,
+      pageId: Object.keys(sidecar.binding.pages)[0] ?? "page-1",
+      kind: "deleted",
+      fields: [],
+      passthroughPreserved: Object.keys(sidecar.passthrough[dshId] ?? {}),
+      expectedRemoteHash: sidecar.base.remoteProjectedNodes[dshId]?.fingerprint,
+      selected: true
+    });
+  }
+  return buildPlanObject(
+    "push",
+    "complete",
+    options.canvasName ?? sidecar.canvasName,
+    options.baseCanvasRevision ?? sidecar.binding.lastCanvasRevision,
+    sidecar.binding.fileKey,
+    entries,
+    [],
+    notices,
+    missingAssets.size
+  );
+}
+function buildFigmaSyncPatch(doc, sidecar, plan, options = {}) {
+  const localMap = indexLocalDoc(doc, sidecar);
+  const mode = options.mode ?? "in-place";
+  const operations = [];
+  const missingAssets = /* @__PURE__ */ new Set();
+  const knownAssets = new Set(Object.values(sidecar.binding.imageHashes));
+  for (const entry of plan.entries) {
+    const selected = options.selectedIds ? options.selectedIds.has(entry.dshId) : entry.selected;
+    if (!selected) continue;
+    if (entry.kind === "deleted") {
+      if (!entry.figmaNodeId) continue;
+      operations.push({
+        op: "delete",
+        dshId: entry.dshId,
+        figmaNodeId: entry.figmaNodeId,
+        pageDshId: entry.pageId,
+        pageFigmaId: sidecar.binding.pages[entry.pageId],
+        expectedRemoteHash: entry.expectedRemoteHash
+      });
+      continue;
+    }
+    const item = localMap.get(entry.dshId);
+    if (!item) continue;
+    for (const fill of item.node.fills ?? []) {
+      if (fill.type === "image" && fill.asset && !knownAssets.has(fill.asset)) {
+        missingAssets.add(fill.asset);
+      }
+    }
+    if (entry.kind === "added") {
+      operations.push({
+        op: "create",
+        dshId: entry.dshId,
+        parentDshId: item.parentId ?? void 0,
+        parentFigmaNodeId: item.parentId ? sidecar.binding.nodes[item.parentId] : void 0,
+        pageDshId: item.pageDshId,
+        pageFigmaId: item.pageFigmaId,
+        index: item.index,
+        node: item.node
+      });
+    } else {
+      const fields = {};
+      for (const change of entry.fields) {
+        fields[change.field] = change.after;
+      }
+      operations.push({
+        op: entry.kind === "moved" && entry.fields.some((f) => f.field === "parentId") ? "move" : "update",
+        dshId: entry.dshId,
+        figmaNodeId: item.figmaId,
+        parentDshId: item.parentId ?? void 0,
+        parentFigmaNodeId: item.parentId ? sidecar.binding.nodes[item.parentId] : void 0,
+        pageDshId: item.pageDshId,
+        pageFigmaId: item.pageFigmaId,
+        index: item.index,
+        expectedRemoteHash: entry.expectedRemoteHash,
+        fields,
+        passthroughPreserved: entry.passthroughPreserved
+      });
+    }
+  }
+  return {
+    format: "dsh.figma.patch",
+    version: 1,
+    planId: plan.planId,
+    canvasName: plan.canvasName,
+    fileKey: plan.fileKey,
+    mode,
+    baseCanvasRevision: plan.baseCanvasRevision,
+    operations,
+    missingAssets: [...missingAssets]
+  };
+}
+function commitPushAck(doc, sidecar, ack, canvasRevision) {
+  const next = structuredClone(sidecar);
+  const localMap = indexLocalDoc(doc, next);
+  if (ack.createdPageIds) {
+    for (const [dshPageId, figmaPageId] of Object.entries(ack.createdPageIds)) {
+      next.binding.pages[dshPageId] = figmaPageId;
+    }
+  }
+  for (const [dshId, figmaId2] of Object.entries(ack.createdNodeIds)) {
+    next.binding.nodes[dshId] = figmaId2;
+  }
+  for (const dshId of ack.appliedDshIds) {
+    const localItem = localMap.get(dshId);
+    if (!localItem) {
+      delete next.binding.nodes[dshId];
+      delete next.base.localNodes[dshId];
+      delete next.base.remoteProjectedNodes[dshId];
+      delete next.passthrough[dshId];
+      continue;
+    }
+    next.base.localNodes[dshId] = localItem.snapshot;
+    next.base.remoteProjectedNodes[dshId] = ack.remoteProjectedNodes?.[dshId] ?? localItem.snapshot;
+  }
+  next.binding.lastSyncedAt = (/* @__PURE__ */ new Date()).toISOString();
+  next.binding.lastCanvasRevision = canvasRevision;
+  if (ack.remoteVersion) next.binding.lastRemoteVersion = ack.remoteVersion;
+  return next;
+}
+
+// src/shared/path/svg-import.ts
+function attrs(text2) {
+  const result = {};
+  for (const match of text2.matchAll(/([:\w-]+)\s*=\s*("([^"]*)"|'([^']*)')/g)) {
+    result[match[1]] = match[3] ?? match[4] ?? "";
+  }
+  return result;
+}
+function viewBoxOfAttrs(values) {
+  const parts = (values.viewBox ?? "").trim().split(/[\s,]+/).map(Number);
+  if (parts.length !== 4 || parts.some((value) => !Number.isFinite(value)) || parts[2] <= 0 || parts[3] <= 0) return null;
+  return { x: parts[0], y: parts[1], width: parts[2], height: parts[3] };
+}
+function shapePath(tag, values) {
+  const n = (name, fallback = 0) => {
+    const value = Number(values[name]);
+    return Number.isFinite(value) ? value : fallback;
+  };
+  if (tag === "rect") {
+    const x2 = n("x");
+    const y = n("y");
+    const w = n("width");
+    const h = n("height");
+    if (w <= 0 || h <= 0) return null;
+    return `M${x2} ${y}h${w}v${h}h${-w}z`;
+  }
+  if (tag === "circle" || tag === "ellipse") {
+    const cx = n("cx");
+    const cy = n("cy");
+    const rx = tag === "circle" ? n("r") : n("rx");
+    const ry = tag === "circle" ? n("r") : n("ry");
+    if (rx <= 0 || ry <= 0) return null;
+    return `M${cx - rx} ${cy}a${rx} ${ry} 0 1 0 ${rx * 2} 0a${rx} ${ry} 0 1 0 ${-rx * 2} 0z`;
+  }
+  if (tag === "line") {
+    return `M${n("x1")} ${n("y1")}L${n("x2")} ${n("y2")}`;
+  }
+  if (tag === "polyline" || tag === "polygon") {
+    const numbers = (values.points ?? "").trim().split(/[\s,]+/).map(Number).filter(Number.isFinite);
+    if (numbers.length < 4) return null;
+    const pairs = [];
+    for (let i2 = 0; i2 + 1 < numbers.length; i2 += 2) pairs.push(`${numbers[i2]} ${numbers[i2 + 1]}`);
+    return `M${pairs.join("L")}${tag === "polygon" ? "Z" : ""}`;
+  }
+  return null;
+}
+function importSvgPaths(source) {
+  const warnings = [];
+  const paths = [];
+  const root = /<svg\b([^>]*)>/i.exec(source);
+  const rootAttrs = root ? attrs(root[1] ?? "") : {};
+  const rootViewBox = viewBoxOfAttrs(rootAttrs);
+  if (/<text\b|<image\b|<filter\b|<mask\b|<clipPath\b/i.test(source)) {
+    warnings.push("\u5DF2\u8DF3\u8FC7 text/image/filter/mask/clipPath");
+  }
+  if (/<g\b[^>]*\btransform\s*=/i.test(source) || /<path\b[^>]*\btransform\s*=/i.test(source)) {
+    warnings.push("\u5DF2\u8DF3\u8FC7 transform\uFF08\u57FA\u7840\u5BFC\u5165\u6682\u4E0D\u5C55\u5F00\u5206\u7EC4\u53D8\u6362\uFF09");
+  }
+  let index = 0;
+  for (const match of source.matchAll(/<(path|rect|circle|ellipse|line|polyline|polygon)\b([^>]*)\/?>/gi)) {
+    index += 1;
+    const tag = match[1].toLowerCase();
+    const values = attrs(match[2] ?? "");
+    const d = tag === "path" ? values.d : shapePath(tag, values);
+    if (!d) {
+      warnings.push(`\u7B2C ${index} \u4E2A ${tag} \u65E0\u6CD5\u8F6C\u6362\u4E3A path\uFF0C\u5DF2\u8DF3\u8FC7`);
+      continue;
+    }
+    let parsed;
+    try {
+      parsed = parsePathData(d);
+    } catch (error) {
+      warnings.push(`\u7B2C ${index} \u4E2A path \u65E0\u6CD5\u89E3\u6790\uFF0C\u5DF2\u8DF3\u8FC7\uFF1A${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+    const viewBox = viewBoxOfAttrs(values) ?? {
+      x: parsed.bounds.minX,
+      y: parsed.bounds.minY,
+      width: Math.max(1, parsed.bounds.maxX - parsed.bounds.minX),
+      height: Math.max(1, parsed.bounds.maxY - parsed.bounds.minY)
+    };
+    const fill = values.fill && values.fill !== "none" && /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(values.fill) ? values.fill : null;
+    const stroke = values.stroke && values.stroke !== "none" && /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(values.stroke) ? values.stroke : null;
+    const strokeWidth = Number(values["stroke-width"]);
+    paths.push({
+      name: values.id || `Path ${index}`,
+      d,
+      viewBox,
+      width: rootViewBox?.width ?? viewBox.width,
+      height: rootViewBox?.height ?? viewBox.height,
+      fills: fill ? [{ type: "solid", color: fill }] : [],
+      strokes: stroke ? [{ color: stroke, width: Number.isFinite(strokeWidth) && strokeWidth > 0 ? strokeWidth : 1, align: "center" }] : [],
+      fillRule: values["fill-rule"] === "evenodd" ? "evenodd" : "nonzero"
+    });
+  }
+  if (!paths.length) warnings.push("\u6CA1\u6709\u627E\u5230\u53EF\u5BFC\u5165\u7684 <path>");
+  return { paths, warnings };
+}
+
+// src/host/figma/clipboard.ts
+var FIGMETA_RE = /<!--\(figmeta\)([A-Za-z0-9+/=\s_-]+)-->/;
+var FIGMA_RE = /<!--\(figma\)([A-Za-z0-9+/=\s_-]+)-->/;
+function extractFigmaClipboardPayload(html) {
+  const figMatch = FIGMA_RE.exec(html);
+  if (!figMatch) return null;
+  const b64 = figMatch[1].replace(/\s+/g, "");
+  const buffer = Buffer.from(b64, "base64");
+  if (buffer.byteLength < 12) return null;
+  let figmeta;
+  const metaMatch = FIGMETA_RE.exec(html);
+  if (metaMatch) {
+    try {
+      const parsed = JSON.parse(Buffer.from(metaMatch[1].replace(/\s+/g, ""), "base64").toString("utf8"));
+      if (parsed && typeof parsed === "object") figmeta = parsed;
+    } catch {
+    }
+  }
+  return { figmeta, buffer };
+}
+async function decodeFigmaClipboard(payload, canvasDir) {
+  const html = typeof payload.html === "string" ? payload.html : "";
+  const extracted = html ? extractFigmaClipboardPayload(html) : null;
+  if (extracted) {
+    const fileKey = typeof extracted.figmeta?.fileKey === "string" ? extracted.figmeta.fileKey : void 0;
+    const decoded = await decodeFigBytesToIr(extracted.buffer, canvasDir, { fileKey });
+    const collector = {
+      nodeBindings: {},
+      passthrough: {},
+      imageHashes: { ...decoded.imageHashes },
+      usedIds: new Set(payload.existingIds ?? [])
+    };
+    const nodes = [];
+    for (const page of decoded.ir.pages) {
+      for (const child of page.children) {
+        nodes.push(irNodeToDshNode(child, collector));
+      }
+    }
+    return {
+      source: "figma-kiwi",
+      ...fileKey ? { fileKey } : {},
+      nodes,
+      passthrough: collector.passthrough,
+      nodeBindings: collector.nodeBindings,
+      imageHashes: collector.imageHashes,
+      warnings: decoded.ir.notices ?? []
+    };
+  }
+  const svgSource = [payload.svg, payload.text, html].find(
+    (s) => typeof s === "string" && /<svg[\s>]/i.test(s)
+  );
+  if (svgSource) {
+    const imported = importSvgPaths(svgSource);
+    const usedIds = new Set(payload.existingIds ?? []);
+    const nodes = imported.paths.map((p) => {
+      let id2 = newId("path");
+      while (usedIds.has(id2)) id2 = newId("path");
+      usedIds.add(id2);
+      return {
+        id: id2,
+        type: "path",
+        name: p.name,
+        x: p.viewBox.x,
+        y: p.viewBox.y,
+        width: p.width,
+        height: p.height,
+        d: p.d,
+        viewBox: p.viewBox,
+        fillRule: p.fillRule,
+        fills: p.fills,
+        strokes: p.strokes
+      };
+    });
+    return {
+      source: "svg",
+      nodes,
+      passthrough: {},
+      nodeBindings: {},
+      imageHashes: {},
+      warnings: imported.warnings ?? []
+    };
+  }
+  throw new Error("Clipboard does not contain Figma Kiwi data or SVG markup");
+}
+
+// src/host/figma/credentials.ts
+import { execFile } from "node:child_process";
+import { chmod, mkdir as mkdir4, readFile as readFile3, unlink as unlink2, writeFile as writeFile4 } from "node:fs/promises";
+import { homedir } from "node:os";
+import { dirname as dirname2, join as join4 } from "node:path";
+import { promisify } from "node:util";
+var run = promisify(execFile);
+var API_ORIGIN = "https://api.figma.com";
+var TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,240}$/;
+var KEYCHAIN_SERVICE = "dsh-canvas.figma";
+var KEYCHAIN_ACCOUNT = "default";
+var LEGACY_KEYCHAIN_SERVICE = "dsh-canvas.figma.personal";
+var LEGACY_KEYCHAIN_ACCOUNT = "readonly";
+function resolveCredFile(options) {
+  const dir = options?.credentialsDir ?? join4(homedir(), ".dsh", "credentials");
+  return join4(dir, "dsh-canvas-figma.json");
+}
+function resolveMetaFile(options) {
+  const dir = options?.credentialsDir ?? join4(homedir(), ".dsh", "credentials");
+  return join4(dir, "dsh-canvas-figma.meta.json");
+}
+function isValidFigmaTokenFormat(token) {
+  const trimmed = token.trim();
+  return TOKEN_PATTERN.test(trimmed);
+}
+async function execSecurity(args, options) {
+  const runner = options?.execFileImpl ? promisify(options.execFileImpl) : run;
+  const result = await runner("/usr/bin/security", args, { timeout: 15e3, maxBuffer: 8192 });
+  return String(result.stdout ?? "").trim();
+}
+async function readMeta(options) {
+  try {
+    const raw = await readFile3(resolveMetaFile(options), "utf8");
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") return parsed;
+  } catch {
+  }
+  return null;
+}
+async function writeMeta(meta, options) {
+  const file = resolveMetaFile(options);
+  await mkdir4(dirname2(file), { recursive: true });
+  await writeFile4(file, JSON.stringify(meta, null, 2) + "\n", { mode: 384 });
+  await chmod(file, 384).catch(() => {
+  });
+}
+async function readFigmaCredential(options) {
+  const env = options?.env ?? process.env;
+  const platform = options?.platform ?? process.platform;
+  const envToken = env.DSH_FIGMA_TOKEN?.trim();
+  if (envToken && isValidFigmaTokenFormat(envToken)) {
+    const meta = await readMeta(options);
+    return {
+      source: "env",
+      credential: {
+        kind: "pat",
+        accessToken: envToken,
+        scopeMode: meta?.scopeMode ?? "unknown",
+        createdAt: meta?.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+        ...meta?.expiresAt ? { expiresAt: meta.expiresAt } : {},
+        ...meta?.account ? { account: meta.account } : {}
+      }
+    };
+  }
+  if (platform === "darwin" && !options?.credentialsDir) {
+    for (const [service, account] of [
+      [KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT],
+      [LEGACY_KEYCHAIN_SERVICE, LEGACY_KEYCHAIN_ACCOUNT]
+    ]) {
+      try {
+        const secret = await execSecurity(["find-generic-password", "-s", service, "-a", account, "-w"], options);
+        if (secret) {
+          if (secret.startsWith("{")) {
+            const parsed = JSON.parse(secret);
+            if (parsed.accessToken && isValidFigmaTokenFormat(parsed.accessToken)) {
+              return { source: "keychain", credential: parsed };
+            }
+          } else if (isValidFigmaTokenFormat(secret)) {
+            const meta = await readMeta(options);
+            return {
+              source: "keychain",
+              credential: {
+                kind: "pat",
+                accessToken: secret,
+                scopeMode: meta?.scopeMode ?? (service === LEGACY_KEYCHAIN_SERVICE ? "readonly" : "unknown"),
+                createdAt: meta?.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+                ...meta?.expiresAt ? { expiresAt: meta.expiresAt } : {},
+                ...meta?.account ? { account: meta.account } : {}
+              }
+            };
+          }
+        }
+      } catch {
+      }
+    }
+  }
+  try {
+    const raw = await readFile3(resolveCredFile(options), "utf8");
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.accessToken === "string" && isValidFigmaTokenFormat(parsed.accessToken)) {
+      return { source: "file", credential: parsed };
+    }
+  } catch {
+  }
+  return null;
+}
+async function requireFigmaAccessToken(options) {
+  const found = await readFigmaCredential(options);
+  if (!found) {
+    throw new Error("Figma API token is not configured. Run the canvas-figma-setup skill or configure it in Figma Sync settings.");
+  }
+  return found.credential.accessToken;
+}
+async function verifyFigmaToken(token, fetchImpl = fetch) {
+  const trimmed = token.trim();
+  if (!isValidFigmaTokenFormat(trimmed)) {
+    return { valid: false, error: "Token format is invalid (expected a Figma Personal Access Token like figd_...)" };
+  }
+  try {
+    const response = await fetchImpl(new URL("/v1/me", API_ORIGIN), {
+      method: "GET",
+      redirect: "error",
+      headers: {
+        accept: "application/json",
+        "X-Figma-Token": trimmed
+      },
+      signal: AbortSignal.timeout(15e3)
+    });
+    if (!response.ok) {
+      const text2 = await response.text().catch(() => "");
+      if (response.status === 403 && /scope|current_user/i.test(text2)) {
+        return {
+          valid: true,
+          account: { handle: "Figma (restricted scope)" }
+        };
+      }
+      return { valid: false, error: `Figma /v1/me returned HTTP ${response.status}` };
+    }
+    const data = await response.json();
+    return {
+      valid: true,
+      account: {
+        ...typeof data.id === "string" ? { id: data.id } : {},
+        ...typeof data.handle === "string" ? { handle: data.handle } : {},
+        ...typeof data.email === "string" ? { email: data.email } : {}
+      }
+    };
+  } catch (error) {
+    return { valid: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+async function saveFigmaToken(token, params = {}, options) {
+  const trimmed = token.trim();
+  if (!isValidFigmaTokenFormat(trimmed)) {
+    throw new Error("Invalid Figma token format");
+  }
+  let account;
+  let valid = true;
+  if (!params.skipVerify) {
+    const check = await verifyFigmaToken(trimmed, options?.fetchImpl);
+    if (!check.valid) {
+      throw new Error(check.error ?? "Figma token verification failed");
+    }
+    account = check.account;
+  }
+  const now = /* @__PURE__ */ new Date();
+  const expiresDays = typeof params.expiresInDays === "number" && params.expiresInDays > 0 ? params.expiresInDays : 90;
+  const expiresAt = new Date(now.getTime() + expiresDays * 864e5).toISOString();
+  const credential = {
+    kind: "pat",
+    accessToken: trimmed,
+    scopeMode: params.scopeMode ?? "readonly",
+    createdAt: now.toISOString(),
+    expiresAt,
+    ...account ? { account } : {}
+  };
+  const platform = options?.platform ?? process.platform;
+  let source = "file";
+  if (platform === "darwin" && !options?.credentialsDir) {
+    try {
+      await execSecurity(
+        ["add-generic-password", "-U", "-s", KEYCHAIN_SERVICE, "-a", KEYCHAIN_ACCOUNT, "-w", trimmed],
+        options
+      );
+      await writeMeta(
+        {
+          kind: credential.kind,
+          scopeMode: credential.scopeMode,
+          createdAt: credential.createdAt,
+          expiresAt: credential.expiresAt,
+          ...account ? { account } : {}
+        },
+        options
+      );
+      source = "keychain";
+    } catch {
+      source = "file";
+    }
+  }
+  if (source === "file") {
+    const file = resolveCredFile(options);
+    await mkdir4(dirname2(file), { recursive: true });
+    await writeFile4(file, JSON.stringify(credential, null, 2) + "\n", { mode: 384 });
+    await chmod(file, 384).catch(() => {
+    });
+  }
+  return buildRedactedStatus(credential, source, valid);
+}
+async function clearFigmaToken(options) {
+  const platform = options?.platform ?? process.platform;
+  let cleared = false;
+  if (platform === "darwin" && !options?.credentialsDir) {
+    for (const [service, account] of [
+      [KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT],
+      [LEGACY_KEYCHAIN_SERVICE, LEGACY_KEYCHAIN_ACCOUNT]
+    ]) {
+      try {
+        await execSecurity(["delete-generic-password", "-s", service, "-a", account], options);
+        cleared = true;
+      } catch {
+      }
+    }
+  }
+  for (const file of [resolveCredFile(options), resolveMetaFile(options)]) {
+    try {
+      await unlink2(file);
+      cleared = true;
+    } catch {
+    }
+  }
+  return { cleared };
+}
+async function getFigmaAuthStatus(params = {}, options) {
+  const found = await readFigmaCredential(options);
+  if (!found) {
+    return {
+      configured: false,
+      valid: false,
+      source: "none",
+      kind: null,
+      scopeMode: "unknown"
+    };
+  }
+  if (!params.probe) {
+    return buildRedactedStatus(found.credential, found.source, true);
+  }
+  const check = await verifyFigmaToken(found.credential.accessToken, options?.fetchImpl);
+  const cred = {
+    ...found.credential,
+    ...check.account ? { account: check.account } : {}
+  };
+  return buildRedactedStatus(cred, found.source, check.valid, check.error);
+}
+function buildRedactedStatus(credential, source, valid, error) {
+  let daysUntilExpiry = null;
+  if (credential.expiresAt) {
+    const ms = Date.parse(credential.expiresAt) - Date.now();
+    if (Number.isFinite(ms)) daysUntilExpiry = Math.ceil(ms / 864e5);
+  }
+  return {
+    configured: true,
+    valid,
+    source,
+    kind: credential.kind,
+    scopeMode: credential.scopeMode,
+    ...credential.account ? { account: credential.account } : {},
+    createdAt: credential.createdAt,
+    ...credential.expiresAt ? { expiresAt: credential.expiresAt } : {},
+    daysUntilExpiry,
+    expiringSoon: daysUntilExpiry !== null && daysUntilExpiry <= 7,
+    ...error ? { error } : {}
+  };
+}
+
+// src/host/figma/rest-adapter.ts
+import { createHash as createHash4 } from "node:crypto";
+import { mkdir as mkdir5, writeFile as writeFile5 } from "node:fs/promises";
+import { join as join5 } from "node:path";
+var API_ORIGIN2 = "https://api.figma.com";
+var FILE_KEY_PATTERN = /^[A-Za-z0-9]{8,70}$/;
+var MAX_RESPONSE_BYTES = 24 * 1024 * 1024;
+var MAX_PAGES = 50;
+function parseFigmaUrl(input) {
+  const raw = String(input ?? "").trim();
+  if (FILE_KEY_PATTERN.test(raw)) {
+    return { fileKey: raw, url: `https://www.figma.com/design/${raw}` };
+  }
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error("Invalid Figma URL or file key");
+  }
+  if (!/(^|\.)figma\.com$/i.test(url.hostname)) {
+    throw new Error("URL must point to figma.com");
+  }
+  const segments = url.pathname.split("/").filter(Boolean);
+  const kindIdx = segments.findIndex((s) => s === "file" || s === "design" || s === "proto" || s === "board");
+  const fileKey = kindIdx >= 0 ? segments[kindIdx + 1] : void 0;
+  if (!fileKey || !FILE_KEY_PATTERN.test(fileKey)) {
+    throw new Error("Could not extract a valid Figma file key from URL");
+  }
+  const fileName = kindIdx >= 0 && segments[kindIdx + 2] ? decodeURIComponent(segments[kindIdx + 2]).replace(/-/g, " ") : void 0;
+  const rawNodeId = url.searchParams.get("node-id");
+  const nodeId = rawNodeId ? rawNodeId.replace(/-/g, ":") : void 0;
+  return {
+    fileKey,
+    ...nodeId ? { nodeId } : {},
+    ...fileName ? { fileName } : {},
+    url: url.toString()
+  };
+}
+async function figmaRequest(path, token, options = {}) {
+  const request = options.fetchImpl ?? fetch;
+  const url = new URL(path, API_ORIGIN2);
+  const response = await request(url, {
+    method: options.method ?? "GET",
+    redirect: "error",
+    headers: {
+      accept: "application/json",
+      "X-Figma-Token": token,
+      ...options.body !== void 0 ? { "content-type": "application/json" } : {}
+    },
+    ...options.body !== void 0 ? { body: JSON.stringify(options.body) } : {},
+    signal: AbortSignal.timeout(3e4)
+  });
+  if (!response.ok) {
+    const retryAfter = response.headers.get("retry-after");
+    const retry = response.status === 429 && /^\d{1,9}$/.test(retryAfter ?? "") ? `; retry in ${retryAfter}s` : "";
+    throw new Error(`Figma ${url.pathname} returned HTTP ${response.status}${retry}`);
+  }
+  const buf = Buffer.from(await response.arrayBuffer());
+  if (buf.byteLength > MAX_RESPONSE_BYTES) {
+    throw new Error("Figma REST response exceeds 24 MiB");
+  }
+  const parsed = JSON.parse(buf.toString("utf8"));
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Figma REST returned an unexpected payload");
+  }
+  return parsed;
+}
+function convertRestFills(paints, imageAssets) {
+  if (!Array.isArray(paints)) return void 0;
+  const out = [];
+  for (const raw of paints) {
+    if (!raw || typeof raw !== "object") continue;
+    const p = raw;
+    if (p.visible === false) continue;
+    const opacity = typeof p.opacity === "number" ? p.opacity : 1;
+    if (p.type === "SOLID" && p.color && typeof p.color === "object") {
+      const c = p.color;
+      const conv = figmaRgbaToHex(c, opacity);
+      out.push(conv.opacity < 1 ? { type: "solid", color: conv.color, opacity: conv.opacity } : { type: "solid", color: conv.color });
+    } else if ((p.type === "GRADIENT_LINEAR" || p.type === "GRADIENT_RADIAL") && Array.isArray(p.gradientStops)) {
+      const stops = p.gradientStops.filter((s) => Boolean(s && typeof s === "object")).map((s) => {
+        const conv = figmaRgbaToHex(s.color, 1);
+        return {
+          position: round22(Number(s.position ?? 0)),
+          color: conv.color,
+          ...conv.opacity < 1 ? { opacity: conv.opacity } : {}
+        };
+      });
+      if (stops.length >= 2) {
+        out.push({
+          type: p.type === "GRADIENT_LINEAR" ? "linear-gradient" : "radial-gradient",
+          angle: 180,
+          stops,
+          ...opacity < 1 ? { opacity: round22(opacity) } : {}
+        });
+      }
+    } else if (p.type === "IMAGE" && typeof p.imageRef === "string") {
+      const hash = p.imageRef;
+      const asset = imageAssets[hash];
+      const scaleRaw = String(p.scaleMode ?? "FILL").toUpperCase();
+      const scaleMode = scaleRaw === "FIT" ? "fit" : scaleRaw === "STRETCH" ? "stretch" : scaleRaw === "TILE" ? "tile" : "fill";
+      if (asset || hash) {
+        out.push({
+          type: "image",
+          ...asset ? { asset } : {},
+          imageHash: hash,
+          scaleMode,
+          ...opacity < 1 ? { opacity: round22(opacity) } : {}
+        });
+      }
+    }
+  }
+  return out.length ? out : void 0;
+}
+function convertRestStrokes(node) {
+  if (!Array.isArray(node.strokes)) return void 0;
+  const weight = typeof node.strokeWeight === "number" ? node.strokeWeight : 1;
+  const alignRaw = String(node.strokeAlign ?? "CENTER").toUpperCase();
+  const align = alignRaw === "INSIDE" ? "inside" : alignRaw === "OUTSIDE" ? "outside" : "center";
+  const out = [];
+  for (const raw of node.strokes) {
+    if (!raw || typeof raw !== "object") continue;
+    const p = raw;
+    if (p.visible === false || p.type !== "SOLID") continue;
+    const conv = figmaRgbaToHex(p.color, typeof p.opacity === "number" ? p.opacity : 1);
+    out.push({
+      color: conv.color,
+      width: round22(Math.max(0, weight)),
+      ...conv.opacity < 1 ? { opacity: conv.opacity } : {},
+      align
+    });
+  }
+  return out.length ? out : void 0;
+}
+function convertRestEffects(node) {
+  if (!Array.isArray(node.effects)) return void 0;
+  const out = [];
+  for (const raw of node.effects) {
+    if (!raw || typeof raw !== "object") continue;
+    const e = raw;
+    if (e.visible === false) continue;
+    const radius = typeof e.radius === "number" ? round22(Math.max(0, e.radius)) : 0;
+    if (e.type === "LAYER_BLUR" || e.type === "BACKGROUND_BLUR") {
+      out.push({ type: "blur", blur: radius });
+    } else if (e.type === "DROP_SHADOW" || e.type === "INNER_SHADOW") {
+      const conv = figmaRgbaToHex(e.color);
+      const offset = e.offset && typeof e.offset === "object" ? e.offset : {};
+      out.push({
+        type: e.type === "INNER_SHADOW" ? "inner-shadow" : "drop-shadow",
+        color: conv.color,
+        opacity: conv.opacity,
+        x: round22(offset.x ?? 0),
+        y: round22(offset.y ?? 2),
+        blur: radius,
+        ...typeof e.spread === "number" && e.spread !== 0 ? { spread: round22(e.spread) } : {}
+      });
+    }
+  }
+  return out.length ? out : void 0;
+}
+function convertRestLayout(node) {
+  const mode = node.layoutMode;
+  if (mode !== "HORIZONTAL" && mode !== "VERTICAL") return void 0;
+  const mapPrimary = (v) => v === "CENTER" ? "center" : v === "MAX" ? "end" : v === "SPACE_BETWEEN" ? "space-between" : "start";
+  const mapCounter = (v) => v === "CENTER" ? "center" : v === "MAX" ? "end" : v === "STRETCH" ? "stretch" : "start";
+  return {
+    direction: mode === "HORIZONTAL" ? "horizontal" : "vertical",
+    gap: round22(typeof node.itemSpacing === "number" ? Math.max(0, node.itemSpacing) : 0),
+    padding: {
+      top: round22(Number(node.paddingTop ?? 0)),
+      right: round22(Number(node.paddingRight ?? 0)),
+      bottom: round22(Number(node.paddingBottom ?? 0)),
+      left: round22(Number(node.paddingLeft ?? 0))
+    },
+    alignPrimary: mapPrimary(node.primaryAxisAlignItems),
+    alignCounter: mapCounter(node.counterAxisAlignItems),
+    ...node.layoutWrap === "WRAP" ? { wrap: true } : {}
+  };
+}
+function convertRestFont(node) {
+  const style = node.style && typeof node.style === "object" ? node.style : {};
+  const size = typeof style.fontSize === "number" && style.fontSize > 0 ? round22(style.fontSize) : 14;
+  let lineHeight = 1.4;
+  if (typeof style.lineHeightPx === "number" && style.lineHeightPx > 0) {
+    lineHeight = round22(style.lineHeightPx / size);
+  } else if (typeof style.lineHeightPercentFontSize === "number" && style.lineHeightPercentFontSize > 0) {
+    lineHeight = round22(style.lineHeightPercentFontSize / 100);
+  }
+  return {
+    family: typeof style.fontFamily === "string" && style.fontFamily.trim() ? style.fontFamily.trim() : "Inter",
+    weight: typeof style.fontWeight === "number" ? Math.round(style.fontWeight) : 400,
+    ...style.italic === true ? { style: "italic" } : {},
+    size,
+    lineHeight: Math.max(0.5, Math.min(10, lineHeight)),
+    ...typeof style.letterSpacing === "number" && style.letterSpacing !== 0 ? { letterSpacing: round22(style.letterSpacing) } : {}
+  };
+}
+function convertRestNode(raw, parentBox, imageAssets) {
+  const figmaType = String(raw.type ?? "FRAME");
+  const mappedType = figmaType === "GROUP" ? "group" : figmaType === "RECTANGLE" ? "rect" : figmaType === "ELLIPSE" ? "ellipse" : figmaType === "LINE" ? "line" : figmaType === "TEXT" ? "text" : figmaType === "VECTOR" && Array.isArray(raw.fillGeometry) && typeof raw.fillGeometry[0]?.path === "string" ? "path" : "frame";
+  const box = raw.absoluteBoundingBox && typeof raw.absoluteBoundingBox === "object" ? raw.absoluteBoundingBox : { x: 0, y: 0, width: 100, height: 100 };
+  const x2 = round22(parentBox ? box.x - parentBox.x : box.x);
+  const y = round22(parentBox ? box.y - parentBox.y : box.y);
+  const width = round22(Math.max(0, box.width ?? 0));
+  const height = round22(Math.max(0, box.height ?? 0));
+  const passthrough = {};
+  if (raw.blendMode && raw.blendMode !== "PASS_THROUGH" && raw.blendMode !== "NORMAL") passthrough.blendMode = raw.blendMode;
+  if (raw.constraints) passthrough.constraints = raw.constraints;
+  if (Array.isArray(raw.interactions) && raw.interactions.length > 0) passthrough.reactions = raw.interactions;
+  if (figmaType === "INSTANCE" && typeof raw.componentId === "string") passthrough.figmaComponentId = raw.componentId;
+  const cornerRadii = Array.isArray(raw.rectangleCornerRadii) && raw.rectangleCornerRadii.length === 4 ? raw.rectangleCornerRadii.map((n) => round22(Math.max(0, Number(n) || 0))) : void 0;
+  const children = Array.isArray(raw.children) && (mappedType === "frame" || mappedType === "group") ? raw.children.map((child) => convertRestNode(child, box, imageAssets)) : void 0;
+  const style = raw.style && typeof raw.style === "object" ? raw.style : {};
+  const vectorPath = mappedType === "path" && Array.isArray(raw.fillGeometry) ? String(raw.fillGeometry[0]?.path ?? "") : void 0;
+  return {
+    figmaId: typeof raw.id === "string" ? raw.id : void 0,
+    type: mappedType,
+    name: typeof raw.name === "string" && raw.name.trim() ? raw.name : mappedType,
+    x: x2,
+    y,
+    width,
+    height,
+    ...typeof raw.rotation === "number" && raw.rotation !== 0 ? { rotation: round22(raw.rotation) } : {},
+    ...typeof raw.opacity === "number" && raw.opacity < 1 ? { opacity: round22(raw.opacity) } : {},
+    ...raw.visible === false ? { visible: false } : {},
+    ...raw.locked === true ? { locked: true } : {},
+    ...mappedType === "frame" ? { clip: raw.clipsContent !== false } : {},
+    ...typeof raw.cornerRadius === "number" && raw.cornerRadius > 0 ? { cornerRadius: round22(raw.cornerRadius) } : {},
+    ...cornerRadii ? { cornerRadii } : {},
+    ...convertRestFills(raw.fills, imageAssets) ? { fills: convertRestFills(raw.fills, imageAssets) } : {},
+    ...convertRestStrokes(raw) ? { strokes: convertRestStrokes(raw) } : {},
+    ...convertRestEffects(raw) ? { effects: convertRestEffects(raw) } : {},
+    ...convertRestLayout(raw) ? { layout: convertRestLayout(raw) } : {},
+    ...raw.layoutPositioning === "ABSOLUTE" ? { layoutPositioning: "absolute" } : {},
+    ...mappedType === "text" ? {
+      text: typeof raw.characters === "string" ? raw.characters : "",
+      font: convertRestFont(raw),
+      align: style.textAlignHorizontal === "CENTER" ? "center" : style.textAlignHorizontal === "RIGHT" ? "right" : style.textAlignHorizontal === "JUSTIFIED" ? "justify" : "left",
+      verticalAlign: style.textAlignVertical === "CENTER" ? "center" : style.textAlignVertical === "BOTTOM" ? "bottom" : "top"
+    } : {},
+    ...mappedType === "path" && vectorPath ? {
+      d: vectorPath,
+      viewBox: { x: 0, y: 0, width: Math.max(1, width), height: Math.max(1, height) },
+      fillRule: "nonzero"
+    } : {},
+    ...children && children.length > 0 ? { children } : {},
+    ...Object.keys(passthrough).length > 0 ? { passthrough } : {}
+  };
+}
+async function downloadRestImageFills(fileKey, token, canvasDir, fetchImpl = fetch) {
+  const imageAssets = {};
+  try {
+    const res = await figmaRequest(`/v1/files/${fileKey}/images`, token, { fetchImpl });
+    const meta = res.meta && typeof res.meta === "object" ? res.meta : {};
+    const images = meta.images && typeof meta.images === "object" ? meta.images : {};
+    const entries = Object.entries(images).filter(([, url]) => typeof url === "string" && url.startsWith("https://"));
+    if (entries.length === 0) return imageAssets;
+    await mkdir5(join5(canvasDir, "assets"), { recursive: true });
+    for (const [imageRef, imageUrl] of entries.slice(0, 64)) {
+      try {
+        const imgRes = await fetchImpl(imageUrl, { signal: AbortSignal.timeout(2e4) });
+        if (!imgRes.ok) continue;
+        const bytes = Buffer.from(await imgRes.arrayBuffer());
+        if (!bytes.byteLength || bytes.byteLength > 20 * 1024 * 1024) continue;
+        const ct = imgRes.headers.get("content-type") ?? "";
+        const ext = ct.includes("jpeg") || ct.includes("jpg") ? ".jpg" : ct.includes("webp") ? ".webp" : ct.includes("gif") ? ".gif" : ".png";
+        const hash = createHash4("sha256").update(bytes).digest("hex").slice(0, 24);
+        const rel = `assets/${hash}${ext}`;
+        await writeFile5(join5(canvasDir, rel), bytes);
+        imageAssets[imageRef] = rel;
+      } catch {
+      }
+    }
+  } catch {
+  }
+  return imageAssets;
+}
+async function fetchFigmaAsIr(fileKey, token, canvasDir, options = {}) {
+  if (!FILE_KEY_PATTERN.test(fileKey)) throw new Error("Invalid Figma fileKey");
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const imageHashes = await downloadRestImageFills(fileKey, token, canvasDir, fetchImpl);
+  if (options.nodeId) {
+    const query2 = new URLSearchParams({ ids: options.nodeId, geometry: "paths" });
+    const data2 = await figmaRequest(`/v1/files/${fileKey}/nodes?${query2}`, token, { fetchImpl });
+    const nodesMap = data2.nodes && typeof data2.nodes === "object" ? data2.nodes : {};
+    const entry = nodesMap[options.nodeId] ?? Object.values(nodesMap)[0];
+    const docNode = entry?.document;
+    if (!docNode) throw new Error(`Figma node "${options.nodeId}" not found in file ${fileKey}`);
+    const pages2 = docNode.type === "CANVAS" ? [
+      {
+        figmaId: String(docNode.id ?? options.nodeId),
+        name: String(docNode.name ?? "Page 1"),
+        children: Array.isArray(docNode.children) ? docNode.children.map((c) => convertRestNode(c, null, imageHashes)) : []
+      }
+    ] : [
+      {
+        name: String(data2.name ?? "Figma Selection"),
+        children: [convertRestNode(docNode, null, imageHashes)]
+      }
+    ];
+    return {
+      imageHashes,
+      ir: {
+        format: FIGMA_IR_FORMAT,
+        version: FIGMA_IR_VERSION,
+        fileKey,
+        fileName: typeof data2.name === "string" ? data2.name : void 0,
+        remoteVersion: typeof data2.version === "string" ? data2.version : void 0,
+        readCompleteness: "partial",
+        pages: pages2
+      }
+    };
+  }
+  const query = new URLSearchParams({ geometry: "paths" });
+  if (typeof options.depth === "number") query.set("depth", String(options.depth));
+  const data = await figmaRequest(`/v1/files/${fileKey}?${query}`, token, { fetchImpl });
+  const document = data.document && typeof data.document === "object" ? data.document : {};
+  const rawPages = Array.isArray(document.children) ? document.children : [];
+  const pages = rawPages.map((p, idx) => {
+    const bg = p.backgroundColor && typeof p.backgroundColor === "object" ? figmaRgbaToHex(p.backgroundColor, 1).color : "#f5f5f5";
+    return {
+      figmaId: typeof p.id === "string" ? p.id : `0:${idx + 1}`,
+      name: typeof p.name === "string" ? p.name : `Page ${idx + 1}`,
+      background: bg,
+      children: Array.isArray(p.children) ? p.children.map((c) => convertRestNode(c, null, imageHashes)) : []
+    };
+  });
+  return {
+    imageHashes,
+    ir: {
+      format: FIGMA_IR_FORMAT,
+      version: FIGMA_IR_VERSION,
+      fileKey,
+      fileName: typeof data.name === "string" ? data.name : void 0,
+      remoteVersion: typeof data.version === "string" ? data.version : void 0,
+      readCompleteness: options.depth !== void 0 ? "partial" : "complete",
+      pages
+    }
+  };
+}
+async function fetchFigmaComments(fileKey, token, nodeBindings, fetchImpl = fetch) {
+  if (!FILE_KEY_PATTERN.test(fileKey)) throw new Error("Invalid Figma fileKey");
+  const data = await figmaRequest(`/v1/files/${fileKey}/comments`, token, { fetchImpl });
+  const rawList = Array.isArray(data.comments) ? data.comments : [];
+  const figmaToDsh = /* @__PURE__ */ new Map();
+  for (const [dshId, figmaId2] of Object.entries(nodeBindings)) figmaToDsh.set(figmaId2, dshId);
+  const byId = new Map(rawList.map((c) => [String(c.id ?? ""), c]));
+  return rawList.map((c) => {
+    const parentId = typeof c.parent_id === "string" && c.parent_id ? c.parent_id : void 0;
+    const root = parentId ? byId.get(parentId) ?? c : c;
+    const meta = root.client_meta && typeof root.client_meta === "object" ? root.client_meta : {};
+    const figmaNodeId = typeof meta.node_id === "string" ? meta.node_id : void 0;
+    const offset = meta.node_offset && typeof meta.node_offset === "object" ? meta.node_offset : meta;
+    const canvasNodeId = figmaNodeId ? figmaToDsh.get(figmaNodeId) : void 0;
+    const user = c.user && typeof c.user === "object" ? c.user : {};
+    return {
+      id: String(c.id ?? ""),
+      ...parentId ? { parentId } : {},
+      message: String(c.message ?? ""),
+      author: typeof user.handle === "string" ? user.handle : "Figma",
+      createdAt: typeof c.created_at === "string" ? c.created_at : (/* @__PURE__ */ new Date()).toISOString(),
+      resolvedAt: typeof c.resolved_at === "string" ? c.resolved_at : null,
+      ...figmaNodeId ? { figmaNodeId } : {},
+      ...canvasNodeId ? { canvasNodeId } : {},
+      ...typeof offset.x === "number" ? { x: round22(offset.x) } : {},
+      ...typeof offset.y === "number" ? { y: round22(offset.y) } : {},
+      anchorState: canvasNodeId ? "attached" : "unanchored-needs-relocate"
+    };
+  });
+}
+async function postFigmaComment(fileKey, token, params, fetchImpl = fetch) {
+  if (!FILE_KEY_PATTERN.test(fileKey)) throw new Error("Invalid Figma fileKey");
+  const message = String(params.message ?? "").trim();
+  if (!message) throw new Error("Comment message is required");
+  const body = { message };
+  if (params.parentId) {
+    body.comment_id = params.parentId;
+  } else if (params.figmaNodeId) {
+    body.client_meta = {
+      node_id: params.figmaNodeId,
+      node_offset: { x: params.x ?? 0, y: params.y ?? 0 }
+    };
+  } else if (typeof params.x === "number" && typeof params.y === "number") {
+    body.client_meta = { x: params.x, y: params.y };
+  }
+  const created = await figmaRequest(`/v1/files/${fileKey}/comments`, token, {
+    method: "POST",
+    body,
+    fetchImpl
+  });
+  return {
+    id: String(created.id ?? ""),
+    message: String(created.message ?? message),
+    createdAt: typeof created.created_at === "string" ? created.created_at : (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+async function fetchFigmaVersions(fileKey, token, fetchImpl = fetch) {
+  if (!FILE_KEY_PATTERN.test(fileKey)) throw new Error("Invalid Figma fileKey");
+  const versions = /* @__PURE__ */ new Map();
+  let nextPath = `/v1/files/${fileKey}/versions`;
+  let pages = 0;
+  while (nextPath && pages < MAX_PAGES) {
+    pages += 1;
+    const res = await figmaRequest(nextPath, token, { fetchImpl });
+    const list2 = Array.isArray(res.versions) ? res.versions : [];
+    for (const v of list2) {
+      if (typeof v.id === "string") versions.set(v.id, v);
+    }
+    const pagination = res.pagination && typeof res.pagination === "object" ? res.pagination : {};
+    const nextUrl = typeof pagination.next_page === "string" && pagination.next_page ? pagination.next_page : null;
+    if (!nextUrl) break;
+    const parsed = new URL(nextUrl, API_ORIGIN2);
+    if (parsed.origin !== API_ORIGIN2) break;
+    nextPath = `${parsed.pathname}${parsed.search}`;
+  }
+  return [...versions.values()];
+}
+function mergeFigmaCommentsIntoDoc(doc, sidecar, remoteItems) {
+  const nextDoc = structuredClone(doc);
+  const nextSidecar = structuredClone(sidecar);
+  const existingByRemoteId = /* @__PURE__ */ new Map();
+  for (const prev of nextSidecar.remoteComments?.items ?? []) existingByRemoteId.set(prev.id, prev);
+  const docComments = Array.isArray(nextDoc.comments) ? nextDoc.comments : nextDoc.comments = [];
+  const firstPageId = Array.isArray(nextDoc.pages) && nextDoc.pages[0] && typeof nextDoc.pages[0].id === "string" ? String(nextDoc.pages[0].id) : "page-1";
+  let imported = 0;
+  let updated = 0;
+  const roots = remoteItems.filter((c) => !c.parentId);
+  const repliesByParent = /* @__PURE__ */ new Map();
+  for (const c of remoteItems) {
+    if (!c.parentId) continue;
+    const list2 = repliesByParent.get(c.parentId) ?? [];
+    list2.push(c);
+    repliesByParent.set(c.parentId, list2);
+  }
+  const storedItems = [];
+  for (const root of roots) {
+    const prev = existingByRemoteId.get(root.id);
+    const localId = prev?.localCommentId ?? newId("c");
+    const existingLocal = docComments.find((c) => c.id === localId);
+    const threadReplies = (repliesByParent.get(root.id) ?? []).map((r) => ({
+      id: existingByRemoteId.get(r.id)?.localCommentId ?? newId("r"),
+      author: "user",
+      figmaAuthor: r.author,
+      body: r.message,
+      createdAt: r.createdAt,
+      figmaCommentId: r.id
+    }));
+    if (!existingLocal) {
+      docComments.push({
+        id: localId,
+        pageId: firstPageId,
+        ...root.canvasNodeId ? { nodeId: root.canvasNodeId } : {},
+        x: 0.5,
+        y: 0.15,
+        author: "user",
+        figmaAuthor: root.author,
+        body: root.message,
+        resolved: Boolean(root.resolvedAt),
+        createdAt: root.createdAt,
+        source: "figma",
+        figmaCommentId: root.id,
+        ...root.x !== void 0 || root.y !== void 0 ? { figmaOffset: { x: root.x ?? 0, y: root.y ?? 0 } } : {},
+        anchorState: root.anchorState,
+        replies: threadReplies
+      });
+      imported += 1;
+    } else {
+      existingLocal.resolved = Boolean(root.resolvedAt);
+      existingLocal.anchorState = root.anchorState;
+      const existingReplyIds = new Set(
+        Array.isArray(existingLocal.replies) ? existingLocal.replies.map((r) => String(r.figmaCommentId ?? "")) : []
+      );
+      const replies = Array.isArray(existingLocal.replies) ? existingLocal.replies : existingLocal.replies = [];
+      for (const r of threadReplies) {
+        if (!existingReplyIds.has(r.figmaCommentId)) {
+          replies.push(r);
+          updated += 1;
+        }
+      }
+    }
+    storedItems.push({ ...root, localCommentId: localId });
+    for (const r of repliesByParent.get(root.id) ?? []) {
+      storedItems.push({ ...r, localCommentId: existingByRemoteId.get(r.id)?.localCommentId });
+    }
+  }
+  nextSidecar.remoteComments = {
+    syncedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    items: storedItems
+  };
+  return { doc: nextDoc, sidecar: nextSidecar, imported, updated };
+}
+
+// src/host/figma/service.ts
+var PACKAGE_ROOT = resolve4(dirname3(fileURLToPath2(import.meta.url)), "..", "..", "..");
+function resolvePackagePath(...segments) {
+  const fromSrc = join6(PACKAGE_ROOT, ...segments);
+  if (existsSync(fromSrc)) return fromSrc;
+  const fromDist = resolve4(dirname3(fileURLToPath2(import.meta.url)), "..", "..", ...segments);
+  return fromDist;
+}
+async function getFigmaSetupStatus(params) {
+  const auth = await getFigmaAuthStatus({ probe: params.probe !== false }, params.credOptions);
+  const sidecar = await readSidecar(params.canvasDir, params.canvasName).catch(() => null);
+  const pairing = params.bridge.getForCanvas(params.sessionId, params.canvasName);
+  const manifestPath = resolvePackagePath("figma-plugin", "manifest.json");
+  const setupScriptPath = resolvePackagePath("scripts", "figma-setup.mjs");
+  const figmaDesktopInstalled = process.platform === "darwin" ? existsSync("/Applications/Figma.app") || existsSync(join6(process.env.HOME ?? "", "Applications", "Figma.app")) : false;
+  return {
+    ok: true,
+    auth,
+    channels: {
+      clipboard: { ready: true, requiresToken: false },
+      figFile: { ready: true, requiresToken: false },
+      companionPlugin: {
+        ready: Boolean(pairing?.connectedAt),
+        paired: Boolean(pairing),
+        pairingCode: pairing?.pairingCode ?? null,
+        expiresAt: pairing ? new Date(pairing.expiresAt).toISOString() : null,
+        requiresToken: false,
+        figmaDesktopInstalled,
+        manifestPath
+      },
+      restApi: {
+        ready: auth.configured && auth.valid,
+        requiresToken: true,
+        scopeMode: auth.scopeMode
+      }
+    },
+    binding: sidecar ? {
+      bindingId: sidecar.binding.bindingId,
+      fileKey: sidecar.binding.fileKey,
+      fileName: sidecar.binding.fileName,
+      fileUrl: sidecar.binding.fileUrl,
+      transport: sidecar.binding.transport,
+      lastSyncedAt: sidecar.binding.lastSyncedAt,
+      boundNodes: Object.keys(sidecar.binding.nodes).length,
+      remoteComments: sidecar.remoteComments?.items.length ?? 0
+    } : null,
+    setupScriptPath,
+    settingsUrl: "https://www.figma.com/settings"
+  };
+}
+function buildCanvasFromIr(params) {
+  const usedIds = /* @__PURE__ */ new Set();
+  const pageBindings = {};
+  const nodeBindings = {};
+  const passthrough = {};
+  const imageHashes = { ...params.imageHashes };
+  const pages = params.ir.pages.map((irPage, index) => {
+    const pageId = irPage.dshId && /^[A-Za-z0-9_-]{1,64}$/.test(irPage.dshId) ? irPage.dshId : `page-${index + 1}`;
+    if (irPage.figmaId) pageBindings[pageId] = irPage.figmaId;
+    const children = irPage.children.map(
+      (child) => irNodeToDshNode(child, { nodeBindings, passthrough, imageHashes, usedIds })
+    );
+    return {
+      id: pageId,
+      name: irPage.name || `Page ${index + 1}`,
+      background: irPage.background ?? "#f5f5f5",
+      children
+    };
+  });
+  const rawDoc = {
+    ...emptyDoc(params.fileName ?? params.ir.fileName ?? params.canvasName),
+    pages: pages.length ? pages : [{ id: "page-1", name: "Page 1", background: "#f5f5f5", children: [] }],
+    meta: {
+      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      layoutIgnoreHidden: true
+    }
+  };
+  const doc = normalizeDoc(rawDoc, { touch: false });
+  const localIr = dshDocToIr(doc);
+  const sidecar = createInitialSidecar({
+    canvasName: params.canvasName,
+    canvasDocId: String(doc.id ?? newId("doc")),
+    canvasRevision: "initial",
+    fileKey: params.fileKey,
+    fileName: params.fileName ?? params.ir.fileName,
+    fileUrl: params.fileUrl,
+    transport: params.transport,
+    remoteIr: params.ir,
+    pageBindings,
+    nodeBindings,
+    passthrough,
+    imageHashes,
+    localIr
+  });
+  return { doc, sidecar };
+}
+async function importFigmaFromUrl(params) {
+  const parsed = parseFigmaUrl(params.url);
+  const token = await requireFigmaAccessToken(params.credOptions);
+  const { ir, imageHashes } = await fetchFigmaAsIr(parsed.fileKey, token, params.canvasDir, {
+    nodeId: parsed.nodeId,
+    fetchImpl: params.credOptions?.fetchImpl
+  });
+  const existingSidecar = await readSidecar(params.canvasDir, params.canvasName).catch(() => null);
+  if (params.mode === "pull" && params.currentDoc && existingSidecar) {
+    const plan = planPullDiff(params.currentDoc, existingSidecar, ir, {
+      canvasName: params.canvasName,
+      baseCanvasRevision: params.currentRevision ?? existingSidecar.binding.lastCanvasRevision
+    });
+    if (params.dryRun !== false) {
+      return { ok: true, mode: "pull", dryRun: true, written: false, plan, fileKey: parsed.fileKey };
+    }
+    const applied = applyPullPlan(params.currentDoc, existingSidecar, ir, plan, {
+      ...params.selectedIds ? { selectedIds: new Set(params.selectedIds) } : {},
+      ...params.resolutions ? { resolutions: params.resolutions } : {}
+    });
+    applied.sidecar.binding.imageHashes = { ...applied.sidecar.binding.imageHashes, ...imageHashes };
+    return {
+      ok: true,
+      mode: "pull",
+      dryRun: false,
+      written: true,
+      plan,
+      doc: normalizeDoc(applied.doc, { touch: true }),
+      sidecar: applied.sidecar,
+      appliedCount: applied.appliedCount,
+      skippedCount: applied.skippedCount,
+      fileKey: parsed.fileKey
+    };
+  }
+  const built = buildCanvasFromIr({
+    ir,
+    imageHashes,
+    canvasName: params.canvasName,
+    fileKey: parsed.fileKey,
+    fileName: ir.fileName ?? parsed.fileName,
+    fileUrl: parsed.url,
+    transport: "rest"
+  });
+  if (params.dryRun) {
+    return {
+      ok: true,
+      mode: "import",
+      dryRun: true,
+      written: false,
+      fileKey: parsed.fileKey,
+      fileName: built.doc.title,
+      pages: built.doc.pages.length,
+      nodes: Object.keys(built.sidecar.binding.nodes).length,
+      images: Object.keys(imageHashes).length,
+      notices: ir.notices ?? []
+    };
+  }
+  return {
+    ok: true,
+    mode: "import",
+    dryRun: false,
+    written: true,
+    fileKey: parsed.fileKey,
+    fileName: built.doc.title,
+    doc: built.doc,
+    sidecar: built.sidecar,
+    nodes: Object.keys(built.sidecar.binding.nodes).length,
+    images: Object.keys(imageHashes).length,
+    notices: ir.notices ?? []
+  };
+}
+async function importFigmaFromFigBytes(params) {
+  const { ir, schemaVersion, imageHashes } = await decodeFigBytesToIr(params.bytes, params.canvasDir, {
+    fileKey: params.fileKey,
+    fileName: params.fileName
+  });
+  const existingSidecar = await readSidecar(params.canvasDir, params.canvasName).catch(() => null);
+  const fileKey = params.fileKey || existingSidecar?.binding.fileKey || `local_${newId("fig")}`;
+  if (params.mode === "pull" && params.currentDoc && existingSidecar) {
+    const plan = planPullDiff(params.currentDoc, existingSidecar, ir, {
+      canvasName: params.canvasName,
+      baseCanvasRevision: params.currentRevision ?? existingSidecar.binding.lastCanvasRevision
+    });
+    if (params.dryRun !== false) {
+      return { ok: true, mode: "pull", dryRun: true, written: false, schemaVersion, plan };
+    }
+    const applied = applyPullPlan(params.currentDoc, existingSidecar, ir, plan, {
+      ...params.selectedIds ? { selectedIds: new Set(params.selectedIds) } : {},
+      ...params.resolutions ? { resolutions: params.resolutions } : {}
+    });
+    applied.sidecar.binding.imageHashes = { ...applied.sidecar.binding.imageHashes, ...imageHashes };
+    return {
+      ok: true,
+      mode: "pull",
+      dryRun: false,
+      written: true,
+      schemaVersion,
+      plan,
+      doc: normalizeDoc(applied.doc, { touch: true }),
+      sidecar: applied.sidecar,
+      appliedCount: applied.appliedCount,
+      skippedCount: applied.skippedCount
+    };
+  }
+  const built = buildCanvasFromIr({
+    ir,
+    imageHashes,
+    canvasName: params.canvasName,
+    fileKey,
+    fileName: params.fileName ?? ir.fileName,
+    transport: "fig-file"
+  });
+  return {
+    ok: true,
+    mode: "import",
+    dryRun: Boolean(params.dryRun),
+    written: !params.dryRun,
+    schemaVersion,
+    doc: built.doc,
+    sidecar: built.sidecar,
+    nodes: Object.keys(built.sidecar.binding.nodes).length,
+    images: Object.keys(imageHashes).length,
+    notices: ir.notices ?? []
+  };
+}
+async function planOrQueueFigmaPush(params) {
+  const sidecar = await readSidecar(params.canvasDir, params.canvasName);
+  if (!sidecar) {
+    throw new Error(`Canvas "${params.canvasName}" is not bound to a Figma file yet. Import or pair via Companion Plugin first.`);
+  }
+  const plan = planPushDiff(params.doc, sidecar, {
+    canvasName: params.canvasName,
+    baseCanvasRevision: params.baseCanvasRevision
+  });
+  if (params.dryRun !== false) {
+    return { ok: true, plan };
+  }
+  const patch = buildFigmaSyncPatch(params.doc, sidecar, plan, {
+    mode: params.mode ?? "in-place",
+    ...params.selectedIds ? { selectedIds: new Set(params.selectedIds) } : {}
+  });
+  let queuedForPlugin = false;
+  if (params.bridge && params.sessionId) {
+    queuedForPlugin = params.bridge.queuePatch(params.sessionId, params.canvasName, patch);
+  }
+  return { ok: true, plan, patch, queuedForPlugin };
+}
+async function applyPluginPushAck(params) {
+  const sidecar = await readSidecar(params.canvasDir, params.canvasName);
+  if (!sidecar) throw new Error(`Missing Figma sidecar for "${params.canvasName}"`);
+  const updated = commitPushAck(params.doc, sidecar, params.ack, params.canvasRevision);
+  await writeSidecar(params.canvasDir, params.canvasName, updated);
+  return updated;
+}
+async function syncFigmaComments(params) {
+  const sidecar = await readSidecar(params.canvasDir, params.canvasName);
+  const fileKey = params.fileKey ? parseFigmaUrl(params.fileKey).fileKey : sidecar?.binding.fileKey;
+  if (!fileKey) throw new Error("Specify a Figma URL/fileKey or bind this canvas to Figma first");
+  const token = await requireFigmaAccessToken(params.credOptions);
+  const remoteComments = await fetchFigmaComments(fileKey, token, sidecar?.binding.nodes ?? {}, params.credOptions?.fetchImpl);
+  const versions = await fetchFigmaVersions(fileKey, token, params.credOptions?.fetchImpl).catch(() => []);
+  if (!sidecar) {
+    return { ok: true, fileKey, comments: remoteComments, versionsCount: versions.length, written: false };
+  }
+  const merged = mergeFigmaCommentsIntoDoc(params.doc, sidecar, remoteComments);
+  return {
+    ok: true,
+    fileKey,
+    doc: normalizeDoc(merged.doc, { touch: true }),
+    sidecar: merged.sidecar,
+    imported: merged.imported,
+    updated: merged.updated,
+    totalComments: remoteComments.length,
+    versionsCount: versions.length,
+    written: true
+  };
+}
+async function replyToFigmaComment(params) {
+  const sidecar = await readSidecar(params.canvasDir, params.canvasName);
+  const fileKey = params.fileKey ? parseFigmaUrl(params.fileKey).fileKey : sidecar?.binding.fileKey;
+  if (!fileKey) throw new Error("Specify a Figma URL/fileKey or bind this canvas to Figma first");
+  const token = await requireFigmaAccessToken(params.credOptions);
+  const figmaNodeId = params.nodeId && sidecar?.binding.nodes[params.nodeId] ? sidecar.binding.nodes[params.nodeId] : params.nodeId;
+  const posted = await postFigmaComment(
+    fileKey,
+    token,
+    { message: params.message, parentId: params.parentId, figmaNodeId, x: params.x, y: params.y },
+    params.credOptions?.fetchImpl
+  );
+  return { ok: true, fileKey, comment: posted };
+}
+async function exportCanvasAsDshFig(params) {
+  const sidecar = await readSidecar(params.canvasDir, params.canvasName).catch(() => null);
+  return exportDshFigBundle({
+    doc: params.doc,
+    sidecar,
+    loadAsset: async (relPath) => new Uint8Array(await readFile4(join6(params.canvasDir, relPath)))
+  });
+}
+async function restoreCanvasFromDshFig(params) {
+  const unpacked = importDshFigBundle(params.bytes);
+  for (const [relPath, data] of unpacked.files) {
+    const dest = join6(params.canvasDir, relPath);
+    await mkdir6(dirname3(dest), { recursive: true });
+    await writeFile6(dest, data);
+  }
+  if (unpacked.sidecar) {
+    await writeSidecar(params.canvasDir, params.canvasName, {
+      ...unpacked.sidecar,
+      canvasName: params.canvasName
+    });
+  }
+  return {
+    doc: unpacked.doc,
+    hasSidecar: Boolean(unpacked.sidecar),
+    assetsRestored: unpacked.files.size
+  };
+}
+
+// src/host/figma/routes.ts
+var BRIDGE_PREFIX = "/dsh-canvas/bridge/v1/";
+async function readBinaryBody(request, limit = maxTransportBytes) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buf.byteLength;
+    if (size > limit) throw new Error(`Request body exceeds ${limit} bytes`);
+    chunks.push(buf);
+  }
+  return Buffer.concat(chunks);
+}
+function assertInsideWorkspace(cwd, relPath) {
+  const base = resolve5(cwd);
+  const full = resolve5(cwd, relPath);
+  if (full !== base && !full.startsWith(base + sep2)) {
+    throw new Error("path escapes workspace directory");
+  }
+  return full;
+}
+async function handleBridgeRoute(pathname, request, response, deps) {
+  if (!pathname.startsWith(BRIDGE_PREFIX)) return false;
+  if (!deps.isLoopbackRequest(request)) {
+    deps.sendJson(response, 403, { ok: false, error: "loopback-only", message: "Bridge accepts loopback connections only" });
+    return true;
+  }
+  if (!applyBridgeCors(request, response)) {
+    deps.sendJson(response, 403, { ok: false, error: "origin-denied", message: "Bridge origin not allowed" });
+    return true;
+  }
+  if (request.method === "OPTIONS") {
+    response.writeHead(204);
+    response.end();
+    return true;
+  }
+  const route = pathname.slice(BRIDGE_PREFIX.length);
+  try {
+    if (route === "pair" && request.method === "POST") {
+      const body = await deps.readBody(request, 64 * 1024);
+      const session2 = deps.bridge.exchangeCode(String(body.pairingCode ?? ""), String(body.client ?? "drafi-figma-plugin"));
+      if (!session2) {
+        deps.sendJson(response, 401, { ok: false, error: "invalid-pairing-code", message: "\u914D\u5BF9\u7801\u65E0\u6548\u6216\u5DF2\u8FC7\u671F" });
+        return true;
+      }
+      deps.sendJson(response, 200, {
+        ok: true,
+        token: session2.token,
+        canvasName: session2.canvasName,
+        expiresAt: new Date(session2.expiresAt).toISOString()
+      });
+      return true;
+    }
+    const session = deps.bridge.authenticateBearer(request);
+    if (!session) {
+      deps.sendJson(response, 401, { ok: false, error: "unauthorized", message: "\u65E0\u6548\u6216\u5DF2\u8FC7\u671F\u7684\u914D\u5BF9\u4EE4\u724C" });
+      return true;
+    }
+    const canvasDir = deps.canvasRoot(session.cwd);
+    if (route === "status" && request.method === "GET") {
+      deps.sendJson(response, 200, {
+        ok: true,
+        canvasName: session.canvasName,
+        hasPendingPatch: Boolean(session.pendingPatch)
+      });
+      return true;
+    }
+    if (route === "pull" && request.method === "POST") {
+      const body = await deps.readBody(request, 64 * 1024 * 1024);
+      const ir = body.ir;
+      if (!ir || ir.format !== "dsh.figma.ir") {
+        deps.sendJson(response, 400, { ok: false, error: "invalid-ir", message: "Expected a dsh.figma.ir@1 payload" });
+        return true;
+      }
+      const imagesMap = /* @__PURE__ */ new Map();
+      if (body.images && typeof body.images === "object") {
+        for (const [hash, b64] of Object.entries(body.images)) {
+          if (typeof b64 === "string" && b64.length > 0) {
+            imagesMap.set(hash, Buffer.from(b64, "base64"));
+          }
+        }
+      }
+      const imageHashes = await persistFigmaImages(canvasDir, imagesMap);
+      const attachAssets = (nodes) => {
+        for (const n of nodes) {
+          for (const f of n.fills ?? []) {
+            if (f.type === "image" && f.imageHash && imageHashes[f.imageHash.toLowerCase()]) {
+              f.asset = imageHashes[f.imageHash.toLowerCase()];
+            }
+          }
+          if (n.children?.length) attachAssets(n.children);
+        }
+      };
+      for (const page of ir.pages) attachAssets(page.children);
+      await deps.ensureScaffold(session.cwd);
+      const existingSidecar = await readSidecar(canvasDir, session.canvasName).catch(() => null);
+      if (!existingSidecar) {
+        const built = buildCanvasFromIr({
+          ir,
+          imageHashes,
+          canvasName: session.canvasName,
+          fileKey: ir.fileKey ?? "plugin-local",
+          fileName: ir.fileName,
+          transport: "plugin"
+        });
+        const written = await deps.writeDoc(session.cwd, session.canvasName, built.doc, { source: "figma-plugin" });
+        built.sidecar.binding.lastCanvasRevision = written.revision;
+        await writeSidecar(canvasDir, session.canvasName, built.sidecar);
+        deps.sendJson(response, 200, {
+          ok: true,
+          mode: "import",
+          written: true,
+          revision: written.revision,
+          nodes: Object.keys(built.sidecar.binding.nodes).length
+        });
+        return true;
+      }
+      const current = await deps.readDoc(session.cwd, session.canvasName);
+      const plan = planPullDiff(current.doc, existingSidecar, ir, {
+        canvasName: session.canvasName,
+        baseCanvasRevision: current.revision
+      });
+      session.lastPullPlan = plan;
+      session.lastPullIr = ir;
+      if (body.autoApply === true && plan.conflicts.length === 0) {
+        const applied = applyPullPlan(current.doc, existingSidecar, ir, plan);
+        applied.sidecar.binding.imageHashes = { ...applied.sidecar.binding.imageHashes, ...imageHashes };
+        const written = await deps.writeDoc(session.cwd, session.canvasName, normalizeDoc(applied.doc, { touch: true }), {
+          baseRevision: current.revision,
+          source: "figma-plugin"
+        });
+        applied.sidecar.binding.lastCanvasRevision = written.revision;
+        await writeSidecar(canvasDir, session.canvasName, applied.sidecar);
+        deps.sendJson(response, 200, { ok: true, mode: "pull", written: true, plan, appliedCount: applied.appliedCount });
+        return true;
+      }
+      deps.sendJson(response, 200, { ok: true, mode: "pull", written: false, plan });
+      return true;
+    }
+    if (route === "patch" && request.method === "GET") {
+      const patch = deps.bridge.consumePatch(session);
+      deps.sendJson(response, 200, { ok: true, patch });
+      return true;
+    }
+    if (route === "ack" && request.method === "POST") {
+      const body = await deps.readBody(request, 8 * 1024 * 1024);
+      const ack = body.ack;
+      if (!ack || !Array.isArray(ack.appliedDshIds)) {
+        deps.sendJson(response, 400, { ok: false, error: "invalid-ack", message: "Expected ack.appliedDshIds" });
+        return true;
+      }
+      const current = await deps.readDoc(session.cwd, session.canvasName);
+      await applyPluginPushAck({
+        doc: current.doc,
+        canvasDir,
+        canvasName: session.canvasName,
+        canvasRevision: current.revision,
+        ack
+      });
+      session.lastPushAck = ack;
+      deps.sendJson(response, 200, { ok: true, applied: ack.appliedDshIds.length });
+      return true;
+    }
+    deps.sendJson(response, 404, { ok: false, error: "not-found" });
+    return true;
+  } catch (error) {
+    deps.sendJson(response, 400, { ok: false, error: "bridge-error", message: error instanceof Error ? error.message : String(error) });
+    return true;
+  }
+}
+async function handleFigmaApiRoute(action, query, request, response, deps) {
+  if (!action.startsWith("figma/")) return false;
+  const sub = action.slice("figma/".length);
+  if (sub === "auth/status" && request.method === "GET") {
+    const status = await getFigmaAuthStatus({ probe: query.probe !== "false" });
+    deps.sendJson(response, 200, { ok: true, ...status });
+    return true;
+  }
+  if (sub === "auth/token" && request.method === "POST") {
+    const body = await deps.readBody(request, 16 * 1024);
+    const token = typeof body.token === "string" ? body.token : "";
+    const scopeMode = body.scopeMode === "comments-write" ? "comments-write" : "readonly";
+    const expiresInDays = typeof body.expiresInDays === "number" ? body.expiresInDays : 90;
+    const status = await saveFigmaToken(token, { scopeMode, expiresInDays });
+    deps.sendJson(response, 200, { ok: true, ...status });
+    return true;
+  }
+  if (sub === "auth/token" && request.method === "DELETE") {
+    const res = await clearFigmaToken();
+    deps.sendJson(response, 200, { ok: true, ...res });
+    return true;
+  }
+  if (sub === "status" && request.method === "GET") {
+    const { cwd } = deps.sessionCwd(query.sessionId);
+    const name = deps.resolveName(query.sessionId, query.name);
+    await deps.ensureScaffold(cwd);
+    const status = await getFigmaSetupStatus({
+      canvasDir: deps.canvasRoot(cwd),
+      sessionId: query.sessionId,
+      canvasName: name,
+      bridge: deps.bridge,
+      probe: query.probe !== "false"
+    });
+    deps.sendJson(response, 200, status);
+    return true;
+  }
+  if (sub === "pair" && request.method === "POST") {
+    const body = await deps.readBody(request, 16 * 1024);
+    const sessionId = String(body.sessionId ?? "");
+    const { cwd } = deps.sessionCwd(sessionId);
+    const name = deps.resolveName(sessionId, typeof body.name === "string" ? body.name : void 0);
+    const pairing = deps.bridge.createPairing({ sessionId, cwd, canvasName: name });
+    deps.sendJson(response, 200, {
+      ok: true,
+      pairingCode: pairing.pairingCode,
+      canvasName: name,
+      expiresAt: new Date(pairing.expiresAt).toISOString()
+    });
+    return true;
+  }
+  if (sub === "paste" && request.method === "POST") {
+    const body = await deps.readBody(request, 32 * 1024 * 1024);
+    const sessionId = String(body.sessionId ?? "");
+    const { cwd } = deps.sessionCwd(sessionId);
+    await deps.ensureScaffold(cwd);
+    const existingIds = Array.isArray(body.existingIds) ? new Set(body.existingIds.map(String)) : void 0;
+    const decoded = await decodeFigmaClipboard(
+      {
+        html: typeof body.html === "string" ? body.html : void 0,
+        svg: typeof body.svg === "string" ? body.svg : void 0,
+        text: typeof body.text === "string" ? body.text : void 0,
+        existingIds
+      },
+      deps.canvasRoot(cwd)
+    );
+    deps.sendJson(response, 200, { ok: true, ...decoded });
+    return true;
+  }
+  if (sub === "import-url" && request.method === "POST") {
+    const body = await deps.readBody(request, 256 * 1024);
+    const sessionId = String(body.sessionId ?? "");
+    const { cwd } = deps.sessionCwd(sessionId);
+    const name = deps.resolveName(sessionId, typeof body.name === "string" ? body.name : void 0);
+    await deps.ensureScaffold(cwd);
+    const current = await deps.readDoc(cwd, name).catch(() => null);
+    const result = await importFigmaFromUrl({
+      url: String(body.url ?? ""),
+      canvasDir: deps.canvasRoot(cwd),
+      canvasName: name,
+      currentDoc: current?.doc,
+      currentRevision: typeof body.baseRevision === "string" ? body.baseRevision : current?.revision,
+      mode: body.mode === "pull" ? "pull" : "import",
+      dryRun: body.dryRun !== false,
+      selectedIds: Array.isArray(body.selectedIds) ? body.selectedIds.map(String) : void 0,
+      resolutions: body.resolutions && typeof body.resolutions === "object" ? body.resolutions : void 0
+    });
+    if (result.written && "doc" in result && result.doc && result.sidecar) {
+      const written = await deps.writeDoc(cwd, name, result.doc, {
+        baseRevision: typeof body.baseRevision === "string" ? body.baseRevision : current?.revision,
+        source: "figma-rest"
+      });
+      result.sidecar.binding.lastCanvasRevision = written.revision;
+      await writeSidecar(deps.canvasRoot(cwd), name, result.sidecar);
+      deps.rememberDoc(sessionId, name);
+      deps.sendJson(response, 200, { ...result, revision: written.revision, doc: void 0, sidecar: void 0 });
+      return true;
+    }
+    deps.sendJson(response, 200, { ...result, doc: void 0, sidecar: void 0 });
+    return true;
+  }
+  if (sub === "import-fig" && request.method === "POST") {
+    const sessionId = query.sessionId;
+    const { cwd } = deps.sessionCwd(sessionId);
+    const name = deps.resolveName(sessionId, query.name);
+    await deps.ensureScaffold(cwd);
+    const bytes = await readBinaryBody(request, maxTransportBytes);
+    const current = await deps.readDoc(cwd, name).catch(() => null);
+    const result = await importFigmaFromFigBytes({
+      bytes,
+      canvasDir: deps.canvasRoot(cwd),
+      canvasName: name,
+      fileKey: query.fileKey || void 0,
+      fileName: query.fileName || void 0,
+      currentDoc: current?.doc,
+      currentRevision: query.baseRevision || current?.revision,
+      mode: query.mode === "pull" ? "pull" : "import",
+      dryRun: query.dryRun !== "false"
+    });
+    if (result.written && result.doc && result.sidecar) {
+      const written = await deps.writeDoc(cwd, name, result.doc, {
+        baseRevision: query.baseRevision || current?.revision,
+        source: "figma-file"
+      });
+      result.sidecar.binding.lastCanvasRevision = written.revision;
+      await writeSidecar(deps.canvasRoot(cwd), name, result.sidecar);
+      deps.rememberDoc(sessionId, name);
+      deps.sendJson(response, 200, { ...result, revision: written.revision, doc: void 0, sidecar: void 0 });
+      return true;
+    }
+    deps.sendJson(response, 200, { ...result, doc: void 0, sidecar: void 0 });
+    return true;
+  }
+  if (sub === "push" && request.method === "POST") {
+    const body = await deps.readBody(request, 256 * 1024);
+    const sessionId = String(body.sessionId ?? "");
+    const { cwd } = deps.sessionCwd(sessionId);
+    const name = deps.resolveName(sessionId, typeof body.name === "string" ? body.name : void 0);
+    await deps.ensureScaffold(cwd);
+    const current = await deps.readDoc(cwd, name);
+    const result = await planOrQueueFigmaPush({
+      doc: current.doc,
+      canvasDir: deps.canvasRoot(cwd),
+      canvasName: name,
+      baseCanvasRevision: current.revision,
+      mode: body.mode === "proposal-frame" ? "proposal-frame" : "in-place",
+      selectedIds: Array.isArray(body.selectedIds) ? body.selectedIds.map(String) : void 0,
+      dryRun: body.dryRun !== false,
+      bridge: deps.bridge,
+      sessionId
+    });
+    deps.sendJson(response, 200, result);
+    return true;
+  }
+  if (sub === "comments/sync" && request.method === "POST") {
+    const body = await deps.readBody(request, 64 * 1024);
+    const sessionId = String(body.sessionId ?? "");
+    const { cwd } = deps.sessionCwd(sessionId);
+    const name = deps.resolveName(sessionId, typeof body.name === "string" ? body.name : void 0);
+    await deps.ensureScaffold(cwd);
+    const current = await deps.readDoc(cwd, name);
+    const result = await syncFigmaComments({
+      doc: current.doc,
+      canvasDir: deps.canvasRoot(cwd),
+      canvasName: name,
+      fileKey: typeof body.fileKey === "string" ? body.fileKey : void 0
+    });
+    if (result.written && "doc" in result && result.doc && result.sidecar) {
+      const written = await deps.writeDoc(cwd, name, result.doc, {
+        baseRevision: current.revision,
+        source: "figma-comments"
+      });
+      result.sidecar.binding.lastCanvasRevision = written.revision;
+      await writeSidecar(deps.canvasRoot(cwd), name, result.sidecar);
+      deps.sendJson(response, 200, { ...result, revision: written.revision, doc: void 0, sidecar: void 0 });
+      return true;
+    }
+    deps.sendJson(response, 200, result);
+    return true;
+  }
+  if (sub === "comments/reply" && request.method === "POST") {
+    const body = await deps.readBody(request, 64 * 1024);
+    const sessionId = String(body.sessionId ?? "");
+    const { cwd } = deps.sessionCwd(sessionId);
+    const name = deps.resolveName(sessionId, typeof body.name === "string" ? body.name : void 0);
+    const result = await replyToFigmaComment({
+      canvasDir: deps.canvasRoot(cwd),
+      canvasName: name,
+      fileKey: typeof body.fileKey === "string" ? body.fileKey : void 0,
+      message: String(body.message ?? ""),
+      parentId: typeof body.parentId === "string" ? body.parentId : void 0,
+      nodeId: typeof body.nodeId === "string" ? body.nodeId : void 0
+    });
+    deps.sendJson(response, 200, result);
+    return true;
+  }
+  if (sub === "bundle" && request.method === "GET") {
+    const { cwd } = deps.sessionCwd(query.sessionId);
+    const name = deps.resolveName(query.sessionId, query.name);
+    await deps.ensureScaffold(cwd);
+    const current = await deps.readDoc(cwd, name);
+    const exported = await exportCanvasAsDshFig({
+      doc: current.doc,
+      canvasDir: deps.canvasRoot(cwd),
+      canvasName: name
+    });
+    response.writeHead(200, {
+      "content-type": "application/octet-stream",
+      "content-disposition": `attachment; filename="${name}${BUNDLE_SUFFIX}"`,
+      "content-length": exported.bytes.byteLength,
+      "x-dsh-objects": String(exported.objects)
+    });
+    response.end(Buffer.from(exported.bytes));
+    return true;
+  }
+  if (sub === "bundle/import" && request.method === "POST") {
+    const sessionId = query.sessionId;
+    const { cwd } = deps.sessionCwd(sessionId);
+    const name = deps.resolveName(sessionId, query.name);
+    await deps.ensureScaffold(cwd);
+    const bytes = await readBinaryBody(request, maxTransportBytes);
+    const restored = await restoreCanvasFromDshFig({
+      bytes,
+      canvasDir: deps.canvasRoot(cwd),
+      canvasName: name
+    });
+    const written = await deps.writeDoc(cwd, name, restored.doc, { source: "figma-bundle" });
+    deps.rememberDoc(sessionId, name);
+    deps.sendJson(response, 200, {
+      ok: true,
+      name,
+      revision: written.revision,
+      hasSidecar: restored.hasSidecar,
+      assetsRestored: restored.assetsRestored
+    });
+    return true;
+  }
+  return false;
+}
+function createFigmaTool(deps) {
+  return {
+    name: "canvas_figma",
+    description: "Figma ecosystem bridge: check setup_status (token/plugin/binding), generate a loopback Companion Plugin pairing code, import or 3-way pull from Figma URL or .fig file (preview with dryRun), plan/queue in-place or proposal-frame push patches, sync/reply to Figma review comments, and export/import lossless .dshfig bundles. Never asks for or echoes raw tokens.",
+    parameters: {
+      type: "object",
+      required: ["action"],
+      additionalProperties: false,
+      properties: {
+        action: {
+          type: "string",
+          enum: [
+            "setup_status",
+            "pair_start",
+            "import_url",
+            "import_fig",
+            "pull_diff",
+            "push_diff",
+            "sync_comments",
+            "reply_comment",
+            "export_bundle",
+            "import_bundle"
+          ]
+        },
+        name: { type: "string", description: "canvas document name; defaults to the active canvas" },
+        url: { type: "string", description: "Figma file or node URL (or fileKey) for import_url / pull_diff / comments" },
+        path: { type: "string", description: "workspace-relative path to a .fig or .dshfig file" },
+        mode: { type: "string", enum: ["in-place", "proposal-frame"], description: "push delivery mode (default in-place)" },
+        dryRun: { type: "boolean", description: "preview diff plan without writing (default true for pull/push)" },
+        selectedIds: { type: "array", items: { type: "string" }, description: "optional node IDs for selective staging" },
+        resolutions: {
+          type: "object",
+          additionalProperties: { type: "string", enum: ["keep-drafi", "take-figma", "skip"] },
+          description: "explicit conflict resolutions keyed by conflictKey"
+        },
+        message: { type: "string", description: "comment text for reply_comment" },
+        parentId: { type: "string", description: "Figma root comment ID when replying to an existing thread" },
+        nodeId: { type: "string", description: "optional Drafi or Figma node ID to anchor a comment" },
+        baseRevision: { type: "string", description: "revision guard returned by canvas_read or dryRun" },
+        probe: { type: "boolean", description: "whether setup_status should probe GET /v1/me (default true)" }
+      }
+    },
+    output: { schema: { type: "object", additionalProperties: true }, render: (_args, value) => deps.renderJson(value) },
+    async execute(args, exec) {
+      const { cwd, sessionId } = await deps.workspace(exec);
+      const name = deps.resolveName(sessionId, typeof args.name === "string" ? args.name : void 0);
+      await deps.ensureScaffold(cwd);
+      const canvasDir = deps.canvasRoot(cwd);
+      const action = String(args.action);
+      if (action === "setup_status") {
+        return getFigmaSetupStatus({
+          canvasDir,
+          sessionId,
+          canvasName: name,
+          bridge: deps.bridge,
+          probe: args.probe !== false
+        });
+      }
+      if (action === "pair_start") {
+        const pairing = deps.bridge.createPairing({ sessionId, cwd, canvasName: name });
+        return {
+          ok: true,
+          canvasName: name,
+          pairingCode: pairing.pairingCode,
+          expiresAt: new Date(pairing.expiresAt).toISOString(),
+          hint: "Open Figma Desktop -> Plugins -> Development -> Drafi Companion and enter this pairingCode."
+        };
+      }
+      if (action === "import_url" || action === "pull_diff") {
+        const current = await deps.readDoc(cwd, name).catch(() => null);
+        const sidecar = await readSidecar(canvasDir, name).catch(() => null);
+        const targetUrl = typeof args.url === "string" && args.url ? args.url : sidecar?.binding.fileUrl ?? sidecar?.binding.fileKey;
+        if (!targetUrl) throw new Error("url is required (or bind the canvas to a Figma file first)");
+        const result = await importFigmaFromUrl({
+          url: targetUrl,
+          canvasDir,
+          canvasName: name,
+          currentDoc: current?.doc,
+          currentRevision: typeof args.baseRevision === "string" ? args.baseRevision : current?.revision,
+          mode: action === "pull_diff" ? "pull" : "import",
+          dryRun: action === "pull_diff" ? args.dryRun !== false : Boolean(args.dryRun),
+          selectedIds: Array.isArray(args.selectedIds) ? args.selectedIds.map(String) : void 0,
+          resolutions: args.resolutions && typeof args.resolutions === "object" ? args.resolutions : void 0
+        });
+        if (result.written && "doc" in result && result.doc && result.sidecar) {
+          const written = await deps.writeDoc(cwd, name, result.doc, {
+            baseRevision: typeof args.baseRevision === "string" ? args.baseRevision : current?.revision,
+            source: "tool"
+          });
+          result.sidecar.binding.lastCanvasRevision = written.revision;
+          await writeSidecar(canvasDir, name, result.sidecar);
+          deps.rememberDoc(sessionId, name);
+          return { ...result, revision: written.revision, path: relative(cwd, written.file), doc: void 0, sidecar: void 0 };
+        }
+        return { ...result, doc: void 0, sidecar: void 0 };
+      }
+      if (action === "import_fig") {
+        if (typeof args.path !== "string" || !args.path.trim()) throw new Error("path to .fig file is required");
+        const full = assertInsideWorkspace(cwd, args.path);
+        const bytes = new Uint8Array(await readFile5(full));
+        const current = await deps.readDoc(cwd, name).catch(() => null);
+        const result = await importFigmaFromFigBytes({
+          bytes,
+          canvasDir,
+          canvasName: name,
+          fileKey: typeof args.url === "string" ? args.url : void 0,
+          currentDoc: current?.doc,
+          currentRevision: typeof args.baseRevision === "string" ? args.baseRevision : current?.revision,
+          mode: current && await readSidecar(canvasDir, name).catch(() => null) ? "pull" : "import",
+          dryRun: args.dryRun !== false,
+          selectedIds: Array.isArray(args.selectedIds) ? args.selectedIds.map(String) : void 0,
+          resolutions: args.resolutions && typeof args.resolutions === "object" ? args.resolutions : void 0
+        });
+        if (result.written && result.doc && result.sidecar) {
+          const written = await deps.writeDoc(cwd, name, result.doc, {
+            baseRevision: typeof args.baseRevision === "string" ? args.baseRevision : current?.revision,
+            source: "tool"
+          });
+          result.sidecar.binding.lastCanvasRevision = written.revision;
+          await writeSidecar(canvasDir, name, result.sidecar);
+          deps.rememberDoc(sessionId, name);
+          return { ...result, revision: written.revision, path: relative(cwd, written.file), doc: void 0, sidecar: void 0 };
+        }
+        return { ...result, doc: void 0, sidecar: void 0 };
+      }
+      if (action === "push_diff") {
+        const current = await deps.readDoc(cwd, name);
+        return planOrQueueFigmaPush({
+          doc: current.doc,
+          canvasDir,
+          canvasName: name,
+          baseCanvasRevision: current.revision,
+          mode: args.mode === "proposal-frame" ? "proposal-frame" : "in-place",
+          selectedIds: Array.isArray(args.selectedIds) ? args.selectedIds.map(String) : void 0,
+          dryRun: args.dryRun !== false,
+          bridge: deps.bridge,
+          sessionId
+        });
+      }
+      if (action === "sync_comments") {
+        const current = await deps.readDoc(cwd, name);
+        const result = await syncFigmaComments({
+          doc: current.doc,
+          canvasDir,
+          canvasName: name,
+          fileKey: typeof args.url === "string" ? args.url : void 0
+        });
+        if (result.written && "doc" in result && result.doc && result.sidecar) {
+          const written = await deps.writeDoc(cwd, name, result.doc, { baseRevision: current.revision, source: "tool" });
+          result.sidecar.binding.lastCanvasRevision = written.revision;
+          await writeSidecar(canvasDir, name, result.sidecar);
+          return { ...result, revision: written.revision, doc: void 0, sidecar: void 0 };
+        }
+        return result;
+      }
+      if (action === "reply_comment") {
+        return replyToFigmaComment({
+          canvasDir,
+          canvasName: name,
+          fileKey: typeof args.url === "string" ? args.url : void 0,
+          message: String(args.message ?? ""),
+          parentId: typeof args.parentId === "string" ? args.parentId : void 0,
+          nodeId: typeof args.nodeId === "string" ? args.nodeId : void 0
+        });
+      }
+      if (action === "export_bundle") {
+        const current = await deps.readDoc(cwd, name);
+        const exported = await exportCanvasAsDshFig({ doc: current.doc, canvasDir, canvasName: name });
+        const outDir = join7(canvasDir, "exports");
+        await mkdir7(outDir, { recursive: true });
+        const outFile = join7(outDir, `${name}${BUNDLE_SUFFIX}`);
+        await writeFile7(outFile, exported.bytes);
+        return {
+          ok: true,
+          format: "dsh.fig.bundle",
+          name,
+          path: relative(cwd, outFile),
+          bytes: exported.bytes.byteLength,
+          objects: exported.objects,
+          assetCount: exported.assetCount
+        };
+      }
+      if (action === "import_bundle") {
+        if (typeof args.path !== "string" || !args.path.trim()) throw new Error("path to .dshfig bundle is required");
+        const full = assertInsideWorkspace(cwd, args.path);
+        const bytes = new Uint8Array(await readFile5(full));
+        const restored = await restoreCanvasFromDshFig({ bytes, canvasDir, canvasName: name });
+        const written = await deps.writeDoc(cwd, name, restored.doc, { source: "tool" });
+        deps.rememberDoc(sessionId, name);
+        return {
+          ok: true,
+          name,
+          revision: written.revision,
+          path: relative(cwd, written.file),
+          hasSidecar: restored.hasSidecar,
+          assetsRestored: restored.assetsRestored
+        };
+      }
+      throw new Error(`Unknown canvas_figma action "${action}"`);
+    }
+  };
 }
 
 // src/host/main.ts
@@ -3478,10 +9765,14 @@ var FORMAT_URL = new URL("../../FORMAT.md", import.meta.url);
 var DESIGN_URL = new URL("../../DESIGN.md", import.meta.url);
 var TOOL_PROMPT = [
   `Canvas: the workspace may contain ${CANVAS_DIR}/*.canvas.json (format dsh.canvas@1).`,
+  "Canvas files support more than 2,000 layers within 8 MiB. Viewport tiling only affects display; tools can address offscreen nodes by id.",
+  "For repeated screen placements, use pageRef and physical wire endpoints. Read canvas_read detail=interactions or use canvas_interaction_view in a live session.",
   "Use canvas_read before editing; use canvas_edit for small changes and canvas_write for a new document.",
   `The canvas file format, node fields, auto-layout, components, styles, fills, effects and comments are documented in ${CANVAS_DIR}/FORMAT.md.`,
   `The design system and built-in templates are documented in ${CANVAS_DIR}/DESIGN.md.`,
   "Load the canvas-ui-design skill when the user asks for UI design, page/component generation, design review or design handoff.",
+  "Load the canvas-figma-setup skill when the user wants to connect Figma, obtain or refresh a Figma token, pair the Companion Plugin, or troubleshoot Figma auth. Never ask the user to paste a raw token into chat.",
+  "Use canvas_figma for Figma URL/.fig import, 3-way pull/push diffs, Companion Plugin pairing, Figma comment sync/reply, and .dshfig portable bundles.",
   FOUNDATION_PROMPT,
   "canvas_audit runs deterministic design checks; canvas_image probe/generate/import handles image generation (GPT native or local Codex CLI) and imports.",
   DESIGN_SYSTEM_PROMPT,
@@ -3496,7 +9787,7 @@ var HttpError = class extends Error {
   }
 };
 function sha(value) {
-  return createHash2("sha256").update(value).digest("hex").slice(0, 16);
+  return createHash5("sha256").update(value).digest("hex").slice(0, 16);
 }
 function nowIso2() {
   return (/* @__PURE__ */ new Date()).toISOString();
@@ -3589,12 +9880,12 @@ function admit(ctx, request, response) {
 }
 var migratedCanvasRoots = /* @__PURE__ */ new Set();
 function canvasRoot(cwd) {
-  const root = join2(cwd, CANVAS_DIR);
+  const root = join8(cwd, CANVAS_DIR);
   if (!migratedCanvasRoots.has(cwd)) {
     migratedCanvasRoots.add(cwd);
     try {
-      const legacy = join2(cwd, LEGACY_CANVAS_DIR);
-      if (!existsSync(root) && existsSync(legacy) && statSync(legacy).isDirectory()) {
+      const legacy = join8(cwd, LEGACY_CANVAS_DIR);
+      if (!existsSync2(root) && existsSync2(legacy) && statSync(legacy).isDirectory()) {
         renameSync(legacy, root);
       }
     } catch (error) {
@@ -3606,23 +9897,23 @@ function canvasRoot(cwd) {
   }
   return root;
 }
-function assertInside(root, target) {
-  const rel = relative(root, target);
-  if (rel === "" || rel.startsWith("..") || rel.startsWith(`..${sep}`) || resolve3(root, rel) !== target) {
+function assertInside2(root, target) {
+  const rel = relative2(root, target);
+  if (rel === "" || rel.startsWith("..") || rel.startsWith(`..${sep3}`) || resolve6(root, rel) !== target) {
     throw new HttpError(400, "outside-canvas", "path escapes the canvas directory");
   }
   return target;
 }
 function docFile(cwd, name) {
   if (!isSlug(name)) throw new HttpError(400, "invalid-name", "document name must match ^[a-z0-9][a-z0-9-_]{0,63}$");
-  return assertInside(canvasRoot(cwd), join2(canvasRoot(cwd), `${name}${DOC_SUFFIX}`));
+  return assertInside2(canvasRoot(cwd), join8(canvasRoot(cwd), `${name}${DOC_SUFFIX}`));
 }
 function assetFile(cwd, asset, kind) {
   const allowed = kind === "font" ? /^fonts\/[A-Za-z0-9._-]{1,120}$/ : /^assets\/[A-Za-z0-9._-]{1,120}$/;
   if (typeof asset !== "string" || !allowed.test(asset) || asset.includes("..")) {
     throw new HttpError(400, "invalid-asset", "asset path is not allowed");
   }
-  return assertInside(canvasRoot(cwd), join2(canvasRoot(cwd), asset));
+  return assertInside2(canvasRoot(cwd), join8(canvasRoot(cwd), asset));
 }
 async function exists(file) {
   try {
@@ -3636,7 +9927,7 @@ var exampleDoc = null;
 async function loadExample() {
   if (exampleDoc) return exampleDoc;
   try {
-    exampleDoc = normalizeDoc(JSON.parse(await readFile2(EXAMPLE_URL, "utf8")));
+    exampleDoc = normalizeDoc(JSON.parse(await readFile6(EXAMPLE_URL, "utf8")));
   } catch {
     exampleDoc = normalizeDoc(emptyDoc("\u4E3B\u753B\u5E03"));
   }
@@ -3644,14 +9935,14 @@ async function loadExample() {
 }
 async function readFormatDoc() {
   try {
-    return await readFile2(FORMAT_URL, "utf8");
+    return await readFile6(FORMAT_URL, "utf8");
   } catch {
     return "# dsh.canvas@1\n\nCanvas document format. See the plugin README.\n";
   }
 }
 async function readDesignDoc() {
   try {
-    return await readFile2(DESIGN_URL, "utf8");
+    return await readFile6(DESIGN_URL, "utf8");
   } catch {
     return "# Canvas design system\n\nUse Material Design 3 by default; Apple HIG for iOS.\n";
   }
@@ -3662,21 +9953,23 @@ var state = () => ({
   sse: /* @__PURE__ */ new Set(),
   watchers: /* @__PURE__ */ new Map(),
   revisions: /* @__PURE__ */ new Map(),
-  snapshots: /* @__PURE__ */ new Map()
+  snapshots: /* @__PURE__ */ new Map(),
+  interactionView: createInteractionChannel(),
+  bridge: new FigmaPluginBridge()
 });
 async function ensureScaffold(cwd, store) {
   const root = canvasRoot(cwd);
-  await mkdir2(root, { recursive: true });
-  await mkdir2(join2(root, "assets"), { recursive: true });
-  await mkdir2(join2(root, "fonts"), { recursive: true });
-  await mkdir2(join2(root, "exports"), { recursive: true });
-  const formatPath = join2(root, "FORMAT.md");
+  await mkdir8(root, { recursive: true });
+  await mkdir8(join8(root, "assets"), { recursive: true });
+  await mkdir8(join8(root, "fonts"), { recursive: true });
+  await mkdir8(join8(root, "exports"), { recursive: true });
+  const formatPath = join8(root, "FORMAT.md");
   if (!await exists(formatPath)) {
-    await writeFile2(formatPath, await readFormatDoc(), "utf8");
+    await writeFile8(formatPath, await readFormatDoc(), "utf8");
   }
-  const designPath = join2(root, "DESIGN.md");
+  const designPath = join8(root, "DESIGN.md");
   if (!await exists(designPath)) {
-    await writeFile2(designPath, await readDesignDoc(), "utf8");
+    await writeFile8(designPath, await readDesignDoc(), "utf8");
   }
   const names = await listDocNames(cwd);
   if (names.length === 0) {
@@ -3686,7 +9979,7 @@ async function ensureScaffold(cwd, store) {
     doc.meta = { createdAt: nowIso2(), updatedAt: nowIso2() };
     const file = docFile(cwd, "main");
     const json = JSON.stringify(doc, null, 2) + "\n";
-    await writeFile2(file, json, "utf8");
+    await writeFile8(file, json, "utf8");
     store.revisions.set(file, sha(json));
   }
 }
@@ -3706,7 +9999,7 @@ async function listDocs(cwd) {
     const file = docFile(cwd, name);
     try {
       const info = await stat2(file);
-      const raw = await readFile2(file, "utf8");
+      const raw = await readFile6(file, "utf8");
       let title = name;
       try {
         title = JSON.parse(raw)?.title ?? name;
@@ -3722,7 +10015,7 @@ async function readDoc(cwd, name) {
   const file = docFile(cwd, name);
   let raw;
   try {
-    raw = await readFile2(file, "utf8");
+    raw = await readFile6(file, "utf8");
   } catch (error) {
     if (error?.code === "ENOENT") throw new HttpError(404, "document-not-found", `canvas document "${name}" does not exist`);
     throw error;
@@ -3737,7 +10030,7 @@ async function readDoc(cwd, name) {
   }
   let doc;
   try {
-    doc = normalizeDoc(parsed, { touch: false });
+    doc = isLegacyFigmaArchive(parsed) ? extractDocFromLegacyArchive(parsed) : normalizeDoc(parsed, { touch: false });
   } catch (error) {
     if (error instanceof CanvasError) {
       throw new HttpError(422, "invalid-document", error.message, { name, path: error.path });
@@ -3748,10 +10041,10 @@ async function readDoc(cwd, name) {
 }
 async function writeDoc(ctx, store, cwd, name, doc, options) {
   const file = docFile(cwd, name);
-  await mkdir2(dirname(file), { recursive: true });
+  await mkdir8(dirname4(file), { recursive: true });
   let currentRaw = null;
   try {
-    currentRaw = await readFile2(file, "utf8");
+    currentRaw = await readFile6(file, "utf8");
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
   }
@@ -3775,12 +10068,12 @@ async function writeDoc(ctx, store, cwd, name, doc, options) {
     throw new HttpError(413, "document-too-large", `canvas document exceeds ${LIMITS.docBytes} bytes`);
   }
   const temp = `${file}.${process.pid}.${Date.now()}.tmp`;
-  await writeFile2(temp, json, "utf8");
-  await rename(temp, file);
+  await writeFile8(temp, json, "utf8");
+  await rename2(temp, file);
   const revision = sha(json);
   store.revisions.set(file, revision);
   broadcast(store, file, { type: "doc-changed", name, revision, source: options.source });
-  return { doc: normalized, revision, file, path: relative(cwd, file) };
+  return { doc: normalized, revision, file, path: relative2(cwd, file) };
 }
 async function buildPack(cwd, name) {
   const read = await readDoc(cwd, name);
@@ -3788,13 +10081,13 @@ async function buildPack(cwd, name) {
   const assets = {};
   let assetCount = 0;
   try {
-    const entries = await readdir2(join2(root, "assets"), { withFileTypes: true });
+    const entries = await readdir2(join8(root, "assets"), { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isFile()) continue;
-      const file = join2(root, "assets", entry.name);
+      const file = join8(root, "assets", entry.name);
       const info = await stat2(file);
       if (info.size > 8 * 1024 * 1024) continue;
-      const buffer = await readFile2(file);
+      const buffer = await readFile6(file);
       assets[`assets/${entry.name}`] = `data:${MIME[extname2(entry.name)] ?? "application/octet-stream"};base64,${buffer.toString("base64")}`;
       assetCount += 1;
     }
@@ -3812,18 +10105,18 @@ async function buildPack(cwd, name) {
 }
 async function writePack(cwd, name) {
   const pack = await buildPack(cwd, name);
-  const file = assertInside(canvasRoot(cwd), join2(canvasRoot(cwd), "exports", `${name}${PACK_SUFFIX}`));
-  await mkdir2(dirname(file), { recursive: true });
+  const file = assertInside2(canvasRoot(cwd), join8(canvasRoot(cwd), "exports", `${name}${PACK_SUFFIX}`));
+  await mkdir8(dirname4(file), { recursive: true });
   const json = JSON.stringify(pack);
   if (Buffer.byteLength(json) > LIMITS.docBytes) throw new HttpError(413, "pack-too-large", "packed document exceeds the size limit");
-  await writeFile2(file, json, "utf8");
+  await writeFile8(file, json, "utf8");
   return { pack, file, bytes: Buffer.byteLength(json) };
 }
 async function readPack(cwd, packPath) {
-  const file = assertInside(cwd, resolve3(cwd, packPath));
+  const file = assertInside2(cwd, resolve6(cwd, packPath));
   let raw;
   try {
-    raw = await readFile2(file, "utf8");
+    raw = await readFile6(file, "utf8");
   } catch (error) {
     if (error?.code === "ENOENT") throw new HttpError(404, "pack-not-found", `pack "${packPath}" does not exist`);
     throw error;
@@ -3854,8 +10147,8 @@ async function importPack(ctx, store, cwd, pack, options = {}) {
     if (!base64) continue;
     const buffer = Buffer.from(base64, "base64");
     if (buffer.byteLength > LIMITS.imageBytes) continue;
-    await mkdir2(join2(root, "assets"), { recursive: true });
-    await writeFile2(join2(root, relativePathValue), buffer);
+    await mkdir8(join8(root, "assets"), { recursive: true });
+    await writeFile8(join8(root, relativePathValue), buffer);
     assets += 1;
   }
   const result = await writeDoc(ctx, store, cwd, name, doc, {
@@ -3870,10 +10163,10 @@ async function requestSnapshot(store, cwd, name, options = {}) {
   if (clients.length === 0) {
     throw new HttpError(409, "no-live-canvas", "open the canvas tab first: snapshot needs a live renderer");
   }
-  const requestId = randomUUID();
+  const requestId = randomUUID2();
   const scale = Math.min(Math.max(Number(options.scale) || 2, 0.5), 4);
   const nodeId = typeof options.nodeId === "string" ? options.nodeId : null;
-  const settled = new Promise((resolve4, reject) => {
+  const settled = new Promise((resolve7, reject) => {
     const timer = setTimeout(() => {
       store.snapshots.delete(requestId);
       reject(new HttpError(504, "snapshot-timeout", "the canvas tab did not answer the snapshot request"));
@@ -3882,7 +10175,7 @@ async function requestSnapshot(store, cwd, name, options = {}) {
       resolve: (value) => {
         clearTimeout(timer);
         store.snapshots.delete(requestId);
-        resolve4(value);
+        resolve7(value);
       }
     });
   });
@@ -3942,7 +10235,7 @@ function retainWatcher(store, file, name) {
       entry.timer = setTimeout(async () => {
         entry.timer = null;
         try {
-          const raw = await readFile2(file, "utf8");
+          const raw = await readFile6(file, "utf8");
           const revision = sha(raw);
           if (revision === entry.lastRevision) return;
           entry.lastRevision = revision;
@@ -3990,7 +10283,7 @@ function parseQuery(url) {
   return Object.fromEntries(url.searchParams.entries());
 }
 function relativePath(cwd, file) {
-  return relative(cwd, file);
+  return relative2(cwd, file);
 }
 function currentModelSelection(ctx) {
   try {
@@ -4002,12 +10295,45 @@ function currentModelSelection(ctx) {
 function summary(doc) {
   return outlineDoc(doc).stats;
 }
+function figmaDeps(ctx, store) {
+  const workspace = async (exec) => {
+    const sessionId = exec?.sessionId;
+    const { cwd } = sessionCwd(ctx, sessionId);
+    return { cwd, sessionId };
+  };
+  return {
+    bridge: store.bridge,
+    canvasRoot,
+    sessionCwd: (sessionId) => sessionCwd(ctx, sessionId),
+    resolveName: (sessionId, name) => resolveName(store, sessionId, name),
+    ensureScaffold: (cwd) => ensureScaffold(cwd, store),
+    rememberDoc: (sessionId, name) => rememberDoc(store, sessionId, name),
+    readDoc,
+    writeDoc: (cwd, name, doc, options) => writeDoc(ctx, store, cwd, name, doc, options),
+    sendJson,
+    readBody,
+    isLoopbackRequest: (request) => {
+      const host = request.headers.host;
+      if (host !== void 0 && !isLoopbackHost(host)) return false;
+      const remote = request.socket?.remoteAddress;
+      if (!remote) return true;
+      return remote === "127.0.0.1" || remote === "::1" || remote === "::ffff:127.0.0.1";
+    },
+    workspace,
+    renderJson
+  };
+}
 function createRoutes(ctx, store) {
+  const fDeps = figmaDeps(ctx, store);
   return async function handler(request, response) {
     try {
-      if (!admit(ctx, request, response)) return;
       const url = new URL(request.url ?? "/", "http://127.0.0.1");
       const pathname = url.pathname;
+      if (pathname.startsWith(BRIDGE_PREFIX)) {
+        await handleBridgeRoute(pathname, request, response, fDeps);
+        return;
+      }
+      if (!admit(ctx, request, response)) return;
       if (pathname === HEALTH_PATH) {
         sendJson(response, 200, { ok: true, plugin: "@local/dsh-canvas", version: 2 });
         return;
@@ -4018,6 +10344,10 @@ function createRoutes(ctx, store) {
       }
       const action = pathname.slice(API_PREFIX.length);
       const query = parseQuery(url);
+      if (action.startsWith("figma/")) {
+        const handled = await handleFigmaApiRoute(action, query, request, response, fDeps);
+        if (handled) return;
+      }
       if (action === "state" && request.method === "GET") {
         const sessionId = query.sessionId;
         const { cwd } = sessionCwd(ctx, sessionId);
@@ -4030,6 +10360,7 @@ function createRoutes(ctx, store) {
           ok: true,
           name,
           path: relativePath(cwd, read.file),
+          workspaceId: sha(cwd),
           revision: read.revision,
           doc: read.doc,
           docs,
@@ -4048,7 +10379,7 @@ function createRoutes(ctx, store) {
       if (action === "diag" && request.method === "GET") {
         let text2 = "";
         try {
-          text2 = await readFile2("/tmp/dsh-canvas-client.log", "utf8");
+          text2 = await readFile6("/tmp/dsh-canvas-client.log", "utf8");
         } catch {
           text2 = "";
         }
@@ -4099,7 +10430,9 @@ function createRoutes(ctx, store) {
         if (from !== to) {
           if (!await exists(fromFile)) throw new HttpError(404, "document-not-found", `canvas document "${from}" does not exist`);
           if (await exists(toFile)) throw new HttpError(409, "document-exists", `canvas document "${to}" already exists`);
-          await rename(fromFile, toFile);
+          await rename2(fromFile, toFile);
+          await renameSidecar(canvasRoot(cwd), from, to).catch(() => {
+          });
           const watcher = store.watchers.get(fromFile);
           if (watcher) {
             if (watcher.timer) clearTimeout(watcher.timer);
@@ -4108,7 +10441,7 @@ function createRoutes(ctx, store) {
           }
           store.revisions.delete(fromFile);
         }
-        const raw = await readFile2(toFile, "utf8");
+        const raw = await readFile6(toFile, "utf8");
         const revision = sha(raw);
         store.revisions.set(toFile, revision);
         rememberDoc(store, body.sessionId, to);
@@ -4129,7 +10462,9 @@ function createRoutes(ctx, store) {
         if (!await exists(file)) throw new HttpError(404, "document-not-found", `canvas document "${name}" does not exist`);
         const names = await listDocNames(cwd);
         if (names.length <= 1) throw new HttpError(409, "last-document", "cannot delete the last canvas document");
-        await unlink(file);
+        await unlink3(file);
+        await deleteSidecar(canvasRoot(cwd), name).catch(() => {
+        });
         const watcher = store.watchers.get(file);
         if (watcher) {
           if (watcher.timer) clearTimeout(watcher.timer);
@@ -4160,10 +10495,10 @@ function createRoutes(ctx, store) {
         const buffer = Buffer.from(body.data, "base64");
         if (buffer.byteLength > 30 * 1024 * 1024) throw new HttpError(413, "export-too-large", "export exceeds 30 MiB");
         const root = canvasRoot(cwd);
-        await mkdir2(join2(root, "exports"), { recursive: true });
+        await mkdir8(join8(root, "exports"), { recursive: true });
         const safeName = (isSlug(body.name) ? body.name : "canvas") + "-" + (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-        const file = assertInside(root, join2(root, "exports", `${safeName}.${kind}`));
-        await writeFile2(file, buffer);
+        const file = assertInside2(root, join8(root, "exports", `${safeName}.${kind}`));
+        await writeFile8(file, buffer);
         sendJson(response, 200, {
           ok: true,
           path: relativePath(cwd, file),
@@ -4212,6 +10547,14 @@ function createRoutes(ctx, store) {
         sendJson(response, 200, { ok: true, ...result });
         return;
       }
+      if (action === "interaction-view/reply" && request.method === "POST") {
+        const body = await readBody(request, LIMITS.docBytes);
+        const result = body.result;
+        if (!result || typeof result.ok !== "boolean") throw new HttpError(400, "invalid-reply", "result.ok is required");
+        const received = store.interactionView.reply(body.sessionId, body.requestId, result);
+        sendJson(response, received ? 200 : 404, { ok: received });
+        return;
+      }
       if (action === "snapshot" && request.method === "POST") {
         const body = await readBody(request, 40 * 1024 * 1024);
         const waiter = store.snapshots.get(String(body.requestId ?? ""));
@@ -4233,17 +10576,17 @@ function createRoutes(ctx, store) {
         if (!buffer.byteLength) throw new HttpError(400, "invalid-image", "empty image");
         if (buffer.byteLength > LIMITS.imageBytes) throw new HttpError(413, "image-too-large", "image exceeds 20 MiB");
         const root = canvasRoot(cwd);
-        await mkdir2(join2(root, "assets"), { recursive: true });
-        const hash = createHash2("sha256").update(buffer).digest("hex").slice(0, 24);
-        const file = assertInside(root, join2(root, "assets", `${hash}${ext}`));
-        if (!await exists(file)) await writeFile2(file, buffer);
+        await mkdir8(join8(root, "assets"), { recursive: true });
+        const hash = createHash5("sha256").update(buffer).digest("hex").slice(0, 24);
+        const file = assertInside2(root, join8(root, "assets", `${hash}${ext}`));
+        if (!await exists(file)) await writeFile8(file, buffer);
         sendJson(response, 200, { ok: true, asset: `assets/${hash}${ext}`, bytes: buffer.byteLength });
         return;
       }
       if (action === "asset" && request.method === "GET") {
         const { cwd } = sessionCwd(ctx, query.sessionId);
         const file = assetFile(cwd, query.asset, "asset");
-        const buffer = await readFile2(file);
+        const buffer = await readFile6(file);
         response.writeHead(200, {
           "content-type": MIME[extname2(file).toLowerCase()] ?? "application/octet-stream",
           "cache-control": "public, max-age=31536000, immutable",
@@ -4261,10 +10604,10 @@ function createRoutes(ctx, store) {
         if (!buffer.byteLength) throw new HttpError(400, "invalid-font", "empty font");
         if (buffer.byteLength > LIMITS.fontBytes) throw new HttpError(413, "font-too-large", "font exceeds 10 MiB");
         const root = canvasRoot(cwd);
-        await mkdir2(join2(root, "fonts"), { recursive: true });
-        const hash = createHash2("sha256").update(buffer).digest("hex").slice(0, 24);
-        const file = assertInside(root, join2(root, "fonts", `${hash}${ext}`));
-        if (!await exists(file)) await writeFile2(file, buffer);
+        await mkdir8(join8(root, "fonts"), { recursive: true });
+        const hash = createHash5("sha256").update(buffer).digest("hex").slice(0, 24);
+        const file = assertInside2(root, join8(root, "fonts", `${hash}${ext}`));
+        if (!await exists(file)) await writeFile8(file, buffer);
         sendJson(response, 200, {
           ok: true,
           asset: `fonts/${hash}${ext}`,
@@ -4278,7 +10621,7 @@ function createRoutes(ctx, store) {
       if (action === "font" && request.method === "GET") {
         const { cwd } = sessionCwd(ctx, query.sessionId);
         const file = assetFile(cwd, query.asset, "font");
-        const buffer = await readFile2(file);
+        const buffer = await readFile6(file);
         response.writeHead(200, {
           "content-type": MIME[extname2(file).toLowerCase()] ?? "application/octet-stream",
           "cache-control": "public, max-age=31536000, immutable",
@@ -4335,8 +10678,8 @@ function createRoutes(ctx, store) {
           });
           return;
         }
-        const assetDir = join2(canvasRoot(cwd), "assets");
-        await mkdir2(assetDir, { recursive: true });
+        const assetDir = join8(canvasRoot(cwd), "assets");
+        await mkdir8(assetDir, { recursive: true });
         const generated = await generateWithCodex({
           prompt,
           assetDir,
@@ -4399,10 +10742,11 @@ function createTools(ctx, store) {
       type: "object",
       properties: {
         name: { type: "string", description: "document name; defaults to the last opened canvas in this session" },
-        detail: { type: "string", enum: ["outline", "full", "node"], description: "how much of the document to return" },
-        nodeId: { type: "string", description: 'node id when detail is "node"' },
+        detail: { type: "string", enum: ["outline", "full", "node", "interactions"], description: "how much of the document to return" },
+        nodeId: { type: "string", description: "physical node ID for node or interactions detail" },
         query: { type: "string", description: "match id, name or text; returns matches with ancestor path" },
         limit: { type: "number", description: "max matches for query (default 20)" },
+        offset: { type: "number", description: "connection offset for interactions detail" },
         fields: { type: "array", items: { type: "string" }, description: "outline sections: nodes, styles, components, comments, fonts, meta, pages" },
         depth: { type: "number", description: "outline child depth (default 6)" },
         childrenLimit: { type: "number", description: "max children per node in the outline (default 100)" }
@@ -4432,6 +10776,10 @@ function createTools(ctx, store) {
       if (typeof args?.query === "string" && args.query.trim()) {
         const found = findInDoc(readDocValue.doc, args.query, { pageId, limit: args.limit });
         return { ...base, detail: "query", query: args.query, ...found };
+      }
+      if (args?.detail === "interactions") {
+        const ids = args.nodeId ? [args.nodeId] : selection?.ids;
+        return { ...base, detail: "interactions", ...describeInteractions(readDocValue.doc, { ids, offset: args.offset, limit: args.limit }) };
       }
       if (args?.detail === "full") {
         const json = JSON.stringify(readDocValue.doc);
@@ -4798,8 +11146,8 @@ function createTools(ctx, store) {
         const capabilities = await detectImageCapabilities({ modelSelection: currentModelSelection(ctx) });
         return { ok: true, name, capabilities };
       }
-      const assetDir = join2(canvasRoot(cwd), "assets");
-      await mkdir2(assetDir, { recursive: true });
+      const assetDir = join8(canvasRoot(cwd), "assets");
+      await mkdir8(assetDir, { recursive: true });
       if (args?.action === "generate") {
         const prompt = typeof args?.prompt === "string" ? args.prompt.trim() : "";
         if (!prompt) throw new Error("image generate requires prompt");
@@ -4830,7 +11178,7 @@ function createTools(ctx, store) {
       if (args?.action === "import") {
         const source = typeof args?.path === "string" ? args.path : "";
         if (!source) throw new Error("image import requires path");
-        const result = await importImage({ sourcePath: resolve3(cwd, source), assetDir });
+        const result = await importImage({ sourcePath: resolve6(cwd, source), assetDir });
         return { name, ...result };
       }
       throw new Error(`unknown canvas_image action "${String(args?.action)}"`);
@@ -4936,10 +11284,10 @@ function createTools(ctx, store) {
       });
       const { buffer, nodeId } = await pending.settled;
       const root = canvasRoot(cwd);
-      await mkdir2(join2(root, "exports"), { recursive: true });
+      await mkdir8(join8(root, "exports"), { recursive: true });
       const suffix = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-      const target = assertInside(root, join2(root, "exports", `snapshot-${name}-${suffix}.png`));
-      await writeFile2(target, buffer);
+      const target = assertInside2(root, join8(root, "exports", `snapshot-${name}-${suffix}.png`));
+      await writeFile8(target, buffer);
       return {
         ok: true,
         name,
@@ -4950,7 +11298,27 @@ function createTools(ctx, store) {
       };
     }
   };
-  return [read, write, edit, comment, template, audit, image, exportTool, importTool, migrateTool, snapshotTool];
+  const view = {
+    name: "canvas_interaction_view",
+    description: "Inspect or navigate interaction focus in the live canvas. Focus takes a placement node ID; reveal takes a related page ID or a wire node ID. Return goes back to the original placement.",
+    parameters: {
+      type: "object",
+      required: ["action"],
+      additionalProperties: false,
+      properties: {
+        name: { type: "string" },
+        action: { type: "string", enum: ["status", "focus", "reveal", "return", "clear"] },
+        nodeId: { type: "string" }
+      }
+    },
+    output: { schema: { type: "object", additionalProperties: true }, render: (_args, value) => renderJson(value) },
+    async execute(args, exec) {
+      const { cwd, sessionId } = await workspace(exec);
+      return store.interactionView.request(store.sse, docFile(cwd, defaultName2(sessionId, args.name)), sessionId, args.action, args.nodeId);
+    }
+  };
+  const figmaTool = createFigmaTool(figmaDeps(ctx, store));
+  return [read, view, write, edit, comment, template, audit, image, exportTool, importTool, figmaTool, migrateTool, snapshotTool];
 }
 function apply(ctx) {
   const store = state();
@@ -4981,6 +11349,8 @@ function apply(ctx) {
       } catch {
       }
     }
+    store.interactionView.dispose();
+    store.bridge.dispose();
     store.sse.clear();
     for (const file of [...store.watchers.keys()]) releaseWatcher(store, file);
     store.selections.clear();

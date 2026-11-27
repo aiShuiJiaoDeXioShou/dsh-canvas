@@ -7,12 +7,12 @@ contract are reused directly where they apply.
 
 Adapted for dsh-canvas:
 
-- Figma tools/pages → `canvas_read` / `canvas_write` / `canvas_edit` / `canvas_template`;
+- Figma tools/pages → `canvas_read` / `canvas_write` / `canvas_edit` / `canvas_template` / `canvas_interaction_view` plus `canvas_figma` & `canvas-figma-setup` for free Figma ecosystem sync;
 - Image Gen host skill → `canvas_image` capability chain (GPT native / local
   Codex CLI `image_generation` / user import);
 - Visualize → DSH `ask_user_question` or direct clarification;
 - Flutter/GetX implementation → canvas design handoff (tokens, exports, spec);
-- SVG vector import / Figma file fallback → basic SVG `<path>` import only; no .fig parsing or pen editor;
+- SVG vector import / Figma interop → basic SVG `<path>` import (no pen/bezier anchor editor), plus Figma clipboard Kiwi paste, `.fig` import, free REST URL/comments sync, Companion Plugin bidirectional patches, and `.dshfig` lossless bundles;
 - default iPhone 16 393×852; iPhone 15 390×844 remains available.
 
 The package retains the original workflow intent and rules; tool-specific parts

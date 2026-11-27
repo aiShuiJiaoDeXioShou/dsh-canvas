@@ -9,6 +9,7 @@
 | `.dsh-canvas/*.canvas.json` | 设计源，标明文档名/revision |
 | 页面/Frame 节点 | 选定的页面和状态，不只给整页截图 |
 | SVG/PNG 导出 | 用画布导出功能生成，保存到 `.dsh-canvas/exports/`；标明直角完整截图边界 |
+| Figma 同步 / `.dshfig` | 需要交付给 Figma 团队时，使用 `canvas_figma`（Companion Plugin `in-place` / `proposal-frame` Push、回写评论摘要或导出 `.dshfig` 无损包） |
 | resolved tokens | 需要规范交付时保存 `.dsh-canvas/design/resolved-tokens.json` |
 | 设计说明 | `.dsh-canvas/design/brief.md`、`report.md`、素材清单 |
 | 未完成项 | 未覆盖状态、未验证交互、替代素材和限制 |
@@ -16,7 +17,8 @@
 ## 约束
 
 - 不生成 Flutter/GetX 代码或 `ThemeData`；需要代码实现时由用户进入工程侧，设计侧只交设计依据。
-- 不导出 Figma/Sketch 文件，不做整页 SVG 矢量回流。
+- 不生成 Flutter/GetX 代码或 `ThemeData`；需要代码实现时由用户进入工程侧，设计侧只交设计依据。
+- 不导出 `.sketch` 文件，不做整页 SVG 矢量回流；如需回写 Figma 团队文件，走 `canvas_figma` Companion Plugin Patch 或 `.dshfig` 无损便携包。
 - 导出前检查根 Frame 四角为 0、背景完整、无设备外壳/透明圆角混入。
 - 设计审查通过不等于运行验收；真实交互/设备行为未验证时明确标注。
 - 已有工程时更新其 README 的设计资产段；没有工程时把交付文件放在画布工作区。

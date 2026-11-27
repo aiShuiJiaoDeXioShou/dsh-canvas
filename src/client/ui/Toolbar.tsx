@@ -3,6 +3,12 @@
 import * as React from 'react'
 import { IconButton, Button, Modal } from './common.jsx'
 import { Icon } from './icons.jsx'
+import { FigmaSyncDialog } from './FigmaSyncDialog.jsx'
+
+export function ZoomPercentage({ store }: { store: import('../store.js').CanvasStore }) {
+  const percentage = React.useSyncExternalStore(store.subscribeViewport, store.getZoomPercentage)
+  return <>{percentage}%</>
+}
 
 const TOOLS = [
   ['pointer', 'v', '移动/选择 (V)'],
@@ -10,15 +16,17 @@ const TOOLS = [
   ['rect', 'r', '矩形 (R)'],
   ['ellipse', 'o', '椭圆 (O)'],
   ['line', 'l', '直线 (L)'],
+  ['connect', 'k', '交互连线 (K) · 连接按钮与目标界面，标明跳转流程'],
   ['text', 't', '文本 (T)'],
   ['image', 'i', '图片 (I)'],
   ['hand', 'h', '抓手 (H)'],
   ['comment', 'c', '评论 (C)'],
 ]
 
-export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName, inspectorOpen, onToggleInspector }: any) {
+export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName, inspectorOpen, onToggleInspector, connections }: any) {
   const state = store.state
   const [showExport, setShowExport] = React.useState(false)
+  const [showFigmaSync, setShowFigmaSync] = React.useState(false)
   const [docsOpen, setDocsOpen] = React.useState(false)
   const docsRef = React.useRef(null)
   const fileRef = React.useRef(null)
@@ -78,7 +86,7 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName,
           {
             type: 'button',
             className: 'dshc-doc-trigger',
-            title: '切换 / 重命名画布文档',
+            title: '切换 / 重命名设计稿',
             onClick: () => setDocsOpen((open) => !open),
           },
           React.createElement('span', { className: 'dshc-doc-trigger-label' }, currentLabel),
@@ -116,14 +124,22 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName,
               },
             }),
           )),
-          docs.length === 0 && React.createElement('div', { className: 'dshc-doc-empty' }, '还没有画布'),
+          docs.length === 0 && React.createElement('div', { className: 'dshc-doc-empty' }, '还没有设计稿'),
         ),
       ),
-      React.createElement(IconButton, { icon: 'plus', title: '新建画布', onClick: onNewDoc }),
+      React.createElement(IconButton, { icon: 'plus', title: '新建设计稿', onClick: onNewDoc }),
       React.createElement(IconButton, { icon: 'path', title: '导入 SVG path', onClick: () => svgRef.current?.click() }),
-      React.createElement(IconButton, { icon: 'pencil', title: '重命名画布', onClick: () => onRenameDoc?.(state.name) }),
-      React.createElement(IconButton, { icon: 'trash', title: '删除画布', onClick: () => onDeleteDoc?.() }),
+      React.createElement(IconButton, { icon: 'pencil', title: '重命名设计稿', onClick: () => onRenameDoc?.(state.name) }),
+      React.createElement(IconButton, { icon: 'trash', title: '删除设计稿', onClick: () => onDeleteDoc?.() }),
       React.createElement(IconButton, { icon: 'download', title: '导出 SVG / PNG', onClick: () => setShowExport(!showExport) }),
+      React.createElement(Button, {
+        small: true,
+        icon: 'sparkle',
+        className: 'dshc-figma-btn',
+        title: 'Figma 导入 / 同步与快速配置',
+        active: showFigmaSync,
+        onClick: () => setShowFigmaSync(true),
+      }, 'Figma'),
       React.createElement('span', { className: 'dshc-spacer' }),
       React.createElement(IconButton, { icon: 'undo', title: '撤销 (⌘Z)', onClick: () => store.undo(), disabled: !store.history.canUndo() }),
       React.createElement(IconButton, { icon: 'redo', title: '重做 (⇧⌘Z)', onClick: () => store.redo(), disabled: !store.history.canRedo() }),
@@ -152,13 +168,26 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName,
           const view = store.viewportSize()
           store.zoomAt({ x: view.width / 2, y: view.height / 2 }, 1 / 1.2)
         } }),
-        React.createElement('button', { type: 'button', className: 'dshc-zoom-label', title: '重置到 100%', onClick: () => store.setViewport({ ...store.viewport, zoom: 1 }) }, `${Math.round(state.viewport.zoom * 100)}%`),
+        React.createElement('button', { type: 'button', className: 'dshc-zoom-label', title: '重置到 100%', onClick: () => store.setViewport({ ...store.state.viewport, zoom: 1 }) }, <ZoomPercentage store={store} />),
         React.createElement(IconButton, { icon: 'zoomIn', title: '放大', onClick: () => {
           const view = store.viewportSize()
           store.zoomAt({ x: view.width / 2, y: view.height / 2 }, 1.2)
         } }),
-        React.createElement(IconButton, { icon: 'fit', title: '适应画布 (1)', onClick: () => store.zoomToFit() }),
-        React.createElement(IconButton, { icon: 'reset', title: '适应选区 (2)', onClick: () => store.zoomToSelection() }),
+        React.createElement(IconButton, {
+          icon: 'fit',
+          title: selectionCount ? '适应选区 (2)' : '适应画布 (1)',
+          onClick: () => (selectionCount ? store.zoomToSelection() : store.zoomToFit()),
+        }),
+        connections?.hasConnections && React.createElement(Button, {
+          small: true, icon: 'connect', active: connections.focused,
+          disabled: !connections.enabled && !connections.focused,
+          title: connections.focused
+            ? '退出聚焦，恢复显示全部界面和连线'
+            : connections.enabled
+              ? '只显示与当前选中元素相关的跳转连线，淡化无关界面'
+              : '先选中带交互连线的元素或界面后再聚焦',
+          onClick: connections.toggle,
+        }, connections.focused ? '退出聚焦' : '聚焦连线'),
       ),
       React.createElement(
         'span',
@@ -176,7 +205,7 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName,
       React.createElement(
         Modal,
         {
-          title: selectionCount ? `导出选区（${selectionCount} 个图层）` : '导出整页',
+          title: selectionCount ? `导出选区（${selectionCount} 个图层）` : '导出当前画布',
           width: 420,
           onClose: () => setShowExport(false),
         },
@@ -190,7 +219,10 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName,
         React.createElement('div', { className: 'dshc-export-section' }, '工程文件'),
         React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportPack() } }, '导出 Drafi 包（含素材，可再导入）'),
         React.createElement(Button, { icon: 'upload', onClick: () => { setShowExport(false); packRef.current?.click() } }, '导入 Drafi 包'),
+        React.createElement('div', { className: 'dshc-export-section' }, 'Figma 生态'),
+        React.createElement(Button, { icon: 'sparkle', onClick: () => { setShowExport(false); setShowFigmaSync(true) } }, 'Figma 同步与快速配置…'),
       ),
+    showFigmaSync && React.createElement(FigmaSyncDialog, { store, onClose: () => setShowFigmaSync(false) }),
     React.createElement('input', {
       ref: (element) => {
         fileRef.current = element

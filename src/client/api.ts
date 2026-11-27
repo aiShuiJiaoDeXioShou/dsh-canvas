@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Browser-side HTTP/SSE client for the canvas Host half.
  * All routes live under /dsh-canvas/api and resolve against document.baseURI
@@ -6,7 +5,13 @@
  */
 
 export class ApiError extends Error {
-  constructor(message, status, code, details, doc, revision) {
+  status: number
+  code: string
+  details: unknown
+  doc: unknown
+  revision: string
+
+  constructor(message: string, status: number, code: string, details?: unknown, doc?: unknown, revision?: string) {
     super(message)
     this.name = 'ApiError'
     this.status = status
@@ -31,7 +36,7 @@ function api(path) {
   return baseUrl(`dsh-canvas/api/${path}`)
 }
 
-async function request(path, options = {}) {
+async function request(path: string, options: { method?: string; body?: unknown; signal?: AbortSignal } = {}) {
   const response = await fetch(api(path), {
     method: options.method ?? 'GET',
     headers: options.body === undefined ? { accept: 'application/json' } : { accept: 'application/json', 'content-type': 'application/json' },
@@ -60,14 +65,14 @@ async function request(path, options = {}) {
 }
 
 /** @param {string} sessionId @param {string|undefined} name */
-export function loadState(sessionId, name, signal) {
+export function loadState(sessionId, name, signal?: AbortSignal) {
   const query = new URLSearchParams({ sessionId })
   if (name) query.set('name', name)
   return request(`state?${query}`, { signal })
 }
 
 /** @param {string} sessionId @param {string} name @param {string} baseRevision @param {any} doc */
-export function saveDoc(sessionId, name, baseRevision, doc, signal) {
+export function saveDoc(sessionId, name, baseRevision, doc, signal?: AbortSignal) {
   return request('doc', { method: 'PUT', body: { sessionId, name, baseRevision, doc }, signal })
 }
 
@@ -217,7 +222,10 @@ export async function openEvents(sessionId, name, onEvent, signal) {
           for (const line of chunk.split('\n')) {
             if (!line.startsWith('data: ')) continue
             try {
-              onEvent(JSON.parse(line.slice(6)))
+              const event = JSON.parse(line.slice(6))
+              if (event?.type === 'interaction-view-request') {
+                interactionRequests.dispatchEvent(new CustomEvent('request', { detail: { sessionId, name, event } }))
+              } else onEvent(event)
             } catch {
               // ignore a malformed frame
             }
@@ -248,3 +256,161 @@ export function reportDiag(event) {
     return Promise.resolve(undefined)
   }
 }
+
+const interactionRequests = new EventTarget()
+
+export function onInteractionViewRequest(
+  listener: (request: { sessionId: string; name: string; event: { requestId: string; action: string; nodeId?: string } }) => void,
+) {
+  const callback = (event: Event) => listener((event as CustomEvent).detail)
+  interactionRequests.addEventListener('request', callback)
+  return () => interactionRequests.removeEventListener('request', callback)
+}
+
+export function replyInteractionView(sessionId: string, requestId: string, result: object) {
+  return request('interaction-view/reply', { method: 'POST', body: { sessionId, requestId, result } })
+}
+
+export interface FigmaSetupStatusView {
+  ok: boolean
+  auth: {
+    configured: boolean
+    valid: boolean
+    source: string
+    scopeMode: string
+    daysUntilExpiry?: number | null
+    expiringSoon?: boolean
+    account?: { id?: string; handle?: string; email?: string }
+    error?: string
+  }
+  channels: {
+    clipboard: { ready: boolean; requiresToken: boolean }
+    figFile: { ready: boolean; requiresToken: boolean }
+    companionPlugin: {
+      ready: boolean
+      paired: boolean
+      pairingCode: string | null
+      expiresAt: string | null
+      figmaDesktopInstalled: boolean
+      manifestPath: string
+    }
+    restApi: { ready: boolean; requiresToken: boolean; scopeMode: string }
+  }
+  binding: {
+    bindingId: string
+    fileKey: string
+    fileName?: string
+    fileUrl?: string
+    transport: string
+    lastSyncedAt: string
+    boundNodes: number
+    remoteComments: number
+  } | null
+  setupScriptPath: string
+  settingsUrl: string
+}
+
+export interface FigmaDiffPlanView {
+  planId: string
+  direction: 'pull' | 'push'
+  readCompleteness: 'complete' | 'partial'
+  summary: { added: number; modified: number; moved: number; deleted: number; conflicts: number; assetsToTransfer: number }
+  entries: Array<{ dshId: string; nodeName: string; nodeType: string; kind: string; fields: Array<{ field: string }>; selected: boolean }>
+  conflicts: Array<{ conflictKey: string; dshId: string; nodeName: string; field: string; reason: string }>
+  notices: string[]
+}
+
+export function fetchFigmaStatus(sessionId: string, name?: string, probe = true): Promise<FigmaSetupStatusView> {
+  const query = new URLSearchParams({ sessionId, probe: String(probe) })
+  if (name) query.set('name', name)
+  return request(`figma/status?${query}`)
+}
+
+export function saveFigmaAuthToken(token: string, scopeMode: 'readonly' | 'comments-write' = 'readonly', expiresInDays = 90) {
+  return request('figma/auth/token', { method: 'POST', body: { token, scopeMode, expiresInDays } })
+}
+
+export function clearFigmaAuthToken() {
+  return request('figma/auth/token', { method: 'DELETE' })
+}
+
+export function createFigmaPairing(sessionId: string, name: string): Promise<{ ok: boolean; pairingCode: string; canvasName: string; expiresAt: string }> {
+  return request('figma/pair', { method: 'POST', body: { sessionId, name } })
+}
+
+export function pasteFigmaClipboard(sessionId: string, payload: { html?: string; svg?: string; text?: string; existingIds?: string[] }) {
+  return request('figma/paste', { method: 'POST', body: { sessionId, ...payload } })
+}
+
+export function importFigmaUrl(
+  sessionId: string,
+  name: string,
+  options: {
+    url: string
+    mode: 'import' | 'pull'
+    dryRun: boolean
+    baseRevision?: string
+    selectedIds?: string[]
+    resolutions?: Record<string, 'keep-drafi' | 'take-figma' | 'skip'>
+  },
+) {
+  return request('figma/import-url', { method: 'POST', body: { sessionId, name, ...options } })
+}
+
+export async function uploadFigmaFile(
+  sessionId: string,
+  name: string,
+  file: File,
+  options: { mode: 'import' | 'pull'; dryRun: boolean; baseRevision?: string },
+) {
+  const query = new URLSearchParams({
+    sessionId,
+    name,
+    mode: options.mode,
+    dryRun: String(options.dryRun),
+    fileName: file.name,
+    ...(options.baseRevision ? { baseRevision: options.baseRevision } : {}),
+  })
+  const response = await fetch(api(`figma/import-fig?${query}`), {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'content-type': 'application/octet-stream' },
+    body: file,
+  })
+  const payload = await response.json()
+  if (!response.ok) throw new Error(payload.message ?? 'Figma .fig import failed')
+  return payload
+}
+
+export function requestFigmaPush(
+  sessionId: string,
+  name: string,
+  options: { mode: 'in-place' | 'proposal-frame'; dryRun: boolean; selectedIds?: string[] },
+) {
+  return request('figma/push', { method: 'POST', body: { sessionId, name, ...options } })
+}
+
+export function syncFigmaCommentsApi(sessionId: string, name: string, fileKey?: string) {
+  return request('figma/comments/sync', { method: 'POST', body: { sessionId, name, ...(fileKey ? { fileKey } : {}) } })
+}
+
+export async function downloadDshFigBundle(sessionId: string, name: string): Promise<Blob> {
+  const query = new URLSearchParams({ sessionId, name })
+  const response = await fetch(api(`figma/bundle?${query}`), { method: 'GET', credentials: 'same-origin' })
+  if (!response.ok) throw new Error('Export .dshfig failed')
+  return response.blob()
+}
+
+export async function uploadDshFigBundle(sessionId: string, name: string, file: File) {
+  const query = new URLSearchParams({ sessionId, name })
+  const response = await fetch(api(`figma/bundle/import?${query}`), {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'content-type': 'application/octet-stream' },
+    body: file,
+  })
+  const payload = await response.json()
+  if (!response.ok) throw new Error(payload.message ?? 'Import .dshfig failed')
+  return payload
+}
+

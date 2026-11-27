@@ -1,10 +1,15 @@
-// @ts-nocheck
 /**
  * SVG exporter. Builds a standalone SVG from the resolved scene tree (the same
  * absolute geometry the DOM renderer paints), then PNG rasterisation reuses it.
  */
 
-const FONT_FORMAT = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' }
+const FONT_FORMAT: Record<string, string> = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' }
+
+function imagePreserveAspectRatio(fill: { fit?: string; scaleMode?: string }): string {
+  if (fill.fit === 'contain' || fill.scaleMode === 'fit') return 'xMidYMid meet'
+  if (fill.fit === 'fill' || fill.scaleMode === 'stretch') return 'none'
+  return 'xMidYMid slice'
+}
 
 function escapeXml(value) {
   return String(value ?? '')
@@ -60,7 +65,7 @@ function effectFilter(effects, defs, key) {
   const parts = []
   let blur = 0
   for (const effect of visible) {
-    if (effect.type === 'layer-blur') blur += Number(effect.radius) || 0
+    if (effect.type === 'layer-blur' || effect.type === 'blur') blur += Number(effect.blur ?? effect.radius) || 0
     if (effect.type === 'drop-shadow') {
       parts.push(`<feDropShadow dx="${effect.x ?? 0}" dy="${effect.y ?? 0}" stdDeviation="${(Number(effect.blur) || 0) / 2}" flood-color="${effect.color ?? '#00000040'}"/>`)
     }
@@ -140,13 +145,14 @@ function renderNode(node, context, parentAbs) {
     if (fill.type === 'image') {
       const href = assets.get(fill.asset)
       if (!href) continue
+      const preserveAspectRatio = imagePreserveAspectRatio(fill)
       const crop = fill.crop
       if (crop) {
         const cropId = `crop-${key}`
         defs.push(`<clipPath id="${cropId}"><rect width="${node.width}" height="${node.height}" rx="${radius}" ry="${radius}"/></clipPath>`)
-        parts.push(`<image href="${escapeAttr(href)}" x="${-crop.x * node.width / crop.width}" y="${-crop.y * node.height / crop.height}" width="${node.width / crop.width}" height="${node.height / crop.height}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${cropId})"/>`)
+        parts.push(`<image href="${escapeAttr(href)}" x="${-crop.x * node.width / crop.width}" y="${-crop.y * node.height / crop.height}" width="${node.width / crop.width}" height="${node.height / crop.height}" preserveAspectRatio="${preserveAspectRatio}" clip-path="url(#${cropId})"/>`)
       } else {
-        parts.push(`<image href="${escapeAttr(href)}" ${common} preserveAspectRatio="xMidYMid slice"${radius ? ` rx="${radius}"` : ''}/>`)
+        parts.push(`<image href="${escapeAttr(href)}" ${common} preserveAspectRatio="${preserveAspectRatio}"${radius ? ` rx="${radius}"` : ''}/>`)
       }
       continue
     }
@@ -204,13 +210,22 @@ function collectFonts(node, out) {
  *   fonts?: any[],
  * }} options
  */
-export async function buildSvg(scene, options = {}) {
+export async function buildSvg(
+  scene: any,
+  options: {
+    nodeKeys?: string[]
+    background?: string | null
+    resolveAsset?: (asset: string) => Promise<unknown>
+    resolveFont?: (font: any) => Promise<unknown>
+    fonts?: any[]
+  } = {},
+) {
   const roots = (scene?.roots ?? []).filter((node) => (options.nodeKeys ? options.nodeKeys.includes(node.key) : true))
   const selected = options.nodeKeys?.length ? (scene?.byKey ? options.nodeKeys.map((key) => scene.byKey.get(key)).filter(Boolean) : roots) : roots
   const nodes = selected.length ? selected : roots
-  const assets = new Map()
-  const assetSet = new Set()
-  const fontSet = new Set()
+  const assets = new Map<string, string>()
+  const assetSet = new Set<string>()
+  const fontSet = new Set<string>()
   for (const node of nodes) {
     collectAssets(node, assetSet)
     collectFonts(node, fontSet)
@@ -218,7 +233,8 @@ export async function buildSvg(scene, options = {}) {
   if (options.resolveAsset) {
     for (const asset of assetSet) {
       try {
-        assets.set(asset, await options.resolveAsset(asset))
+        const resolved = await options.resolveAsset(asset)
+        if (typeof resolved === 'string') assets.set(asset, resolved)
       } catch {
         // omit a missing asset
       }
@@ -233,6 +249,7 @@ export async function buildSvg(scene, options = {}) {
     if (!font || !options.resolveFont) continue
     try {
       const data = await options.resolveFont(font)
+      if (typeof data !== 'string') continue
       const ext = font.asset.split('.').pop().toLowerCase()
       fontCss.push(`@font-face{font-family:'${family.replace(/'/g, "\\'")}';src:url('${data}') format('${FONT_FORMAT[ext] ?? 'truetype'}');font-weight:${weight};font-style:${style};}`)
     } catch {
@@ -240,18 +257,15 @@ export async function buildSvg(scene, options = {}) {
     }
   }
 
-  const minX = Math.min(...nodes.map((node) => node.absX))
-  const minY = Math.min(...nodes.map((node) => node.absY))
-  const maxX = Math.max(...nodes.map((node) => node.absX + node.width))
-  const maxY = Math.max(...nodes.map((node) => node.absY + node.height))
+  const minX = nodes.length ? Math.min(...nodes.map((node) => node.absX)) : 0
+  const minY = nodes.length ? Math.min(...nodes.map((node) => node.absY)) : 0
+  const maxX = nodes.length ? Math.max(...nodes.map((node) => node.absX + node.width)) : 1
+  const maxY = nodes.length ? Math.max(...nodes.map((node) => node.absY + node.height)) : 1
   const width = Math.max(1, maxX - minX)
   const height = Math.max(1, maxY - minY)
   const context = { defs, assets, keyPrefix: 'n', clip: true }
   const body = nodes
-    .map((node) => {
-      const copy = { ...node, absX: node.absX - minX, absY: node.absY - minY }
-      return renderNode(copy, context, { x: 0, y: 0 })
-    })
+    .map((node) => renderNode(node, context, { x: minX, y: minY }))
     .join('')
 
   return `<?xml version="1.0" encoding="UTF-8"?>

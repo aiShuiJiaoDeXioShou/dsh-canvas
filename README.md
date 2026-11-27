@@ -57,9 +57,11 @@ Design UI mockups visually in the right sidebar, reference any canvas selection 
 - **Deterministic Design Audit** — `canvas_audit` checks screenshot boundaries, text contrast, touch targets, clipped children, zero-size nodes, missing references, unresolved comments, and empty frames while explicitly reporting skipped checks.
 - **CSS Handoff** — a collapsible **代码 (Code)** section in the inspector resolves layout, fills, gradients, borders, radii, shadows, and typography to copy-ready CSS.
 
-### Local-First Storage & Portable Exports
+### Local-First Storage, Figma Ecosystem & Portable Exports
 - **Open JSON Format** — designs live as plain JSON in `<workspace>/.dsh-canvas/*.canvas.json` (`dsh.canvas@1`), editable by Drafi, agent tools, or ordinary file tools.
-- **Browser Save-Picker Export** — export the selection, frame, or page as PNG, SVG, or a portable `.drafi.json` pack directly to disk via the browser save picker (with download fallback), without polluting the workspace or chat composer.
+- **Free Figma Bidirectional Sync** — copy/paste directly from Figma (`⌘C` → `⌘V`), import `.fig` local copies or Figma URLs, run Git-like 3-way Pull/Push diffs (`in-place` or `proposal-frame`) via the free **Drafi Companion** Figma Plugin (`figma-plugin/`), sync Figma review comments into Drafi comments/TODOs, and exchange lossless `.dshfig` bundles. All Figma bindings and passthrough metadata stay isolated in `.dsh-canvas/figma/<name>.sync.json`.
+- **`canvas-figma-setup` Quick Setup Skill** — guides users through 30-second zero-leak onboarding (progressive L0 clipboard → L1 Companion Plugin pairing → L2 Keychain-backed Figma REST Token via UI password box or `scripts/figma-setup.mjs --from-clipboard`).
+- **Browser Save-Picker Export** — export the selection, frame, or page as PNG, SVG, `.dshfig`, or a portable `.drafi.json` pack directly to disk via the browser save picker (with download fallback), without polluting the workspace or chat composer.
 - **Image Capability Chain** — `canvas_image` automatically probes native GPT/OpenAI image generation, falls back to a local Codex CLI (`image_generation`), or imports local image files into `.dsh-canvas/assets/`.
 
 ---
@@ -70,7 +72,7 @@ Design UI mockups visually in the right sidebar, reference any canvas selection 
   Right Sidebar ("Drafi")                 Chat Composer & Agent
   ┌───────────────────────────┐           ┌──────────────────────────────┐
   │ Visual Canvas Editor      │ ──chip──▶ │ dsh-canvas://main?node=...   │
-  │ (React, zero npm deps)    │ ◀──SSE─── │ 11 canvas_* tools + skill    │
+  │ (React, zero npm deps)    │ ◀──SSE─── │ 13 canvas_* tools + 2 skills   │
   └─────────────┬─────────────┘           └──────────────┬───────────────┘
                 │ loopback HTTP / SSE                    │ direct Host API
                 ▼                                        ▼
@@ -134,11 +136,12 @@ Choose whichever method fits your DSH workflow:
 
 ## Agent Tools & Runtime Skill
 
-Drafi registers **11 tools** and the **`canvas-ui-design`** runtime skill inside the DSH Host:
+Drafi registers **13 tools** and two runtime skills (**`canvas-ui-design`** and **`canvas-figma-setup`**) inside the DSH Host:
 
 | Tool | Purpose | Key Options / Actions |
 | --- | --- | --- |
-| `canvas_read` | Inspect a document and current user selection in compact JSON | `detail`: `outline` \| `node` \| `full`; `query`, `fields`, `depth`, `childrenLimit` |
+| `canvas_read` | Inspect a document, interactions, and current user selection in compact JSON | `detail`: `outline` \| `node` \| `full` \| `interactions`; `query`, `fields`, `depth`, `childrenLimit`, `offset` |
+| `canvas_interaction_view` | Inspect or navigate interaction focus (`pageRef` & wires) in the live canvas | `action`: `status` \| `focus` \| `reveal` \| `return` \| `clear`; `nodeId` |
 | `canvas_write` | Create or replace a full `dsh.canvas@1` document | `name`, `doc`, `baseRevision` |
 | `canvas_edit` | Apply atomic edits with full-document validation | `ops`: `add`, `update`, `move`, `remove`, `set`, `comment.*`; `baseRevision` |
 | `canvas_comment` | Manage single-user threaded feedback pinned to nodes or coordinates | `action`: `list` \| `add` \| `reply` \| `resolve` |
@@ -147,11 +150,12 @@ Drafi registers **11 tools** and the **`canvas-ui-design`** runtime skill inside
 | `canvas_image` | Resolve image generation or import local assets | `action`: `probe` \| `generate` \| `import` |
 | `canvas_export` | Pack a document and all referenced assets into one portable file | Writes `.dsh-canvas/exports/<name>.drafi.json` |
 | `canvas_import` | Restore a `.drafi.json` pack into a document plus assets | `path`, optional `name`, `baseRevision` |
+| `canvas_figma` | Bidirectional Figma ecosystem sync, setup probe, comments, and `.dshfig` bundles | `action`: `setup_status` \| `pair_start` \| `import_url` \| `import_fig` \| `pull_diff` \| `push_diff` \| `sync_comments` \| `reply_comment` \| `export_bundle` \| `import_bundle` |
 | `canvas_migrate` | Upgrade a stored document to the current format version | `name`, `dryRun` |
 | `canvas_snapshot` | Render the page or a node in the open tab and save a PNG | `name`, optional `nodeId`, `scale` (`0.5`–`4`, default `2`) |
 
-### `canvas-ui-design` Skill
-Registered automatically from [`skills/canvas-ui-design/`](skills/canvas-ui-design/SKILL.md) (adapted from the BD Flutter Dev UI design suite; see [`SOURCE.md`](skills/canvas-ui-design/SOURCE.md)). When you ask the agent to design screens, build components, match a reference image, refactor layouts, or review a design, the skill routes through structured workflows while keeping `.dsh-canvas/*.canvas.json` as the single source of truth.
+### `canvas-ui-design` & `canvas-figma-setup` Skills
+Registered automatically from [`skills/canvas-ui-design/`](skills/canvas-ui-design/SKILL.md) (adapted from the BD Flutter Dev UI design suite; see [`SOURCE.md`](skills/canvas-ui-design/SOURCE.md)) and [`skills/canvas-figma-setup/`](skills/canvas-figma-setup/SKILL.md). `canvas-ui-design` routes UI generation, component building, reference rebuilds, refactoring, and reviews while keeping `.dsh-canvas/*.canvas.json` as the single source of truth. `canvas-figma-setup` provides zero-leak 30-second Figma onboarding (L0 clipboard → L1 Companion Plugin pairing → L2 Keychain-backed Figma REST Token via UI password box or `scripts/figma-setup.mjs --from-clipboard`).
 
 ### Image Generation Chain (`canvas_image`)
 1. **Native GPT/OpenAI image tool** — if the active model supports native image generation, the agent generates natively and imports via `canvas_image { action: "import" }`.
@@ -190,7 +194,8 @@ All design artifacts live inside a hidden directory in the active session worksp
     ├── <name>.canvas.json   # Additional canvas documents (lowercase slugs)
     ├── assets/              # Uploaded & imported images (png/jpeg/webp/gif)
     ├── fonts/               # Uploaded custom fonts (woff2/woff/ttf/otf)
-    ├── exports/             # Agent snapshots (PNG) & portable packs (.drafi.json)
+    ├── figma/               # Figma sync sidecars (<name>.sync.json: binding, 3-way base, passthrough, comments)
+    ├── exports/             # Agent snapshots (PNG) & portable bundles (.dshfig / .drafi.json)
     ├── FORMAT.md            # Format reference (auto-generated on first open)
     └── DESIGN.md            # Default design system & templates (auto-generated)
 ```
@@ -277,7 +282,7 @@ pnpm check          # Run typecheck + build + test
 | `src/shared/foundation.ts` | Device metrics (iPhone 16 / 15) and style presets |
 | `src/shared/templates.ts` | Device-aware iOS screen and system-bar template builders |
 | `src/shared/audit.ts` | Deterministic design audit engine |
-| `src/host/main.ts` | Host HTTP routes, SSE stream, file store, assets/fonts, and 11 agent tools |
+| `src/host/main.ts` | Host HTTP routes, SSE stream, file store, assets/fonts, and 13 agent tools |
 | `src/host/image.ts` | Image capability probe, Codex CLI adapter, and safe asset import |
 | `src/host/skills.ts` | Registers the `canvas-ui-design` runtime skill |
 | `src/client/index.tsx` | Right sidebar tab registration, inline-dock fallback, composer locate chip & chat link renderer |
@@ -294,12 +299,12 @@ For architectural invariants, TypeScript guidelines, and release rules, see **[A
 
 ## Known Limitations (v1)
 
-- **Single-user, single-page:** No multiplayer collaboration, realtime cursors, or version history. The `pages` array exists in `dsh.canvas@1` for forward compatibility, while the v1 editor presents a single canvas per document.
+- **Local-first collaboration:** No realtime multiplayer cursors inside Drafi itself (use Figma as the team review hub via `canvas_figma` and the free Companion Plugin). Multi-page switching is supported via the Layers panel page switcher.
 - **Browser-side rendering:** No headless server-side renderer, thumbnailer, or font subsetter. `canvas_snapshot` renders inside the open browser tab and therefore requires the Drafi tab to be open.
 - **Export approximations:** Background blur is exact on screen (`backdrop-filter`) but approximated in SVG/PNG exports.
 - **Composer link behavior:** Because the composer accepts plain text, inserted selections appear as markdown links in the input box and convert to clickable reference chips once sent.
-- **Vector & file import scope:** No Figma (`.fig`) or Penpot import, pen/bezier anchor editing, or interactive prototyping. Basic SVG `<path>` import is supported; unsupported elements (transforms, text, filters, masks) are skipped with warnings. Path hit-testing currently uses the node bounding box.
-- **Auto-layout & overrides:** Auto-layout v1 does not include wrap, grid, min/max constraints, or absolute-positioned children. Component instance overrides support text, fills, and visibility (plus root `cornerRadius`), not inner-node layout overrides.
+- **Vector & prototyping scope:** Figma clipboard (`⌘C/⌘V`), `.fig` import, free REST API URL/comments sync, and Companion Plugin patches are supported; Penpot import, pen/bezier anchor editing, and runtime prototyping playback are not included. Basic SVG `<path>` import is supported; unsupported elements (transforms, text, filters, masks) are skipped with warnings. Path hit-testing currently uses the node bounding box.
+- **Auto-layout & overrides:** Supports `cornerRadii`, `layoutPositioning: 'absolute'`, `layout.wrap`, and `layout.ignoreHidden`, while CSS grid and min/max constraints remain passthrough-only. Component instance overrides support text, fills, and visibility (plus root `cornerRadius`), not inner-node layout overrides.
 - **Image generation:** Requires either a GPT/OpenAI model with native image generation or a local Codex CLI with `image_generation`; otherwise import images manually.
 
 ---

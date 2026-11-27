@@ -1,4 +1,3 @@
-// @ts-nocheck
 /** The canvas tab body: store wiring, chrome, panels and dialogs. */
 
 import * as React from 'react'
@@ -6,7 +5,9 @@ import { CanvasStore } from './store.js'
 import { reportDiag } from './api.js'
 import { consumePendingFocus, onCanvasFocus } from './focus.js'
 import { CanvasView } from './CanvasView.jsx'
-import { Toolbar } from './ui/Toolbar.jsx'
+import { useInteractionFocus } from './interaction-focus.js'
+import { InteractionPanel } from './ui/InteractionPanel.jsx'
+import { Toolbar, ZoomPercentage } from './ui/Toolbar.jsx'
 import { LayerPanel } from './ui/LayerPanel.jsx'
 import { Inspector } from './ui/Inspector.jsx'
 import { ComponentsPanel, StylesPanel, FontsPanel, CommentsPanel, TemplatesPanel } from './ui/panels.jsx'
@@ -25,7 +26,7 @@ const RAIL = [
   ['comments', 'comment', '评论'],
 ]
 
-export class CanvasErrorBoundary extends React.Component {
+export class CanvasErrorBoundary extends React.Component<React.PropsWithChildren, { error: Error | null }> {
   constructor(props) {
     super(props)
     this.state = { error: null }
@@ -65,7 +66,7 @@ export class CanvasErrorBoundary extends React.Component {
 export function CanvasPanel({ sessionId, inputActions }: any) {
   const storeRef = React.useRef(null)
   if (!storeRef.current || storeRef.current.sessionId !== sessionId) {
-    storeRef.current = new CanvasStore({ sessionId, inputActions })
+    storeRef.current = new CanvasStore({ sessionId, inputActions, onToast: undefined })
   }
   const store = storeRef.current
   store.inputActions = inputActions
@@ -73,6 +74,16 @@ export function CanvasPanel({ sessionId, inputActions }: any) {
   const [nameDialog, setNameDialog] = React.useState(null)
   const [layerMenu, setLayerMenu] = React.useState(null)
   const state = store.state
+  const canvasWrap = React.useRef<HTMLDivElement>(null)
+  const connections = useInteractionFocus(store, canvasWrap)
+  // The viewport subscribes to camera movement itself. Panel-only state does
+  // not invalidate the canvas, while shared editor changes reach both surfaces.
+  const canvas = React.useMemo(() => (
+    <CanvasView store={store} interactions={connections.presentation} interactionDestination={connections.destination} />
+  ), [store, connections.presentation, connections.destination, state.scene, state.name, state.selection,
+    state.primaryKey, state.tool, state.editingText, state.enteredInstance, state.crop, state.crop?.crop,
+    state.commentDraft, state.showComments, state.doc?.comments, state.pageId, store.clipboard])
+
 
   React.useEffect(() => attachGlobalTooltips(), [])
 
@@ -172,21 +183,22 @@ export function CanvasPanel({ sessionId, inputActions }: any) {
       store,
       inspectorOpen: state.inspectorOpen,
       onToggleInspector: toggleInspector,
+      connections,
       onNewDoc: () => onNeedName({
-        title: '新建画布',
+        title: '新建设计稿',
         label: '文档名（小写 slug）',
         defaultValue: `canvas-${(state.docs?.length ?? 0) + 1}`,
         onSubmit: (name) => store.createDoc(name),
       }),
       onNeedName,
       onRenameDoc: (from = store.state.name) => onNeedName({
-        title: '重命名画布',
+        title: '重命名设计稿',
         label: '文档名（小写 slug）',
         defaultValue: from,
         onSubmit: (name) => store.renameDoc(name, from),
       }),
       onDeleteDoc: () => {
-        if (typeof window !== 'undefined' && !window.confirm(`删除画布「${store.state.name}」？此操作不可撤销。`)) return
+        if (typeof window !== 'undefined' && !window.confirm(`删除设计稿「${store.state.name}」？此操作不可撤销。`)) return
         store.deleteDoc()
       },
     }),
@@ -259,11 +271,30 @@ export function CanvasPanel({ sessionId, inputActions }: any) {
         ),
       React.createElement(
         'div',
-        { className: 'dshc-canvas-wrap' },
-        React.createElement(CanvasView, { store }),
+        { className: 'dshc-canvas-wrap', ref: canvasWrap },
+        canvas,
       ),
-      state.inspectorOpen &&
-        React.createElement(Inspector, { store, onNameDialog: onNeedName }),
+      state.inspectorOpen && (connections.available ? (
+        <div className="dshc-inspector-shell">
+          <nav className="dshc-inspector-tabs" aria-label="右侧面板">
+            <button type="button" aria-pressed={connections.tab === 'properties'}
+              onClick={() => connections.setTab('properties')}>属性</button>
+            <button type="button" aria-pressed={connections.tab === 'interactions'}
+              onClick={() => connections.setTab('interactions')}>
+              交互流程
+              {connections.totalEdges > 0 && <span className="dshc-tab-count">{connections.totalEdges}</span>}
+            </button>
+          </nav>
+          {connections.tab === 'interactions' ? (
+            <InteractionPanel
+              scope={connections.scope} focused={connections.focused} viewed={connections.viewed}
+              allEdges={connections.allEdges}
+              store={store} previewNode={connections.previewNode} onVisit={connections.visit} activeEdge={connections.activeEdge} onVisitStart={connections.visitStart}
+              onFocus={connections.toggle} onReturn={connections.returnToFocus} onExit={connections.exit}
+            />
+          ) : <Inspector store={store} onNameDialog={onNeedName} />}
+        </div>
+      ) : React.createElement(Inspector, { store, onNameDialog: onNeedName })),
     ),
     React.createElement(
       'div',
@@ -280,7 +311,7 @@ export function CanvasPanel({ sessionId, inputActions }: any) {
         ? React.createElement('span', { className: 'dshc-status-warn', title: state.sceneIssues.join('\n') }, `${state.sceneIssues.length} 个警告`)
         : null,
       React.createElement('span', { className: 'dshc-muted' }, state.dirty ? '未保存' : state.saving ? '保存中…' : '已保存'),
-      React.createElement('span', { className: 'dshc-muted' }, `${Math.round(state.viewport.zoom * 100)}%`),
+      React.createElement('span', { className: 'dshc-muted' }, <ZoomPercentage store={store} />),
       React.createElement(Button, { small: true, primary: state.selection.length > 0, onClick: () => store.insertSelectionToComposer(), disabled: !state.selection.length }, '插入到对话'),
       React.createElement(Button, { small: true, icon: 'sparkle', onClick: () => store.insertPrompt() }, '让 AI 生成'),
     ),

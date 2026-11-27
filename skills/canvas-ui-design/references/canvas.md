@@ -1,11 +1,11 @@
 # 在画布中构建设计
 
-使用 dsh-canvas 的节点和工具构建可编辑设计，不依赖 Figma。
+使用 dsh-canvas 的节点和工具即可独立构建可编辑设计（不强依赖 Figma），也支持通过 `canvas_figma` 与 Figma 团队文件无缝双向同步。
 
 ## 读取
 
-- `canvas_read` 返回文档、页面、选区、revision 和节点 outline；先读再改。
-- 画布格式 `dsh.canvas@1` 见 `.dsh-canvas/FORMAT.md`；节点字段、样式、自动布局、组件、评论都在其中。
+- `canvas_read` 返回文档、页面、选区、revision 和节点 outline；先读再改。大画布支持 2,000+ 图层与多页切换，检查交互连线与 `pageRef` 复用摆放时可用 `canvas_read({ detail: 'interactions', nodeId })` 或 `canvas_interaction_view`。
+- 画布格式 `dsh.canvas@1` 见 `.dsh-canvas/FORMAT.md`；节点字段、样式、自动布局（含 `cornerRadii` / `layoutPositioning` / `ignoreHidden`）、组件、评论都在其中。Figma 绑定与透传元数据保存在 `.dsh-canvas/figma/<name>.sync.json`。
 - 已有文档优先复用现有 styles/components/frames，不重新发明颜色和尺寸。
 
 ## 写入
