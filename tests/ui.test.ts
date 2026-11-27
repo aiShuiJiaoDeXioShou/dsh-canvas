@@ -204,3 +204,14 @@ test('toolbar merges fit canvas and fit selection into one contextual button', a
   assert.doesNotMatch(toolbar, /icon: 'reset'/, 'fit selection should no longer use a separate reset button')
   assert.match(toolbar, /selectionCount \? '适应选区 \(2\)' : '适应画布 \(1\)'/)
 })
+
+test('toolbar separates Import and Export buttons with direct Copy-to-Figma guidance', async () => {
+  const toolbar = await readFile(new URL('src/client/ui/Toolbar.tsx', root), 'utf8')
+  assert.doesNotMatch(toolbar, /导入 SVG path/, 'unlabeled path icon should be consolidated into the Import modal')
+  assert.match(toolbar, /'导入'/)
+  assert.match(toolbar, /'导出'/)
+  assert.match(toolbar, /复制到 Figma（免插件 · 直接 ⌘V 粘贴）/)
+  const css = await readFile(new URL('src/client/styles.css', root), 'utf8')
+  assert.ok(css.includes('.dshc-io-card'))
+  assert.ok(css.includes('.dshc-io-card-primary'))
+})

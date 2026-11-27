@@ -25,13 +25,15 @@ const TOOLS = [
 
 export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName, inspectorOpen, onToggleInspector, connections }: any) {
   const state = store.state
+  const [showImport, setShowImport] = React.useState(false)
   const [showExport, setShowExport] = React.useState(false)
-  const [showFigmaSync, setShowFigmaSync] = React.useState(false)
+  const [figmaTab, setFigmaTab] = React.useState<'setup' | 'pull' | 'push' | null>(null)
   const [docsOpen, setDocsOpen] = React.useState(false)
   const docsRef = React.useRef(null)
   const fileRef = React.useRef(null)
   const svgRef = React.useRef(null)
   const packRef = React.useRef(null)
+  const dshFigRef = React.useRef(null)
 
   React.useEffect(() => {
     if (!docsOpen) return
@@ -128,17 +130,32 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName,
         ),
       ),
       React.createElement(IconButton, { icon: 'plus', title: '新建设计稿', onClick: onNewDoc }),
-      React.createElement(IconButton, { icon: 'path', title: '导入 SVG path', onClick: () => svgRef.current?.click() }),
       React.createElement(IconButton, { icon: 'pencil', title: '重命名设计稿', onClick: () => onRenameDoc?.(state.name) }),
       React.createElement(IconButton, { icon: 'trash', title: '删除设计稿', onClick: () => onDeleteDoc?.() }),
-      React.createElement(IconButton, { icon: 'download', title: '导出 SVG / PNG', onClick: () => setShowExport(!showExport) }),
+      React.createElement('span', { className: 'dshc-divider' }),
+      React.createElement(Button, {
+        small: true,
+        icon: 'upload',
+        className: 'dshc-io-btn',
+        title: '导入图片、SVG、Figma 或工程包',
+        active: showImport,
+        onClick: () => { setShowExport(false); setShowImport(!showImport) },
+      }, '导入'),
+      React.createElement(Button, {
+        small: true,
+        icon: 'download',
+        className: 'dshc-io-btn',
+        title: '导出到 Figma、PNG/SVG 或工程包',
+        active: showExport,
+        onClick: () => { setShowImport(false); setShowExport(!showExport) },
+      }, '导出'),
       React.createElement(Button, {
         small: true,
         icon: 'sparkle',
         className: 'dshc-figma-btn',
-        title: 'Figma 导入 / 同步与快速配置',
-        active: showFigmaSync,
-        onClick: () => setShowFigmaSync(true),
+        title: 'Figma 双向同步与快速配置',
+        active: Boolean(figmaTab),
+        onClick: () => setFigmaTab('setup'),
       }, 'Figma'),
       React.createElement('span', { className: 'dshc-spacer' }),
       React.createElement(IconButton, { icon: 'undo', title: '撤销 (⌘Z)', onClick: () => store.undo(), disabled: !store.history.canUndo() }),
@@ -201,28 +218,241 @@ export function Toolbar({ store, onNewDoc, onRenameDoc, onDeleteDoc, onNeedName,
         }),
       ),
     ),
+    showImport &&
+      React.createElement(
+        Modal,
+        {
+          title: '导入到当前设计稿',
+          width: 460,
+          onClose: () => setShowImport(false),
+        },
+        React.createElement('div', { className: 'dshc-export-section' }, '从 Figma 导入'),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            className: 'dshc-io-card dshc-io-card-primary',
+            onClick: () => { setShowImport(false); setFigmaTab('pull') },
+          },
+          React.createElement(Icon, { name: 'sparkle', size: 16 }),
+          React.createElement(
+            'span',
+            { className: 'dshc-io-card-body' },
+            React.createElement('span', { className: 'dshc-io-card-title' }, '从 Figma URL 或本地 .fig 文件导入'),
+            React.createElement('span', { className: 'dshc-io-card-desc' }, '支持三方 Diff 增量拉取；也可以在 Figma 按 ⌘C 后回画布直接 ⌘V 粘贴'),
+          ),
+        ),
+        React.createElement('div', { className: 'dshc-export-section' }, '插入素材到画布'),
+        React.createElement(
+          'div',
+          { className: 'dshc-io-grid' },
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              className: 'dshc-io-card',
+              onClick: () => { setShowImport(false); chooseImage() },
+            },
+            React.createElement(Icon, { name: 'image', size: 15 }),
+            React.createElement(
+              'span',
+              { className: 'dshc-io-card-body' },
+              React.createElement('span', { className: 'dshc-io-card-title' }, '导入图片'),
+              React.createElement('span', { className: 'dshc-io-card-desc' }, 'PNG / JPG / WebP / GIF'),
+            ),
+          ),
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              className: 'dshc-io-card',
+              onClick: () => { setShowImport(false); svgRef.current?.click() },
+            },
+            React.createElement(Icon, { name: 'path', size: 15 }),
+            React.createElement(
+              'span',
+              { className: 'dshc-io-card-body' },
+              React.createElement('span', { className: 'dshc-io-card-title' }, '导入 SVG 矢量'),
+              React.createElement('span', { className: 'dshc-io-card-desc' }, '.svg 转为可编辑 Path'),
+            ),
+          ),
+        ),
+        React.createElement('div', { className: 'dshc-export-section' }, '恢复工程包'),
+        React.createElement(
+          'div',
+          { className: 'dshc-io-grid' },
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              className: 'dshc-io-card',
+              onClick: () => { setShowImport(false); packRef.current?.click() },
+            },
+            React.createElement(Icon, { name: 'upload', size: 15 }),
+            React.createElement(
+              'span',
+              { className: 'dshc-io-card-body' },
+              React.createElement('span', { className: 'dshc-io-card-title' }, 'Drafi 工程包'),
+              React.createElement('span', { className: 'dshc-io-card-desc' }, '.drafi.json（含素材字体）'),
+            ),
+          ),
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              className: 'dshc-io-card',
+              onClick: () => { setShowImport(false); dshFigRef.current?.click() },
+            },
+            React.createElement(Icon, { name: 'upload', size: 15 }),
+            React.createElement(
+              'span',
+              { className: 'dshc-io-card-body' },
+              React.createElement('span', { className: 'dshc-io-card-title' }, '无损便携包'),
+              React.createElement('span', { className: 'dshc-io-card-desc' }, '.dshfig（含 Figma 绑定）'),
+            ),
+          ),
+        ),
+        React.createElement('div', { className: 'dshc-io-tip' }, '提示：也可直接把本地图片或 .svg 文件拖进画布任意位置。'),
+      ),
     showExport &&
       React.createElement(
         Modal,
         {
-          title: selectionCount ? `导出选区（${selectionCount} 个图层）` : '导出当前画布',
-          width: 420,
+          title: selectionCount
+            ? `导出选区（${selectionCount} 个图层）`
+            : `导出当前画布 · ${state.doc?.pages?.find((p) => p.id === state.pageId)?.name ?? '画布 1'}`,
+          width: 460,
           onClose: () => setShowExport(false),
         },
-        React.createElement('div', { className: 'dshc-export-section' }, '图片'),
+        React.createElement('div', { className: 'dshc-export-section' }, '导出到 Figma（推荐）'),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            className: 'dshc-io-card dshc-io-card-primary',
+            onClick: () => { setShowExport(false); void store.copyForFigma() },
+          },
+          React.createElement(Icon, { name: 'copy', size: 16 }),
+          React.createElement(
+            'span',
+            { className: 'dshc-io-card-body' },
+            React.createElement('span', { className: 'dshc-io-card-title' }, '复制到 Figma（免插件 · 直接 ⌘V 粘贴）'),
+            React.createElement('span', { className: 'dshc-io-card-desc' }, '复制为可编辑矢量到剪贴板，切到 Figma 画布按 ⌘V 即可落稿'),
+          ),
+        ),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            className: 'dshc-io-card',
+            onClick: () => { setShowExport(false); setFigmaTab('push') },
+          },
+          React.createElement(Icon, { name: 'sparkle', size: 15 }),
+          React.createElement(
+            'span',
+            { className: 'dshc-io-card-body' },
+            React.createElement('span', { className: 'dshc-io-card-title' }, '推送到 Figma 文件（原位更新 / 双向同步）…'),
+            React.createElement('span', { className: 'dshc-io-card-desc' }, '配合免费 Companion 插件推送 Diff 或导出离线补丁包，适合多次往返改稿'),
+          ),
+        ),
+        React.createElement('div', { className: 'dshc-export-section' }, '导出图片 / 矢量文件'),
         React.createElement(
           'div',
-          { className: 'dshc-export-grid' },
-          React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportSelection('svg') } }, 'SVG 矢量'),
-          React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportSelection('png') } }, 'PNG（2x）'),
+          { className: 'dshc-io-grid' },
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              className: 'dshc-io-card',
+              onClick: () => { setShowExport(false); store.exportSelection('png') },
+            },
+            React.createElement(Icon, { name: 'download', size: 15 }),
+            React.createElement(
+              'span',
+              { className: 'dshc-io-card-body' },
+              React.createElement('span', { className: 'dshc-io-card-title' }, 'PNG 高清图（2x）'),
+              React.createElement('span', { className: 'dshc-io-card-desc' }, '适合分享、评审与配图'),
+            ),
+          ),
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              className: 'dshc-io-card',
+              onClick: () => { setShowExport(false); store.exportSelection('svg') },
+            },
+            React.createElement(Icon, { name: 'download', size: 15 }),
+            React.createElement(
+              'span',
+              { className: 'dshc-io-card-body' },
+              React.createElement('span', { className: 'dshc-io-card-title' }, 'SVG 矢量文件'),
+              React.createElement('span', { className: 'dshc-io-card-desc' }, '可直接拖进 Figma / Sketch'),
+            ),
+          ),
         ),
-        React.createElement('div', { className: 'dshc-export-section' }, '工程文件'),
-        React.createElement(Button, { icon: 'download', onClick: () => { setShowExport(false); store.exportPack() } }, '导出 Drafi 包（含素材，可再导入）'),
-        React.createElement(Button, { icon: 'upload', onClick: () => { setShowExport(false); packRef.current?.click() } }, '导入 Drafi 包'),
-        React.createElement('div', { className: 'dshc-export-section' }, 'Figma 生态'),
-        React.createElement(Button, { icon: 'sparkle', onClick: () => { setShowExport(false); setShowFigmaSync(true) } }, 'Figma 同步与快速配置…'),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            className: 'dshc-io-card',
+            onClick: () => { setShowExport(false); store.copySelectionImage() },
+          },
+          React.createElement(Icon, { name: 'image', size: 15 }),
+          React.createElement(
+            'span',
+            { className: 'dshc-io-card-body' },
+            React.createElement('span', { className: 'dshc-io-card-title' }, '复制 PNG 渲染图片（⇧⌘C）'),
+            React.createElement('span', { className: 'dshc-io-card-desc' }, '直接粘贴发到聊天或文档'),
+          ),
+        ),
+        React.createElement('div', { className: 'dshc-export-section' }, '导出工程包（可重新导入）'),
+        React.createElement(
+          'div',
+          { className: 'dshc-io-grid' },
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              className: 'dshc-io-card',
+              onClick: () => { setShowExport(false); store.exportPack() },
+            },
+            React.createElement(Icon, { name: 'download', size: 15 }),
+            React.createElement(
+              'span',
+              { className: 'dshc-io-card-body' },
+              React.createElement('span', { className: 'dshc-io-card-title' }, 'Drafi 工程包'),
+              React.createElement('span', { className: 'dshc-io-card-desc' }, '.drafi.json（含全部素材）'),
+            ),
+          ),
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              className: 'dshc-io-card',
+              onClick: () => { setShowExport(false); void store.exportDshFig() },
+            },
+            React.createElement(Icon, { name: 'download', size: 15 }),
+            React.createElement(
+              'span',
+              { className: 'dshc-io-card-body' },
+              React.createElement('span', { className: 'dshc-io-card-title' }, '无损便携包'),
+              React.createElement('span', { className: 'dshc-io-card-desc' }, '.dshfig（含 Figma 绑定）'),
+            ),
+          ),
+        ),
       ),
-    showFigmaSync && React.createElement(FigmaSyncDialog, { store, onClose: () => setShowFigmaSync(false) }),
+    figmaTab && React.createElement(FigmaSyncDialog, { store, initialTab: figmaTab, onClose: () => setFigmaTab(null) }),
+    React.createElement('input', {
+      ref: dshFigRef,
+      type: 'file',
+      accept: '.dshfig',
+      style: { display: 'none' },
+      onChange: async (event) => {
+        const file = event.target.files?.[0]
+        if (file) await store.importDshFigFile(file)
+        event.target.value = ''
+      },
+    }),
     React.createElement('input', {
       ref: (element) => {
         fileRef.current = element

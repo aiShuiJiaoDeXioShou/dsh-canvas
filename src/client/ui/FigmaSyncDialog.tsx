@@ -26,8 +26,16 @@ import { Button, Modal } from './common.jsx'
 
 type Tab = 'setup' | 'pull' | 'push'
 
-export function FigmaSyncDialog({ store, onClose }: { store: any; onClose: () => void }) {
-  const [tab, setTab] = React.useState<Tab>('setup')
+export function FigmaSyncDialog({
+  store,
+  initialTab = 'setup',
+  onClose,
+}: {
+  store: any
+  initialTab?: Tab
+  onClose: () => void
+}) {
+  const [tab, setTab] = React.useState<Tab>(initialTab)
   const [status, setStatus] = React.useState<FigmaSetupStatusView | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -295,8 +303,8 @@ export function FigmaSyncDialog({ store, onClose }: { store: any; onClose: () =>
     <Modal title="Figma 生态同步与快速配置" width={540} onClose={onClose}>
       <div className="dshc-figma-tabs">
         <Button small active={tab === 'setup'} onClick={() => setTab('setup')}>快速配置</Button>
-        <Button small active={tab === 'pull'} onClick={() => setTab('pull')}>导入 / 拉取 Diff</Button>
-        <Button small active={tab === 'push'} onClick={() => setTab('push')}>推送 / 评论 / .dshfig</Button>
+        <Button small active={tab === 'pull'} onClick={() => setTab('pull')}>从 Figma 导入</Button>
+        <Button small active={tab === 'push'} onClick={() => setTab('push')}>导出到 Figma</Button>
       </div>
 
       {error && <div className="dshc-figma-banner is-error">{error}</div>}
@@ -444,7 +452,37 @@ export function FigmaSyncDialog({ store, onClose }: { store: any; onClose: () =>
       {tab === 'push' && (
         <div className="dshc-figma-section">
           <div className="dshc-figma-card">
-            <strong>推回 Figma（类 Git Diff 审查）</strong>
+            <strong>方式一：1 秒导出到 Figma（免插件，推荐）</strong>
+            <p className="dshc-muted">
+              直接复制当前选区（未选则复制整张画布）为可编辑矢量，切到 Figma 按 ⌘V 粘贴即可；或导出 SVG 文件直接拖入 Figma。
+            </p>
+            <div className="dshc-figma-row">
+              <Button
+                small
+                primary
+                disabled={loading}
+                onClick={async () => {
+                  const ok = await store.copyForFigma?.()
+                  if (ok) setNotice('已复制到剪贴板：切到 Figma 按 ⌘V 即可粘贴为可编辑图层。')
+                }}
+              >
+                复制到剪贴板（去 Figma 按 ⌘V）
+              </Button>
+              <Button
+                small
+                disabled={loading}
+                onClick={() => store.exportSelection?.('svg')}
+              >
+                保存 SVG（拖进 Figma）
+              </Button>
+            </div>
+          </div>
+
+          <div className="dshc-figma-card">
+            <strong>方式二：双向同步推回 Figma 文件（配合免费插件）</strong>
+            <p className="dshc-muted">
+              适合从 Figma 拉来改稿后推回原文件：先在「快速配置」生成配对码并导入 Companion 插件，再点下方推送（未连插件会自动下载 .dshpatch.json 离线包供插件导入）。
+            </p>
             <div className="dshc-figma-row">
               <select
                 className="dshc-input"
@@ -454,8 +492,8 @@ export function FigmaSyncDialog({ store, onClose }: { store: any; onClose: () =>
                 <option value="in-place">原位更新（保留原 URL / 评论 / 透传属性）</option>
                 <option value="proposal-frame">新建 [Drafi Diff] 对比画板</option>
               </select>
-              <Button small disabled={loading} onClick={() => onPlanPush(false)}>生成 Diff</Button>
-              <Button small primary disabled={loading} onClick={() => onPlanPush(true)}>推送 Patch</Button>
+              <Button small disabled={loading} onClick={() => onPlanPush(false)}>预览改动</Button>
+              <Button small primary disabled={loading} onClick={() => onPlanPush(true)}>推送到 Figma</Button>
             </div>
             {pushPlan && (
               <div className="dshc-muted" style={{ marginTop: 6 }}>
