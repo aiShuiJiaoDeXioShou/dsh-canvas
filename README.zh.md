@@ -57,9 +57,11 @@
 - **确定性设计审查**：`canvas_audit` 自动检查画板边界、文字对比度、触控目标尺寸、子节点裁切、零尺寸节点、失效引用、未解决评论与空画板，并明确列出跳过的检查项。
 - **CSS 交付检查器**：右侧属性面板内置可折叠的「代码」区块，自动解析布局、填充/渐变、圆角、边框、阴影与排版 CSS，支持一键复制。
 
-### 本地优先与便携分享
+### 本地优先、Figma 生态与便携分享
 - **开放 JSON 文档格式**：所有设计稿以纯 JSON 存放在 `<workspace>/.dsh-canvas/*.canvas.json`（`dsh.canvas@1`），既可由画布和专属工具编辑，也可由普通文件工具直接读写。
-- **浏览器保存弹窗导出**：支持将选区、画板或整页导出为 PNG、SVG 或便携包 `.drafi.json`，通过浏览器文件保存对话框直存本地（附下载兜底），不污染工作区或输入框。
+- **免费 Figma 生态双向同步**：支持 Figma `⌘C` → Drafi `⌘V` 剪贴板直粘、`.fig` 本地副本与 Figma URL 导入、通过免费 **Drafi Companion** Figma 插件（`figma-plugin/`）做类 Git Diff 的原位/对比画板双向同步、团队评论联动，以及 `.dshfig` 无损便携包；所有绑定与透传元数据隔离保存在 `.dsh-canvas/figma/<name>.sync.json`。
+- **`canvas-figma-setup` 快速接入技能**：按 L0（免 Token 剪贴板）→ L1（免 Token 插件配对）→ L2（Keychain 安全存储 REST Token，支持 UI 密码框或 `scripts/figma-setup.mjs --from-clipboard` 盲存并清空剪贴板）30 秒零泄露引导配置。
+- **浏览器保存弹窗导出**：支持将选区、画板或整页导出为 PNG、SVG、`.dshfig` 或便携包 `.drafi.json`，通过浏览器文件保存对话框直存本地（附下载兜底），不污染工作区或输入框。
 - **图片能力链**：`canvas_image` 自动探测当前模型是否支持原生生图（GPT/OpenAI），不可用时回退至本机 Codex CLI（`image_generation`），或直接导入本地图片到 `.dsh-canvas/assets/`。
 
 ---
@@ -70,7 +72,7 @@
   右侧边栏（"Drafi" 标签）                  对话输入框与 Agent
   ┌───────────────────────────┐           ┌──────────────────────────────┐
   │ 可视化画布编辑器            │ ──选区──▶ │ dsh-canvas://main?node=...   │
-  │ (React，无运行时 npm 依赖) │ ◀──SSE─── │ 11 个 canvas_* 工具 + Skill   │
+  │ (React，无运行时 npm 依赖) │ ◀──SSE─── │ 13 个 canvas_* 工具 + 2 Skill │
   └─────────────┬─────────────┘           └──────────────┬───────────────┘
                 │ 本机回环 HTTP / SSE                     │ Host 内部调用
                 ▼                                        ▼
@@ -134,11 +136,12 @@ pnpm check   # typecheck + build + test
 
 ## Agent 工具与运行时技能
 
-Drafi 在 DSH Host 中注册了 **11 个 Agent 工具**与 **`canvas-ui-design`** 运行时技能：
+Drafi 在 DSH Host 中注册了 **13 个 Agent 工具**与 **`canvas-ui-design` / `canvas-figma-setup`** 两个运行时技能：
 
 | 工具 | 作用 | 常用参数 / 动作 |
 | --- | --- | --- |
-| `canvas_read` | 以紧凑 JSON 读取画布文档与用户当前选区 | `detail`: `outline` \| `node` \| `full`；支持 `query`、`fields`、`depth`、`childrenLimit` |
+| `canvas_read` | 以紧凑 JSON 读取画布文档、交互连线与用户当前选区 | `detail`: `outline` \| `node` \| `full` \| `interactions`；支持 `query`、`fields`、`depth`、`childrenLimit`、`offset` |
+| `canvas_interaction_view` | 在实时画布中查看或导航 `pageRef` 与连线聚焦视图 | `action`: `status` \| `focus` \| `reveal` \| `return` \| `clear`；`nodeId` |
 | `canvas_write` | 创建或整份替换 `dsh.canvas@1` 文档 | `name`、`doc`、`baseRevision` |
 | `canvas_edit` | 批量原子编辑，写前校验整份文档 | `ops`: `add` / `update` / `move` / `remove` / `set` / `comment.*`；`baseRevision` |
 | `canvas_comment` | 读写锚定在节点或画布坐标上的评论线程 | `action`: `list` \| `add` \| `reply` \| `resolve` |
@@ -147,11 +150,12 @@ Drafi 在 DSH Host 中注册了 **11 个 Agent 工具**与 **`canvas-ui-design`*
 | `canvas_image` | 探测生图能力、调用生图或导入本地图片素材 | `action`: `probe` \| `generate` \| `import` |
 | `canvas_export` | 将文档及其引用的图片/字体打包为单文件 | 写入 `.dsh-canvas/exports/<name>.drafi.json` |
 | `canvas_import` | 从 `.drafi.json` 便携包恢复文档与资源 | `path`、可选 `name`、`baseRevision` |
+| `canvas_figma` | Figma 生态双向同步、配置体检、评论联动与 `.dshfig` 无损包 | `action`: `setup_status` \| `pair_start` \| `import_url` \| `import_fig` \| `pull_diff` \| `push_diff` \| `sync_comments` \| `reply_comment` \| `export_bundle` \| `import_bundle` |
 | `canvas_migrate` | 将旧版本文档升级至当前格式并报告变更 | `name`、`dryRun` |
 | `canvas_snapshot` | 在打开的画布标签中渲染整页或单节点为 PNG | `name`、可选 `nodeId`、`scale`（`0.5`–`4`，默认 `2`） |
 
-### `canvas-ui-design` 运行时技能
-由 Host 自动从 [`skills/canvas-ui-design/`](skills/canvas-ui-design/SKILL.md) 注册（改编自 BD Flutter Dev UI 设计技能套件，来源与适配说明见 [`SOURCE.md`](skills/canvas-ui-design/SOURCE.md)）。当用户在对话中提出新建界面、补状态、建组件、按参考图还原、改稿或设计审查时，技能会自动路由到对应工作流，始终以 `.dsh-canvas/*.canvas.json` 作为唯一设计源。
+### `canvas-ui-design` 与 `canvas-figma-setup` 运行时技能
+由 Host 自动从 [`skills/canvas-ui-design/`](skills/canvas-ui-design/SKILL.md)（改编自 BD Flutter Dev UI 设计技能套件，见 [`SOURCE.md`](skills/canvas-ui-design/SOURCE.md)）与 [`skills/canvas-figma-setup/`](skills/canvas-figma-setup/SKILL.md) 注册。前者负责新建界面、补状态、建组件、按参考图还原、改稿与设计审查；后者提供 30 秒零泄露 Figma 快速接入（按需分档、Keychain 安全存 Token 与 Companion Plugin 配对）。
 
 ### 图片生成能力链（`canvas_image`）
 1. **模型原生生图（GPT / OpenAI）**：若当前模型支持原生生图，直接生图后通过 `canvas_image { action: "import" }` 导入 `.dsh-canvas/assets/`。
@@ -190,7 +194,8 @@ Drafi 在 DSH Host 中注册了 **11 个 Agent 工具**与 **`canvas-ui-design`*
     ├── <name>.canvas.json   # 其他画布文档（小写 slug 命名）
     ├── assets/              # 上传或导入的图片资源（png/jpeg/webp/gif）
     ├── fonts/               # 上传的自定义字体（woff2/woff/ttf/otf）
-    ├── exports/             # Agent 渲染截图（PNG）与便携包（.drafi.json）
+    ├── figma/               # Figma 同步侧车（<name>.sync.json：绑定、双基线、透传属性与评论）
+    ├── exports/             # Agent 渲染截图（PNG）与便携包（.dshfig / .drafi.json）
     ├── FORMAT.md            # 格式参考手册（首次打开时自动生成）
     └── DESIGN.md            # 默认设计规范与模板说明（首次打开时自动生成）
 ```
@@ -277,7 +282,7 @@ pnpm check          # 一键执行 typecheck + build + test
 | `src/shared/foundation.ts` | 设备尺寸指标（iPhone 16 / 15）与几何预设 |
 | `src/shared/templates.ts` | 设备自适应的 iOS 页面与系统栏模板构建器 |
 | `src/shared/audit.ts` | 确定性设计审查引擎 |
-| `src/host/main.ts` | Host HTTP 路由、SSE 推送、文件存储、资源/字体服务与 11 个 Agent 工具 |
+| `src/host/main.ts` | Host HTTP 路由、SSE 推送、文件存储、资源/字体服务与 13 个 Agent 工具 |
 | `src/host/image.ts` | 图片生成能力探测、Codex CLI 适配与安全导入 |
 | `src/host/skills.ts` | 注册 `canvas-ui-design` 运行时技能 |
 | `src/client/index.tsx` | 右侧边栏注册、内联面板兜底、输入框定位条与对话链接卡片 |
@@ -294,12 +299,12 @@ pnpm check          # 一键执行 typecheck + build + test
 
 ## 已知限制（v1）
 
-- **单人单页**：暂不支持多人实时协作、远程光标或版本历史。文档格式保留 `pages` 数组用于向前兼容，v1 编辑器每个文档呈现单画布。
+- **本地优先协作**：Drafi 画布内不提供多人实时光标（团队多人协作与评审通过 `canvas_figma` 及免费 Companion Plugin 衔接 Figma）；图层面板已内置多页切换器与分页面视口记忆。
 - **浏览器侧渲染**：无服务端无头渲染、缩略图生成或字体子集化。`canvas_snapshot` 依赖打开的浏览器画布标签完成渲染，未打开标签时会提示原因。
 - **导出近似差异**：背景模糊在屏幕中通过 `backdrop-filter` 精确渲染，在 SVG / PNG 导出中为近似效果。
 - **输入框纯文本限制**：输入框只接收纯文本，因此选区插入时显示为 Markdown 链接，发送后渲染为可点击的画布定位卡片。
-- **矢量与外部格式边界**：暂不支持 Figma（`.fig`）/ Penpot 文件导入、钢笔/贝塞尔锚点编辑及交互原型；SVG 仅支持基础 `<path>` 导入，变换/文本/滤镜/蒙版会跳过并给出警告；`path` 节点目前按包围盒做命中测试。
-- **自动布局与实例覆盖范围**：Auto-Layout v1 暂不支持换行、网格、最小/最大尺寸与绝对定位子节点；组件实例覆盖支持文本、填充、可见性（及根节点圆角），不支持覆盖内部子节点布局。
+- **矢量与原型边界**：已支持 Figma 剪贴板直粘（`⌘C/⌘V`）、`.fig` 导入、免费 REST URL/评论同步及 Companion Plugin 双向回写；不支持 Penpot 导入、钢笔/贝塞尔锚点编辑及原型运行态播放。SVG 导入仅支持基础 `<path>` 及常见几何图形，复杂滤镜/蒙版会跳过并给出警告；`path` 节点目前按包围盒做命中测试。
+- **自动布局与实例覆盖范围**：已支持独立四角 `cornerRadii`、`layoutPositioning: 'absolute'`、`layout.wrap` 与 `layout.ignoreHidden`，网格与最小/最大尺寸约束保持透传保留；组件实例覆盖支持文本、填充、可见性（及根节点圆角），不支持覆盖内部子节点布局。
 - **图片生成依赖**：需配合具备原生生图能力的 GPT / OpenAI 模型，或本机支持 `image_generation` 的 Codex CLI；否则可通过本地导入使用图片素材。
 
 ---

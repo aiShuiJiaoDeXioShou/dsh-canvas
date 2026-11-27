@@ -1,7 +1,7 @@
 ---
 name: canvas-ui-design
-description: 在 dsh-canvas 中做 UI/UX 设计：需求澄清、信息架构、设计系统、页面与组件生成、参考还原、改稿、设计审查、图片素材和开发交付。当用户要设计/生成/修改画布里的 App 或网页界面、组件、设计规范或进行设计审查时使用。不用于纯 Flutter 代码实现或 Figma 文件交付。
-whenToUse: 用户要在 dsh-canvas 画布中直接生成 UI、补页面/状态、建组件、套设计规范、按参考图还原、改稿、审查设计或做设计交付时。
+description: 在 dsh-canvas 中做 UI/UX 设计与 Figma 生态协同：需求澄清、信息架构、设计系统、页面与组件生成、参考还原、改稿、交互连线、Figma 双向同步与评论联动、设计审查、图片素材和开发交付。当用户要设计/生成/修改画布里的 App 或网页界面、组件、设计规范、同步 Figma 画板或进行设计审查时使用。不用于纯 Flutter/业务代码实现或钢笔/贝塞尔矢量精修。
+whenToUse: 用户要在 dsh-canvas 画布中直接生成 UI、补页面/状态、建组件、套设计规范、按参考图还原、管理多页/交互连线、与 Figma 双向同步改稿、审查设计或做设计交付时。
 ---
 
 # Canvas UI/UX 设计
@@ -62,6 +62,8 @@ whenToUse: 用户要在 dsh-canvas 画布中直接生成 UI、补页面/状态�
 | 局部改稿/回归 | `workflows/design-refactor.md` |
 | 设计审查 | `workflows/design-audit.md`（默认只读） |
 | 图片、图标、插画素材 | `workflows/assets.md` + `canvas_image` |
+| Figma 首次配置 / Token / Companion Plugin 配对 | 加载 `canvas-figma-setup` Skill（**严禁在聊天中索要明文 Token**） |
+| Figma 导入 / 双向同步 / 团队评论改稿 | `canvas_figma` + `canvas_comment` + `workflows/design-refactor.md` |
 | 开发交付 | `workflows/developer-handoff.md` |
 
 这些是内部路由，不是每次必须走完的阶段。局部小改直接使用现有上下文。
@@ -69,14 +71,16 @@ whenToUse: 用户要在 dsh-canvas 画布中直接生成 UI、补页面/状态�
 ## 工具
 
 - `canvas_read` / `canvas_write` / `canvas_edit` / `canvas_comment`：读、写、改、评论。
-  局部改稿先用 `query` 定位节点，再用 `fields` 只取需要的大纲段落，避免整棵树进上下文。
+  局部改稿先用 `query` 定位节点，再用 `fields` 只取需要的大纲段落，避免整棵树进上下文；读取多屏交互连线与 `pageRef` 引用关系使用 `canvas_read({ detail: 'interactions', nodeId })`。
+- `canvas_interaction_view`：在实时画布中查看或导航交互聚焦视图（`status` / `focus` / `reveal` / `return` / `clear`），支持多页切换与 `pageRef` 复用摆放定位。
 - `canvas_export` / `canvas_import`：把文档与素材打包成单个 `.drafi.json`，或从该文件恢复。
 - `canvas_migrate`：把旧版本文档升级到当前格式，先 `dryRun` 看变更。
 - `canvas_snapshot`：让打开的画布标签渲染整页或指定节点，返回 PNG 路径；用图片工具读取后核对视觉效果。改完稿需要自证效果时优先用它。
 - `canvas_template`：`list` / `insert` / `styles` / `foundation`；页面骨架与设计基础。
 - `canvas_audit`：确定性设计检查（边界、对比度、触控、裁切、引用）。
 - `canvas_image`：`probe` / `generate` / `import`。
-- 图片和字体的实际落盘位置遵循 `.dsh-canvas/assets/`、`.dsh-canvas/fonts/`；不要输出插件源码目录。
+- `canvas_figma`：Figma 生态双向同步（`setup_status`、`pair_start`、`import_url`、`import_fig`、`pull_diff`、`push_diff`、`sync_comments`、`reply_comment`、`export_bundle` `.dshfig`、`import_bundle`）。涉及 Figma 鉴权、Token 获取/续期或 Companion Plugin 配对时，一律路由到 `canvas-figma-setup` Skill，**严禁让用户在聊天框粘贴明文 Token**。
+- 图片和字体的实际落盘位置遵循 `.dsh-canvas/assets/`、`.dsh-canvas/fonts/`，Figma 同步侧车落在 `.dsh-canvas/figma/<name>.sync.json`；不要输出插件源码目录。
 
 ## 手动操作入口
 
@@ -84,8 +88,8 @@ Templates 面板提供设备选择（iPhone 16 / iPhone 15）和模板插入；A
 
 ## 边界
 
-- 不交付 Figma/Sketch 文件，不做 .fig 解析；SVG 只支持基础 `<path>` 导入，不承诺完整矢量还原。
-- 不生成 Flutter/GetX 代码或 ThemeData；交付是设计文档、token、SVG/PNG 和说明。
+- 支持 Figma 生态互换与双向同步（剪贴板 `⌘C/⌘V` 直粘、`.fig` 本地副本导入、Figma URL 拉取、Companion Plugin 双向原位/对比画板 Push/Pull、Figma 评论同步与回写、`.dshfig` 无损便携包），但**不生成 `.sketch` 文件，不提供钢笔/贝塞尔锚点编辑或 Figma 多人实时光标**；SVG 导入仅支持基础 `<path>` 及常见几何图形，不承诺复杂滤镜/蒙版/矢量网的完整还原。
+- 不生成 Flutter/GetX 代码或 ThemeData；交付是设计文档、token、SVG/PNG、`.dshfig`/Figma 同步结果和说明。
 - 不做真机/模拟器验收；静态设计稿可以审查，但不冒充运行验收。
 - 不伪造 Image Gen 结果；无能力时明确要求用户提供素材。
 

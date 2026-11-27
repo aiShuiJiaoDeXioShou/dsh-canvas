@@ -31,29 +31,37 @@ function fakeHost(cwd) {
     get: () => undefined,
   }
   apply(ctx)
-  const call = (url, body, method = 'POST') =>
+  const call = (url, body, method = 'POST', extraHeaders = {}) =>
     new Promise((resolve) => {
       const request = Readable.from([Buffer.from(JSON.stringify(body ?? {}))])
       request.url = url
       request.method = method
-      request.headers = { host: '127.0.0.1', 'content-type': 'application/json' }
+      request.headers = { host: '127.0.0.1', 'content-type': 'application/json', ...extraHeaders }
       const chunks = []
       const response = {
-        writeHead(status) {
+        headers: {},
+        writeHead(status, headers) {
           this.statusCode = status
+          if (headers) Object.assign(this.headers, headers)
         },
-        setHeader() {},
+        setHeader(k, v) {
+          this.headers[k.toLowerCase()] = v
+        },
         write(chunk) {
           chunks.push(chunk)
         },
         end(chunk) {
           if (chunk) chunks.push(chunk)
-          resolve({ status: this.statusCode, body: Buffer.concat(chunks.map((entry) => Buffer.from(entry))).toString() })
+          resolve({
+            status: this.statusCode,
+            headers: this.headers,
+            body: Buffer.concat(chunks.map((entry) => Buffer.from(entry))).toString(),
+          })
         },
       }
       handler(request, response)
     })
-  return { tools, call, exec: { agent: { id: 'sess-test' } } }
+  return { tools, call, exec: { sessionId: 'sess-test', agent: { id: 'sess-test' } } }
 }
 
 test('canvas_read query returns matches instead of the page tree', async () => {
@@ -170,4 +178,110 @@ test('the read-only pack route returns the pack without writing files', async ()
     ? await (await import('node:fs/promises')).readdir(join(cwd, '.dsh-canvas', 'exports'))
     : []
   assert.equal(exported.some((entry) => entry.endsWith('.drafi.json')), false)
+})
+
+test('canvas_figma tool and Companion Plugin bridge complete pairing, pull, push, ack, paste, and .dshfig round-trip', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'drafi-figma-e2e-'))
+  const { tools, call, exec } = fakeHost(cwd)
+  const figmaTool = tools.get('canvas_figma')
+  assert.ok(figmaTool, 'canvas_figma tool should be registered')
+
+  // 1. Setup status never leaks secrets and exposes paths
+  const status = await figmaTool.execute({ action: 'setup_status', probe: false }, exec)
+  assert.equal(status.ok, true)
+  assert.equal(status.channels.clipboard.ready, true)
+  assert.ok(status.setupScriptPath.endsWith('figma-setup.mjs'))
+  assert.ok(status.channels.companionPlugin.manifestPath.endsWith('manifest.json'))
+
+  // 2. Start pairing and exchange code via /dsh-canvas/bridge/v1/pair with Figma iframe Origin: null
+  const pairStart = await figmaTool.execute({ action: 'pair_start', name: 'bridge-doc' }, exec)
+  assert.match(pairStart.pairingCode, /^[0-9A-F]{4}-[0-9A-F]{4}$/)
+
+  const pairRes = await call('/dsh-canvas/bridge/v1/pair', { pairingCode: pairStart.pairingCode }, 'POST', { origin: 'null' })
+  assert.equal(pairRes.status, 200)
+  const { token } = JSON.parse(pairRes.body)
+  assert.ok(token.startsWith('dshb_'))
+
+  // 3. Plugin pushes initial IR into Drafi (cold import -> creates clean dsh.canvas@1 + sidecar)
+  const pullRes = await call(
+    '/dsh-canvas/bridge/v1/pull',
+    {
+      ir: {
+        format: 'dsh.figma.ir',
+        version: 1,
+        fileKey: 'PLUGINTEST01',
+        fileName: 'Plugin Screen',
+        readCompleteness: 'complete',
+        pages: [
+          {
+            figmaId: '0:1',
+            name: 'Home',
+            children: [
+              {
+                figmaId: '1:10',
+                dshId: 'hero_card',
+                type: 'frame',
+                name: 'Hero Card',
+                x: 16,
+                y: 24,
+                width: 360,
+                height: 200,
+                fills: [{ type: 'solid', color: '#ffffff' }],
+                passthrough: { blendMode: 'MULTIPLY' },
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+    },
+    'POST',
+    { origin: 'null', authorization: `Bearer ${token}` },
+  )
+  assert.equal(pullRes.status, 200)
+  assert.equal(JSON.parse(pullRes.body).written, true)
+  assert.ok(existsSync(join(cwd, '.dsh-canvas', 'bridge-doc.canvas.json')))
+  assert.ok(existsSync(join(cwd, '.dsh-canvas', 'figma', 'bridge-doc.sync.json')))
+
+  // 4. Edit locally via canvas_edit, then plan & queue Push Patch
+  await tools.get('canvas_edit').execute(
+    { name: 'bridge-doc', ops: [{ op: 'update', id: 'hero_card', patch: { width: 393 } }] },
+    exec,
+  )
+  const pushQueued = await figmaTool.execute({ action: 'push_diff', name: 'bridge-doc', dryRun: false, mode: 'in-place' }, exec)
+  assert.equal(pushQueued.queuedForPlugin, true)
+  assert.equal(pushQueued.patch.operations.length, 1)
+
+  // 5. Plugin fetches patch and posts ack
+  const patchRes = await call('/dsh-canvas/bridge/v1/patch', undefined, 'GET', { origin: 'null', authorization: `Bearer ${token}` })
+  assert.equal(patchRes.status, 200)
+  const fetchedPatch = JSON.parse(patchRes.body).patch
+  assert.equal(fetchedPatch.operations[0].fields.width, 393)
+
+  const ackRes = await call(
+    '/dsh-canvas/bridge/v1/ack',
+    { ack: { planId: fetchedPatch.planId, appliedDshIds: ['hero_card'], createdNodeIds: {} } },
+    'POST',
+    { origin: 'null', authorization: `Bearer ${token}` },
+  )
+  assert.equal(ackRes.status, 200)
+
+  // 6. Subsequent push diff is strictly 0 changes
+  const pushAfter = await figmaTool.execute({ action: 'push_diff', name: 'bridge-doc', dryRun: true }, exec)
+  assert.equal(pushAfter.plan.entries.length, 0)
+
+  // 7. Export & import lossless .dshfig bundle
+  const exported = await figmaTool.execute({ action: 'export_bundle', name: 'bridge-doc' }, exec)
+  assert.ok(exported.path.endsWith('bridge-doc.dshfig'))
+  const restored = await figmaTool.execute({ action: 'import_bundle', name: 'restored-doc', path: exported.path }, exec)
+  assert.equal(restored.hasSidecar, true)
+  assert.ok(existsSync(join(cwd, '.dsh-canvas', 'figma', 'restored-doc.sync.json')))
+
+  // 8. Clipboard paste endpoint decodes SVG cleanly
+  const pasteRes = await call('/dsh-canvas/api/figma/paste', {
+    sessionId: 'sess-test',
+    text: '<svg viewBox="0 0 16 16"><path d="M2 8 L14 8" stroke="#111111"/></svg>',
+  })
+  assert.equal(pasteRes.status, 200)
+  assert.equal(JSON.parse(pasteRes.body).nodes[0].type, 'path')
 })

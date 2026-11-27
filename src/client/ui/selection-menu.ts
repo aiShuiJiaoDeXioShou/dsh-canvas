@@ -12,6 +12,12 @@ export function buildSelectionMenu(store) {
     { label: '剪切', shortcut: '⌘X', icon: 'trash', disabled: !selection.length, action: () => { store.copySelection(); store.deleteSelection() } },
     { label: '粘贴', shortcut: '⌘V', icon: 'back', disabled: !hasClipboard, action: () => store.paste() },
     { label: '创建副本', shortcut: '⌘D', icon: 'group', disabled: !selection.length, action: () => store.duplicateSelection() },
+    ...(selection.length === 1 && primary?.editable && !primary.isInstanceRoot && !store.state.componentMode &&
+      (primary.sourceNode?.screenshot || ['frame', 'group'].includes(primary.type) || primary.sourceNode?.pageRef ||
+        primary.sourceNode?.fills?.some(fill => fill.type === 'image')) ? [
+      { label: '创建页面引用', icon: 'group', action: () => store.createPageReference() },
+      ...(primary.sourceNode?.pageRef ? [{ label: '定位源页面', icon: 'fit', action: () => store.focusNode({ node: primary.sourceNode.pageRef }) }] : []),
+    ] : []),
     { label: '删除', shortcut: '⌫', icon: 'trash', danger: true, disabled: !selection.length, action: () => store.deleteSelection() },
     { separator: true },
     { label: '插入到对话', icon: 'send', disabled: !selection.length, action: () => store.insertSelectionToComposer() },
@@ -23,10 +29,10 @@ export function buildSelectionMenu(store) {
     { separator: true },
     { label: '编组', shortcut: '⌘G', icon: 'group', disabled: selection.length < 2, action: () => store.groupSelection() },
     { label: '取消编组', shortcut: '⇧⌘G', icon: 'ungroup', disabled: !hasGroup, action: () => store.ungroupSelection() },
-    { label: '置顶', shortcut: ']', icon: 'front', disabled: !selection.length, action: () => store.reorder('front') },
-    { label: '置底', shortcut: '[', icon: 'back', disabled: !selection.length, action: () => store.reorder('back') },
-    { label: '上移一层', icon: 'front', disabled: !selection.length, action: () => store.reorder('forward') },
-    { label: '下移一层', icon: 'back', disabled: !selection.length, action: () => store.reorder('backward') },
+    { label: '置顶', shortcut: '⇧⌘]', icon: 'front', disabled: !selection.length, action: () => store.reorder('front') },
+    { label: '置底', shortcut: '⇧⌘[', icon: 'back', disabled: !selection.length, action: () => store.reorder('back') },
+    { label: '上移一层', shortcut: '⌘]', icon: 'front', disabled: !selection.length, action: () => store.reorder('forward') },
+    { label: '下移一层', shortcut: '⌘[', icon: 'back', disabled: !selection.length, action: () => store.reorder('backward') },
     { separator: true },
     {
       label: allLocked ? '解锁' : '锁定',
@@ -51,8 +57,9 @@ export function buildSelectionMenu(store) {
       action: () => store.createComponentFromSelection(),
     },
     { separator: true },
-    { label: '适合选区', shortcut: '2', icon: 'fit', disabled: !selection.length, action: () => store.zoomToSelection() },
-    { label: '适合画布', shortcut: '1', icon: 'fit', action: () => store.zoomToFit() },
+    selection.length
+      ? { label: '适应选区', shortcut: '2', icon: 'fit', action: () => store.zoomToSelection() }
+      : { label: '适应画布', shortcut: '1', icon: 'fit', action: () => store.zoomToFit() },
     { label: '全选', shortcut: '⌘A', disabled: !store.state.scene?.roots?.length, action: () => store.setSelection((store.state.scene?.roots ?? []).map((node) => node.key)) },
     { label: '取消选择', action: () => store.clearSelection() },
   ]

@@ -2,18 +2,18 @@
 
 import { pointInNode } from './geometry.js'
 
-function hitDeep(node, point) {
-  if (!node || node.visible === false || node.locked) return null
+function hitDeep(node, point, ignoredKeys?: ReadonlySet<string>) {
+  if (!node || node.visible === false || node.locked || ignoredKeys?.has(node.key)) return null
   if (node.type === 'group') {
     for (const child of [...(node.children ?? [])].reverse()) {
-      const hit = hitDeep(child, point)
+      const hit = hitDeep(child, point, ignoredKeys)
       if (hit) return hit
     }
     return null
   }
   if (!pointInNode(node, point)) return null
   for (const child of [...(node.children ?? [])].reverse()) {
-    const hit = hitDeep(child, point)
+    const hit = hitDeep(child, point, ignoredKeys)
     if (hit) return hit
   }
   return node
@@ -24,13 +24,13 @@ function hitDeep(node, point) {
  * instance. `deep` returns the raw leaf (used by double-click to enter).
  * @param {any} scene
  * @param {{x:number,y:number}} point
- * @param {{enteredInstance?: string|null, deep?: boolean}} [options]
+ * @param {{enteredInstance?: string|null, deep?: boolean, ignoredKeys?: ReadonlySet<string>}} [options]
  */
-export function hitTestScene(scene, point, options: { enteredInstance?: string | null; deep?: boolean } = {}) {
+export function hitTestScene(scene, point, options: { enteredInstance?: string | null; deep?: boolean; ignoredKeys?: ReadonlySet<string> } = {}) {
   if (!scene) return null
   let deepest = null
   for (const node of [...(scene.roots ?? [])].reverse()) {
-    deepest = hitDeep(node, point)
+    deepest = hitDeep(node, point, options.ignoredKeys)
     if (deepest) break
   }
   if (!deepest) return null

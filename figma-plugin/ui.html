@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Drafi Companion</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 14px; font: 12px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--figma-color-bg, #fff); color: var(--figma-color-text, #111);
+    }
+    h2 { margin: 0 0 8px; font-size: 14px; }
+    .card { border: 1px solid var(--figma-color-border, #e5e7eb); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+    label { display: block; font-size: 11px; opacity: 0.75; margin-bottom: 4px; }
+    input {
+      width: 100%; padding: 6px 8px; border-radius: 6px; margin-bottom: 8px;
+      border: 1px solid var(--figma-color-border, #d1d5db); background: transparent; color: inherit;
+    }
+    .row { display: flex; gap: 6px; }
+    button {
+      flex: 1; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--figma-color-border, #d1d5db);
+      background: var(--figma-color-bg-secondary, #f3f4f6); color: inherit; cursor: pointer; font-weight: 500;
+    }
+    button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #log {
+      font-family: ui-monospace, monospace; font-size: 11px; white-space: pre-wrap;
+      max-height: 110px; overflow: auto; padding: 8px; border-radius: 6px;
+      background: var(--figma-color-bg-secondary, #f8fafc);
+    }
+  </style>
+</head>
+<body>
+  <h2>Drafi Companion</h2>
+  <div class="card">
+    <label for="host">本地 Drafi Host 地址</label>
+    <input id="host" value="http://127.0.0.1:3000" />
+    <label for="code">配对码（Drafi Figma 弹窗生成，免 Token）</label>
+    <input id="code" placeholder="例如 A1B2-C3D4" />
+    <div class="row">
+      <button id="connect" class="primary">配对连接</button>
+    </div>
+  </div>
+  <div class="card">
+    <label>双向同步（已连接或离线 JSON 互换）</label>
+    <div class="row" style="margin-bottom: 6px;">
+      <button id="pullSel" class="primary">发送选区到 Drafi</button>
+      <button id="pullPage">发送整页</button>
+    </div>
+    <div class="row" style="margin-bottom: 6px;">
+      <button id="applyPush">拉取并应用 Drafi Patch</button>
+    </div>
+    <div class="row">
+      <button id="downloadIr">导出离线 IR JSON</button>
+      <button id="importPatchBtn">导入 .dshpatch.json</button>
+      <input id="patchFile" type="file" accept=".json,.dshpatch.json" style="display:none" />
+    </div>
+  </div>
+  <div id="log">等待配对或离线操作…</div>
+  <script>
+    let bearerToken = ''
+    let pendingResolvers = new Map()
+    const logEl = document.getElementById('log')
+    const log = (msg) => { logEl.textContent = msg + '\n' + logEl.textContent }
+
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage
+      if (!msg || !msg.requestId) return
+      const resolve = pendingResolvers.get(msg.requestId)
+      if (resolve) {
+        pendingResolvers.delete(msg.requestId)
+        resolve(msg)
+      }
+    }
+
+    function askMain(type, payload) {
+      const requestId = 'req_' + Math.random().toString(36).slice(2)
+      return new Promise((resolve) => {
+        pendingResolvers.set(requestId, resolve)
+        parent.postMessage({ pluginMessage: { type, requestId, ...payload } }, '*')
+      })
+    }
+
+    const hostBase = () => document.getElementById('host').value.replace(/\/$/, '')
+
+    document.getElementById('connect').onclick = async () => {
+      try {
+        const code = document.getElementById('code').value.trim()
+        const res = await fetch(hostBase() + '/dsh-canvas/bridge/v1/pair', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ pairingCode: code, client: 'drafi-figma-plugin' }),
+        })
+        const data = await res.json()
+        if (!res.ok || !data.token) throw new Error(data.message || 'Pairing failed')
+        bearerToken = data.token
+        log('已连接本地画布：' + data.canvasName)
+      } catch (err) {
+        log('配对失败：' + (err.message || err))
+      }
+    }
+
+    async function sendToDrafi(scope) {
+      try {
+        const exported = await askMain('export-ir', { scope })
+        if (!bearerToken) throw new Error('请先配对连接，或点击「导出离线 IR JSON」')
+        const res = await fetch(hostBase() + '/dsh-canvas/bridge/v1/pull', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: 'Bearer ' + bearerToken },
+          body: JSON.stringify({ ir: exported.ir, images: exported.images }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.message || 'Pull failed')
+        log('已发送到 Drafi：' + (data.plan ? JSON.stringify(data.plan.summary) : '导入完成'))
+      } catch (err) {
+        log('发送失败：' + (err.message || err))
+      }
+    }
+
+    document.getElementById('pullSel').onclick = () => sendToDrafi('selection')
+    document.getElementById('pullPage').onclick = () => sendToDrafi('page')
+
+    document.getElementById('applyPush').onclick = async () => {
+      try {
+        if (!bearerToken) throw new Error('请先配对连接')
+        const res = await fetch(hostBase() + '/dsh-canvas/bridge/v1/patch', {
+          headers: { authorization: 'Bearer ' + bearerToken },
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.message || 'Fetch patch failed')
+        if (!data.patch) { log('当前没有待应用的 Drafi Patch'); return }
+        const applied = await askMain('apply-patch', { patch: data.patch })
+        const ackRes = await fetch(hostBase() + '/dsh-canvas/bridge/v1/ack', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: 'Bearer ' + bearerToken },
+          body: JSON.stringify({ ack: applied.ack }),
+        })
+        if (!ackRes.ok) throw new Error('Ack failed')
+        log('已原位应用 Patch：' + applied.ack.appliedDshIds.length + ' 项')
+      } catch (err) {
+        log('应用 Patch 失败：' + (err.message || err))
+      }
+    }
+
+    document.getElementById('downloadIr').onclick = async () => {
+      const exported = await askMain('export-ir', { scope: 'selection' })
+      const blob = new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' })
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = 'figma-selection.dshir.json'
+      a.click()
+      log('已导出离线 IR JSON')
+    }
+
+    const patchInput = document.getElementById('patchFile')
+    document.getElementById('importPatchBtn').onclick = () => patchInput.click()
+    patchInput.onchange = async () => {
+      const file = patchInput.files && patchInput.files[0]
+      if (!file) return
+      const patch = JSON.parse(await file.text())
+      const applied = await askMain('apply-patch', { patch })
+      log('离线 Patch 应用完成：' + applied.ack.appliedDshIds.length + ' 项')
+      patchInput.value = ''
+    }
+  </script>
+</body>
+</html>

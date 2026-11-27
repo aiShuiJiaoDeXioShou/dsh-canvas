@@ -33,7 +33,11 @@ import { instantiateTemplate, listTemplates } from '../shared/templates.js'
 import { DEFAULT_DEVICE, DEVICE_IDS, FOUNDATION_PROMPT, PRESET_IDS, listDevices, listPresets, resolveFoundation } from '../shared/foundation.js'
 import { auditDoc } from '../shared/audit.js'
 import { detectImageCapabilities, generateWithCodex, importImage } from './image.js'
+import { describeInteractions, createInteractionChannel } from './interaction-tools.js'
 import { registerCanvasSkills } from './skills.js'
+import { FigmaPluginBridge } from './figma/bridge.js'
+import { BRIDGE_PREFIX, createFigmaTool, handleBridgeRoute, handleFigmaApiRoute } from './figma/routes.js'
+import { deleteSidecar, extractDocFromLegacyArchive, isLegacyFigmaArchive, renameSidecar } from './figma/sidecar.js'
 
 const HEALTH_PATH = '/dsh-canvas/health'
 const API_PREFIX = '/dsh-canvas/api/'
@@ -65,10 +69,14 @@ const DESIGN_URL = new URL('../../DESIGN.md', import.meta.url)
 
 const TOOL_PROMPT = [
   `Canvas: the workspace may contain ${CANVAS_DIR}/*.canvas.json (format dsh.canvas@1).`,
+  'Canvas files support more than 2,000 layers within 8 MiB. Viewport tiling only affects display; tools can address offscreen nodes by id.',
+  'For repeated screen placements, use pageRef and physical wire endpoints. Read canvas_read detail=interactions or use canvas_interaction_view in a live session.',
   'Use canvas_read before editing; use canvas_edit for small changes and canvas_write for a new document.',
   `The canvas file format, node fields, auto-layout, components, styles, fills, effects and comments are documented in ${CANVAS_DIR}/FORMAT.md.`,
   `The design system and built-in templates are documented in ${CANVAS_DIR}/DESIGN.md.`,
   'Load the canvas-ui-design skill when the user asks for UI design, page/component generation, design review or design handoff.',
+  'Load the canvas-figma-setup skill when the user wants to connect Figma, obtain or refresh a Figma token, pair the Companion Plugin, or troubleshoot Figma auth. Never ask the user to paste a raw token into chat.',
+  'Use canvas_figma for Figma URL/.fig import, 3-way pull/push diffs, Companion Plugin pairing, Figma comment sync/reply, and .dshfig portable bundles.',
   FOUNDATION_PROMPT,
   'canvas_audit runs deterministic design checks; canvas_image probe/generate/import handles image generation (GPT native or local Codex CLI) and imports.',
   DESIGN_SYSTEM_PROMPT,
@@ -284,6 +292,8 @@ const state = () => ({
   watchers: new Map(),
   revisions: new Map(),
   snapshots: new Map(),
+  interactionView: createInteractionChannel(),
+  bridge: new FigmaPluginBridge(),
 })
 
 /** @param {string} cwd */
@@ -372,7 +382,7 @@ async function readDoc(cwd, name) {
   }
   let doc
   try {
-    doc = normalizeDoc(parsed, { touch: false })
+    doc = isLegacyFigmaArchive(parsed) ? extractDocFromLegacyArchive(parsed) : normalizeDoc(parsed, { touch: false })
   } catch (error) {
     if (error instanceof CanvasError) {
       throw new HttpError(422, 'invalid-document', error.message, { name, path: error.path })
@@ -664,13 +674,47 @@ function summary(doc) {
   return outlineDoc(doc).stats
 }
 
+function figmaDeps(ctx, store) {
+  const workspace = async (exec) => {
+    const sessionId = exec?.sessionId
+    const { cwd } = sessionCwd(ctx, sessionId)
+    return { cwd, sessionId }
+  }
+  return {
+    bridge: store.bridge,
+    canvasRoot,
+    sessionCwd: (sessionId) => sessionCwd(ctx, sessionId),
+    resolveName: (sessionId, name) => resolveName(store, sessionId, name),
+    ensureScaffold: (cwd) => ensureScaffold(cwd, store),
+    rememberDoc: (sessionId, name) => rememberDoc(store, sessionId, name),
+    readDoc,
+    writeDoc: (cwd, name, doc, options) => writeDoc(ctx, store, cwd, name, doc, options),
+    sendJson,
+    readBody,
+    isLoopbackRequest: (request) => {
+      const host = request.headers.host
+      if (host !== undefined && !isLoopbackHost(host)) return false
+      const remote = request.socket?.remoteAddress
+      if (!remote) return true
+      return remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1'
+    },
+    workspace,
+    renderJson,
+  }
+}
+
 /** @param {any} ctx @param {any} store */
 function createRoutes(ctx, store) {
+  const fDeps = figmaDeps(ctx, store)
   return async function handler(request, response) {
     try {
-      if (!admit(ctx, request, response)) return
       const url = new URL(request.url ?? '/', 'http://127.0.0.1')
       const pathname = url.pathname
+      if (pathname.startsWith(BRIDGE_PREFIX)) {
+        await handleBridgeRoute(pathname, request, response, fDeps)
+        return
+      }
+      if (!admit(ctx, request, response)) return
       if (pathname === HEALTH_PATH) {
         sendJson(response, 200, { ok: true, plugin: '@local/dsh-canvas', version: 2 })
         return
@@ -681,6 +725,10 @@ function createRoutes(ctx, store) {
       }
       const action = pathname.slice(API_PREFIX.length)
       const query = parseQuery(url)
+      if (action.startsWith('figma/')) {
+        const handled = await handleFigmaApiRoute(action, query, request, response, fDeps)
+        if (handled) return
+      }
       if (action === 'state' && request.method === 'GET') {
         const sessionId = query.sessionId
         const { cwd } = sessionCwd(ctx, sessionId)
@@ -693,6 +741,7 @@ function createRoutes(ctx, store) {
           ok: true,
           name,
           path: relativePath(cwd, read.file),
+          workspaceId: sha(cwd),
           revision: read.revision,
           doc: read.doc,
           docs,
@@ -762,6 +811,7 @@ function createRoutes(ctx, store) {
           if (!(await exists(fromFile))) throw new HttpError(404, 'document-not-found', `canvas document "${from}" does not exist`)
           if (await exists(toFile)) throw new HttpError(409, 'document-exists', `canvas document "${to}" already exists`)
           await rename(fromFile, toFile)
+          await renameSidecar(canvasRoot(cwd), from, to).catch(() => {})
           const watcher = store.watchers.get(fromFile)
           if (watcher) {
             if (watcher.timer) clearTimeout(watcher.timer)
@@ -792,6 +842,7 @@ function createRoutes(ctx, store) {
         const names = await listDocNames(cwd)
         if (names.length <= 1) throw new HttpError(409, 'last-document', 'cannot delete the last canvas document')
         await unlink(file)
+        await deleteSidecar(canvasRoot(cwd), name).catch(() => {})
         const watcher = store.watchers.get(file)
         if (watcher) {
           if (watcher.timer) clearTimeout(watcher.timer)
@@ -872,6 +923,14 @@ function createRoutes(ctx, store) {
           ...(typeof body.baseRevision === 'string' ? { baseRevision: body.baseRevision } : {}),
         })
         sendJson(response, 200, { ok: true, ...result })
+        return
+      }
+      if (action === 'interaction-view/reply' && request.method === 'POST') {
+        const body = await readBody(request, LIMITS.docBytes)
+        const result = body.result
+        if (!result || typeof result.ok !== 'boolean') throw new HttpError(400, 'invalid-reply', 'result.ok is required')
+        const received = store.interactionView.reply(body.sessionId, body.requestId, result)
+        sendJson(response, received ? 200 : 404, { ok: received })
         return
       }
       if (action === 'snapshot' && request.method === 'POST') {
@@ -1065,10 +1124,11 @@ function createTools(ctx, store) {
       type: 'object',
       properties: {
         name: { type: 'string', description: 'document name; defaults to the last opened canvas in this session' },
-        detail: { type: 'string', enum: ['outline', 'full', 'node'], description: 'how much of the document to return' },
-        nodeId: { type: 'string', description: 'node id when detail is "node"' },
+        detail: { type: 'string', enum: ['outline', 'full', 'node', 'interactions'], description: 'how much of the document to return' },
+        nodeId: { type: 'string', description: 'physical node ID for node or interactions detail' },
         query: { type: 'string', description: 'match id, name or text; returns matches with ancestor path' },
         limit: { type: 'number', description: 'max matches for query (default 20)' },
+        offset: { type: 'number', description: 'connection offset for interactions detail' },
         fields: { type: 'array', items: { type: 'string' }, description: 'outline sections: nodes, styles, components, comments, fonts, meta, pages' },
         depth: { type: 'number', description: 'outline child depth (default 6)' },
         childrenLimit: { type: 'number', description: 'max children per node in the outline (default 100)' },
@@ -1098,6 +1158,10 @@ function createTools(ctx, store) {
       if (typeof args?.query === 'string' && args.query.trim()) {
         const found = findInDoc(readDocValue.doc, args.query, { pageId, limit: args.limit })
         return { ...base, detail: 'query', query: args.query, ...found }
+      }
+      if (args?.detail === 'interactions') {
+        const ids = args.nodeId ? [args.nodeId] : selection?.ids
+        return { ...base, detail: 'interactions', ...describeInteractions(readDocValue.doc, { ids, offset: args.offset, limit: args.limit }) }
       }
       if (args?.detail === 'full') {
         const json = JSON.stringify(readDocValue.doc)
@@ -1650,7 +1714,29 @@ function createTools(ctx, store) {
     },
   }
 
-  return [read, write, edit, comment, template, audit, image, exportTool, importTool, migrateTool, snapshotTool]
+  const view = {
+    name: 'canvas_interaction_view',
+    description: 'Inspect or navigate interaction focus in the live canvas. Focus takes a placement node ID; reveal takes a related page ID or a wire node ID. Return goes back to the original placement.',
+    parameters: {
+      type: 'object',
+      required: ['action'],
+      additionalProperties: false,
+      properties: {
+        name: { type: 'string' },
+        action: { type: 'string', enum: ['status', 'focus', 'reveal', 'return', 'clear'] },
+        nodeId: { type: 'string' },
+      },
+    },
+    output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => renderJson(value) },
+    async execute(args, exec) {
+      const { cwd, sessionId } = await workspace(exec)
+      return store.interactionView.request(store.sse, docFile(cwd, defaultName(sessionId, args.name)), sessionId, args.action, args.nodeId)
+    },
+  }
+
+  const figmaTool = createFigmaTool(figmaDeps(ctx, store))
+
+  return [read, view, write, edit, comment, template, audit, image, exportTool, importTool, figmaTool, migrateTool, snapshotTool]
 }
 
 export function apply(ctx) {
@@ -1689,6 +1775,8 @@ export function apply(ctx) {
         // closed
       }
     }
+    store.interactionView.dispose()
+    store.bridge.dispose()
     store.sse.clear()
     for (const file of [...store.watchers.keys()]) releaseWatcher(store, file)
     store.selections.clear()

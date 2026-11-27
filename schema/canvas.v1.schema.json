@@ -406,6 +406,11 @@
         "type"
       ],
       "properties": {
+        "pageRef": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,64}$",
+          "description": "ID of the source node whose interactions this placement shares."
+        },
         "id": {
           "$ref": "#/$defs/id"
         },

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * dsh.canvas@1 — shared document model, normalization and validation.
  *
@@ -13,7 +12,6 @@ export const FORMAT = 'dsh.canvas'
 export const VERSION = 1
 
 export const LIMITS = {
-  nodes: 2000,
   components: 200,
   styles: 500,
   comments: 1000,
@@ -48,7 +46,9 @@ const COLOR_RE = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
 export class CanvasError extends Error {
   /** @param {string} path @param {string} message @param {string} [code] */
-  constructor(path, message, code = 'invalid-document') {
+  readonly path: string
+  readonly code: string
+  constructor(path: string, message: string, code = 'invalid-document') {
     super(`${path}: ${message}`)
     this.name = 'CanvasError'
     this.path = path
@@ -74,7 +74,7 @@ function clone(value) {
 }
 
 /** @param {number} value @param {string} path @param {{min?: number, max?: number, int?: boolean}} [opts] */
-export function finite(value, path, opts = {}) {
+export function finite(value, path, opts: { min?: number; max?: number; int?: boolean } = {}) {
   const { min = -1e6, max = 1e6, int = false } = opts
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new CanvasError(path, 'expected a finite number')
@@ -146,7 +146,7 @@ export function emptyDoc(title = '主画布', docId = newId('doc')) {
     version: VERSION,
     id: docId,
     title,
-    pages: [{ id: newId('page'), name: 'Page 1', background: null, children: [] }],
+    pages: [{ id: newId('page'), name: '画布 1', background: null, children: [] }],
     components: [],
     variantSets: [],
     styles: [],
@@ -282,6 +282,8 @@ function normalizeLayout(value, path) {
     },
     alignPrimary: oneOf(value.alignPrimary ?? 'start', `${path}.alignPrimary`, LAYOUT_PRIMARY),
     alignCounter: oneOf(value.alignCounter ?? 'start', `${path}.alignCounter`, LAYOUT_COUNTER),
+    ...(value.wrap === true ? { wrap: true } : {}),
+    ...(value.ignoreHidden === true ? { ignoreHidden: true } : {}),
   }
 }
 
@@ -321,19 +323,24 @@ function normalizeOverride(value, path) {
  * @param {any} raw
  * @param {string} path
  * @param {number} depth
- * @param {{count: number, ids: Set<string>}} state
+ * @param {{ids: Set<string>}} state
  */
 function normalizeNode(raw, path, depth, state) {
   if (depth > LIMITS.depth) throw new CanvasError(path, `node nesting exceeds ${LIMITS.depth}`)
   if (!isPlainObject(raw)) throw new CanvasError(path, 'expected a node object')
-  state.count += 1
-  if (state.count > LIMITS.nodes) throw new CanvasError(path, `document exceeds ${LIMITS.nodes} nodes`)
 
   const type = oneOf(raw.type, `${path}.type`, NODE_TYPES)
   const node = { ...raw, type }
   node.id = id(raw.id, `${path}.id`)
   if (state.ids.has(node.id)) throw new CanvasError(`${path}.id`, `duplicate id "${node.id}"`)
   state.ids.add(node.id)
+  if (isPlainObject(raw.interaction) && raw.interaction.id != null) {
+    id(raw.interaction.id, `${path}.interaction.id`)
+  }
+  if (raw.pageRef != null) {
+    node.pageRef = id(raw.pageRef, `${path}.pageRef`)
+    if (node.pageRef === node.id) throw new CanvasError(`${path}.pageRef`, 'a page reference cannot target itself')
+  }
   node.name = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, 120) : defaultName(type)
   node.x = finite(raw.x ?? 0, `${path}.x`)
   node.y = finite(raw.y ?? 0, `${path}.y`)
@@ -344,6 +351,9 @@ function normalizeNode(raw, path, depth, state) {
   node.visible = raw.visible !== false
   node.locked = raw.locked === true
   node.layoutSizing = normalizeSizing(raw.layoutSizing, `${path}.layoutSizing`)
+  if (raw.layoutPositioning != null) {
+    node.layoutPositioning = oneOf(raw.layoutPositioning, `${path}.layoutPositioning`, ['auto', 'absolute'])
+  }
 
   if (type === 'frame' || type === 'group') {
     node.children = []
@@ -364,6 +374,17 @@ function normalizeNode(raw, path, depth, state) {
     node.strokes = normalizeStrokes(raw.strokes, `${path}.strokes`)
     node.effects = normalizeEffects(raw.effects, `${path}.effects`)
     node.cornerRadius = finite(raw.cornerRadius ?? 0, `${path}.cornerRadius`, { min: 0, max: 1e6 })
+    if (raw.cornerRadii != null) {
+      if (!Array.isArray(raw.cornerRadii) || raw.cornerRadii.length !== 4) {
+        throw new CanvasError(`${path}.cornerRadii`, 'expected a 4-tuple of corner radii')
+      }
+      node.cornerRadii = [
+        finite(raw.cornerRadii[0], `${path}.cornerRadii[0]`, { min: 0, max: 1e6 }),
+        finite(raw.cornerRadii[1], `${path}.cornerRadii[1]`, { min: 0, max: 1e6 }),
+        finite(raw.cornerRadii[2], `${path}.cornerRadii[2]`, { min: 0, max: 1e6 }),
+        finite(raw.cornerRadii[3], `${path}.cornerRadii[3]`, { min: 0, max: 1e6 }),
+      ]
+    }
   }
   if (type === 'instance') {
     node.fills = undefined
@@ -611,6 +632,7 @@ function normalizeComment(raw, path) {
     comment.replies = raw.replies.slice(0, 100).map((reply, index) => {
       if (!isPlainObject(reply)) throw new CanvasError(`${path}.replies[${index}]`, 'expected an object')
       return {
+        ...reply,
         id: id(reply.id ?? newId('r'), `${path}.replies[${index}].id`),
         body: typeof reply.body === 'string' ? reply.body.slice(0, 4000) : '',
         author: oneOf(reply.author ?? 'user', `${path}.replies[${index}].author`, COMMENT_AUTHORS),
@@ -627,7 +649,7 @@ function normalizeComment(raw, path) {
  * @param {unknown} input
  * @param {{touch?: boolean}} [options]
  */
-export function normalizeDoc(input, options = {}) {
+export function normalizeDoc(input, options: { touch?: boolean } = {}) {
   if (!isPlainObject(input)) throw new CanvasError('$', 'expected a document object')
   const doc = clone(input)
   doc.format = FORMAT
@@ -639,13 +661,13 @@ export function normalizeDoc(input, options = {}) {
 
   /** @type {Set<string>} */
   const nodeIds = new Set()
-  const nodeState = { count: 0, ids: nodeIds }
+  const nodeState = { ids: nodeIds }
   doc.pages = doc.pages.map((page, pageIndex) => {
     if (!isPlainObject(page)) throw new CanvasError(`$.pages[${pageIndex}]`, 'expected an object')
     const normalizedPage = {
       ...page,
       id: id(page.id ?? newId('page'), `$.pages[${pageIndex}].id`),
-      name: typeof page.name === 'string' && page.name.trim() ? page.name.trim().slice(0, 120) : `Page ${pageIndex + 1}`,
+      name: typeof page.name === 'string' && page.name.trim() ? page.name.trim().slice(0, 120) : `画布 ${pageIndex + 1}`,
       children: [],
     }
     if (page.background != null) normalizedPage.background = color(page.background, `$.pages[${pageIndex}].background`)
@@ -658,6 +680,17 @@ export function normalizeDoc(input, options = {}) {
     }
     return normalizedPage
   })
+
+  const pageNodes = new Map<string, any>()
+  walkNodes({ pages: doc.pages }, node => pageNodes.set(node.id, node))
+  for (const node of pageNodes.values()) {
+    if (!node.pageRef) continue
+    const source = pageNodes.get(node.pageRef)
+    if (source?.pageRef) throw new CanvasError(`node[${node.id}].pageRef`, 'expected a direct reference to a source node')
+  }
+  for (const node of pageNodes.values()) {
+    if (node.pageRef && !pageNodes.has(node.pageRef)) delete node.pageRef
+  }
 
   const pageIds = new Set(doc.pages.map((page) => page.id))
   if (pageIds.size !== doc.pages.length) throw new CanvasError('$.pages', 'duplicate page id')
@@ -716,9 +749,9 @@ export function normalizeDoc(input, options = {}) {
 
 /** Cross-reference checks that need the whole document. @param {any} doc */
 function validateReferences(doc) {
-  const componentById = new Map(doc.components.map((component) => [component.id, component]))
-  const variantSetById = new Map(doc.variantSets.map((set) => [set.id, set]))
-  const styleById = new Map(doc.styles.map((style) => [style.id, style]))
+  const componentById = new Map<string, ReturnType<typeof normalizeComponent>>(doc.components.map((component) => [component.id, component]))
+  const variantSetById = new Map<string, ReturnType<typeof normalizeVariantSet>>(doc.variantSets.map((set) => [set.id, set]))
+  const styleById = new Map<string, ReturnType<typeof normalizeStyle>>(doc.styles.map((style) => [style.id, style]))
   const fontIds = new Set()
   for (const [index, font] of doc.fonts.entries()) {
     if (fontIds.has(font.id)) throw new CanvasError(`$.fonts[${index}].id`, `duplicate font id "${font.id}"`)
@@ -782,7 +815,7 @@ function validateReferences(doc) {
         }
       }
     }
-    for (const [overrideId, patch] of Object.entries(node.overrides ?? {})) {
+    for (const [overrideId, patch] of Object.entries<object>(node.overrides ?? {})) {
       const target = findNodeInTree(component.root, overrideId)
       if (!target) throw new CanvasError(`${path}.overrides.${overrideId}`, 'override targets an unknown node')
       if ('text' in patch && target.node.type !== 'text') {
@@ -888,13 +921,13 @@ export function firstPage(doc) {
  * @param {any} doc
  * @param {{selection?: string[], pageId?: string, detail?: 'outline'|'full', depth?: number, childrenLimit?: number, fields?: string[]}} [options]
  */
-export function outlineDoc(doc, options = {}) {
+export function outlineDoc(doc, options: { pageId?: string; selection?: string[]; depth?: number; childrenLimit?: number; fields?: string[] } = {}) {
   const page = options.pageId ? findPage(doc, options.pageId) : firstPage(doc)
   const selection = new Set(options.selection ?? [])
   const maxDepth = Number.isInteger(options.depth) ? Math.min(Math.max(options.depth, 0), 12) : 6
   const childLimit = Number.isInteger(options.childrenLimit) ? Math.min(Math.max(options.childrenLimit, 0), 500) : 100
   const outlineNode = (node, depth = 0) => {
-    const item = {
+    const item: Record<string, any> = {
       id: node.id,
       type: node.type,
       name: node.name,
@@ -969,7 +1002,7 @@ export function outlineDoc(doc, options = {}) {
   }
   if (!Array.isArray(options.fields) || options.fields.length === 0) return outline
   const keep = new Set(options.fields)
-  const filtered = { format: outline.format, version: outline.version, id: outline.id, title: outline.title }
+  const filtered: Partial<typeof outline> = { format: outline.format, version: outline.version, id: outline.id, title: outline.title }
   for (const key of ['page', 'pages', 'nodes', 'selection', 'components', 'variantSets', 'styles', 'fonts', 'comments', 'stats', 'meta']) {
     if (key === 'page' || key === 'nodes' || key === 'selection') {
       if (keep.has('nodes') || keep.has('page') || keep.has('selection')) filtered[key] = outline[key]
@@ -987,7 +1020,7 @@ export function outlineDoc(doc, options = {}) {
  * @param {string} query
  * @param {{pageId?: string, limit?: number}} [options]
  */
-export function findInDoc(doc, query, options = {}) {
+export function findInDoc(doc, query, options: { pageId?: string; limit?: number } = {}) {
   const needle = String(query ?? '').trim().toLowerCase()
   if (!needle) return { matches: [], truncated: false }
   const limit = Math.min(Math.max(Number(options.limit) || 20, 1), 100)
@@ -1000,7 +1033,7 @@ export function findInDoc(doc, query, options = {}) {
       if (haystack.some((value) => String(value ?? '').toLowerCase().includes(needle))) {
         total += 1
         if (matches.length < limit) {
-          const item = {
+          const item: Record<string, any> = {
             id: node.id,
             type: node.type,
             name: node.name,
@@ -1051,7 +1084,7 @@ export function migrateDoc(input) {
       changes.push('meta: added timestamps')
     }
     if (!Array.isArray(raw.pages) || raw.pages.length === 0) {
-      raw.pages = [{ id: newId('page'), name: 'Page 1', children: [] }]
+      raw.pages = [{ id: newId('page'), name: '画布 1', children: [] }]
       changes.push('pages: added a default page')
     }
     changes.push(`version: ${from} -> ${VERSION}`)

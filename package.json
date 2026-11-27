@@ -22,6 +22,8 @@
     "examples",
     "skills",
     "docs",
+    "figma-plugin",
+    "scripts/figma-setup.mjs",
     "icon.svg",
     "icon.png",
     "cordis.patch.yml",
@@ -38,6 +40,7 @@
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "esbuild": "^0.28.2",
+    "fflate": "0.8.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },

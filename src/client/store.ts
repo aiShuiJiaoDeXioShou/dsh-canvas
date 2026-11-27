@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Canvas store: the single mutable source of truth for one canvas tab.
  * React subscribes to a version counter; edits mutate the document in place
@@ -8,6 +7,7 @@
 import {
   emptyDoc,
   findPage,
+  findNodeInDoc,
   normalizeDoc,
   newId,
 } from '../shared/format.js'
@@ -15,6 +15,10 @@ import { addComment as addCommentOp, replyComment, resolveComment, removeComment
 import { buildScene } from './editor/resolve.js'
 import { layoutScene } from './editor/layout.js'
 import { createTextMeasurer } from './editor/text-measure.js'
+import { buildInteractionIndex } from '../shared/interactions.js'
+import { computeConnectionGeometry } from '../shared/interaction-geometry.js'
+import { ViewportMemory } from './editor/viewport-memory.js'
+import { copySelectionSvgForFigma } from './editor/clipboard-figma.js'
 import { History } from './editor/history.js'
 import { formatCanvasLink } from './editor/canvas-link.js'
 import { announceCanvasSelection } from './selection-bridge.js'
@@ -25,6 +29,7 @@ import { designSystemStyles, getDesignSystem } from '../shared/design-system.js'
 import {
   centerOf,
   clamp,
+  rectOf,
   sceneBounds,
   screenPoint,
   unionRects,
@@ -84,24 +89,43 @@ function removeFromTree(nodes, id) {
   return null
 }
 
-/** Unique string keys for duplicated subtrees; overrides are remapped too. */
+/** Unique string keys for duplicated subtrees; instance overrides keep component source keys. */
 function reidTree(node, mapper) {
   const copy = clone(node)
+  const ids = new Map<string, string>()
   const walk = (current) => {
-    const next = mapper(current.id)
+    const next = mapper(current.id, current)
+    ids.set(current.id, next)
     current.id = next
     if (Array.isArray(current.children)) current.children.forEach(walk)
   }
   walk(copy)
-  if (copy.type === 'instance' && copy.overrides) {
-    const remapped = {}
-    for (const [key, value] of Object.entries(copy.overrides)) remapped[mapper(key)] = value
-    copy.overrides = remapped
+  const reconnect = current => {
+    if (ids.has(current.pageRef)) current.pageRef = ids.get(current.pageRef)
+    if (current.interaction) {
+      for (const field of ['from', 'to', 'labelId']) {
+        const previous = current.interaction[field]
+        if (ids.has(previous)) current.interaction[field] = ids.get(previous)
+      }
+    }
+    for (const child of current.children ?? []) reconnect(child)
   }
+  reconnect(copy)
   return copy
 }
 
+function canApplyStyleToNodeType(styleType: string, nodeType: string) {
+  if (styleType === 'fill') return ['frame', 'rect', 'ellipse', 'path', 'text'].includes(nodeType)
+  if (styleType === 'text') return nodeType === 'text'
+  if (styleType === 'effect') return ['frame', 'rect', 'ellipse', 'path', 'text'].includes(nodeType)
+  return false
+}
+
 class CanvasStore {
+  private viewMemory = new ViewportMemory()
+  private viewportListeners = new Set<() => void>()
+  private publishedViewport = null
+
   constructor({ sessionId, inputActions, onToast }) {
     this.sessionId = sessionId
     this.inputActions = inputActions
@@ -166,7 +190,25 @@ class CanvasStore {
 
   getVersion = () => this.version
 
+  subscribeViewport = (listener: () => void) => {
+    this.viewportListeners.add(listener)
+    return () => { this.viewportListeners.delete(listener) }
+  }
+
+  getViewport = () => this.state.viewport
+  getZoomPercentage = () => Math.round(this.state.viewport.zoom * 100)
+
+  private publishViewport() {
+    if (this.mounted && this.state.ready && !this.state.componentMode) {
+      this.viewMemory.observe(this.state.pageId, this.state.viewport)
+    }
+    if (this.publishedViewport === this.state.viewport) return
+    this.publishedViewport = this.state.viewport
+    for (const listener of this.viewportListeners) listener()
+  }
+
   emit() {
+    this.publishViewport()
     this.version += 1
     for (const listener of this.listeners) listener()
   }
@@ -190,10 +232,13 @@ class CanvasStore {
   async mount() {
     if (this.mounted) return
     this.mounted = true
+    globalThis.window?.addEventListener('pagehide', this.viewMemory.flush)
     await this.bootstrap()
   }
 
   unmount() {
+    this.viewMemory.flush()
+    globalThis.window?.removeEventListener('pagehide', this.viewMemory.flush)
     this.mounted = false
     clearTimeout(this.saveTimer)
     clearTimeout(this.selectionTimer)
@@ -218,7 +263,7 @@ class CanvasStore {
     } catch (error) {
       this.state.loading = false
       this.state.ready = false
-      this.state.error = error instanceof ApiError ? error.message : String(error?.message ?? error)
+      this.state.error = errorMessage(error)
       this.emit()
     } finally {
       this.resolveReady?.()
@@ -226,13 +271,20 @@ class CanvasStore {
   }
 
   /** Wait for bootstrap, load a document if needed, then select and reveal a node. */
-  async focusNode(request = {}) {
+  async focusNode(request: {doc?: string; page?: string; node?: string} = {}) {
     await this.readyPromise
     if (!this.state.ready) return false
     if (request.doc && request.doc !== this.state.name) await this.loadDoc(request.doc)
     if (request.page && findPage(this.state.doc, request.page)) {
       this.state.pageId = request.page
       this.rebuild()
+    }
+    if (request.node && !request.page && !this.state.componentMode && !this.findSceneNode(request.node)) {
+      const located = findNodeInDoc(this.state.doc, request.node)
+      if (located?.page && located.page.id !== this.state.pageId) {
+        this.state.pageId = located.page.id
+        this.rebuild()
+      }
     }
     const node = request.node ? this.findSceneNode(request.node) : null
     if (request.node && !node) {
@@ -256,7 +308,9 @@ class CanvasStore {
     this.state.revision = data.revision ?? null
     this.state.path = data.path ?? ''
     this.state.docs = data.docs ?? []
-    this.state.pageId = doc.pages[0]?.id ?? null
+    const saved = this.viewMemory.open([data.workspaceId ?? this.sessionId, this.state.name, doc.id], doc.pages)
+    this.state.pageId = saved.pageId
+    if (!this.state.componentMode) this.state.viewport = { x: saved.x, y: saved.y, zoom: saved.zoom }
     this.state.selection = [...new Set(data.selection?.ids ?? [])]
     this.state.primaryKey = this.state.selection[0] ?? null
     this.state.conflict = null
@@ -285,7 +339,7 @@ class CanvasStore {
       }
     } catch (error) {
       this.state.scene = null
-      this.state.error = `画布渲染失败：${String(error?.message ?? error)}`
+      this.state.error = `画布渲染失败：${errorMessage(error)}`
     }
     this.state.historyVersion += 1
   }
@@ -304,7 +358,7 @@ class CanvasStore {
 
   // ───────────────────────────── selection / viewport ─────────────────────────────
 
-  setSelection(keys, primaryKey) {
+  setSelection(keys, primaryKey?: string) {
     this.state.selection = [...new Set(keys)]
     this.state.primaryKey = primaryKey ?? this.state.selection[0] ?? null
     this.state.editingText = null
@@ -345,36 +399,34 @@ class CanvasStore {
   }
 
   setViewport(viewport) {
+    const current = this.state.viewport
+    if (current.x === viewport.x && current.y === viewport.y && current.zoom === viewport.zoom) return
     this.state.viewport = viewport
-    this.emit()
+    this.publishViewport()
   }
 
   zoomAt(screen, factor) {
     const viewport = this.state.viewport
     const world = worldPoint(viewport, screen)
     const zoom = clamp(viewport.zoom * factor, 0.02, 32)
-    this.state.viewport = {
+    this.setViewport({
       zoom,
       x: screen.x - world.x * zoom,
       y: screen.y - world.y * zoom,
-    }
-    this.emit()
+    })
   }
 
   zoomToFit(padding = 48) {
-    const rect = this.state.scene ? sceneBounds(this.state.scene) : null
-    if (!rect) return
-    this.zoomToRect(rect, padding)
+    const scene = this.state.scene
+    if (!scene) return
+    this.zoomToRect(sceneBounds(scene), padding)
   }
 
   zoomToSelection(padding = 64) {
-    const nodes = this.selectedNodes()
-    if (!nodes.length) {
-      this.zoomToFit(padding)
-      return
-    }
-    const rect = unionRects(nodes.map((node) => ({ x: node.absX, y: node.absY, width: node.width, height: node.height })))
-    if (rect) this.zoomToRect(rect, padding)
+    const scene = this.state.scene
+    if (!scene) return
+    const selectedBounds = unionRects(this.selectedNodes().map(rectOf))
+    this.zoomToRect(selectedBounds ?? sceneBounds(scene), padding)
   }
 
   zoomToRect(rect, padding = 48) {
@@ -382,12 +434,11 @@ class CanvasStore {
     const width = Math.max(1, rect.width)
     const height = Math.max(1, rect.height)
     const zoom = clamp(Math.min((view.width - padding * 2) / width, (view.height - padding * 2) / height), 0.02, 8)
-    this.state.viewport = {
+    this.setViewport({
       zoom,
       x: view.width / 2 - (rect.x + width / 2) * zoom,
       y: view.height / 2 - (rect.y + height / 2) * zoom,
-    }
-    this.emit()
+    })
   }
 
   viewportSize() {
@@ -412,17 +463,17 @@ class CanvasStore {
 
   async createDoc(name) {
     if (!/^[a-z0-9][a-z0-9-_]{0,63}$/.test(name)) {
-      this.toast('文档名只能是小写字母、数字、- 和 _', 'error')
+      this.toast('设计稿名称只能是小写字母、数字、- 和 _', 'error')
       return
     }
     try {
       await this.flush()
-      const doc = emptyDoc('新画布')
-      doc.pages[0].name = 'Page 1'
+      const doc = emptyDoc('新设计稿')
+      doc.pages[0].name = '画布 1'
       const result = await saveDoc(this.sessionId, name, null, doc)
       this.state.revision = result.revision
       await this.loadDoc(name)
-      this.toast('已创建画布')
+      this.toast('已创建设计稿')
     } catch (error) {
       this.toast(error instanceof ApiError ? error.message : String(error), 'error')
     }
@@ -430,7 +481,7 @@ class CanvasStore {
 
   async renameDoc(name, from = this.state.name) {
     if (!/^[a-z0-9][a-z0-9-_]{0,63}$/.test(name)) {
-      this.toast('文档名只能是小写字母、数字、- 和 _', 'error')
+      this.toast('设计稿名称只能是小写字母、数字、- 和 _', 'error')
       return
     }
     if (name === from) {
@@ -440,7 +491,7 @@ class CanvasStore {
     try {
       await this.flush()
       if (this.state.dirty || this.state.saving) {
-        this.toast('请先解决画布保存冲突，再重命名', 'error')
+        this.toast('请先解决设计稿保存冲突，再重命名', 'error')
         return
       }
       const oldName = this.state.name
@@ -449,13 +500,19 @@ class CanvasStore {
       this.state.docs = result.docs ?? this.state.docs
       if (from !== oldName) {
         this.emit()
-        this.toast('已重命名画布')
+        this.toast('已重命名设计稿')
         return
       }
       await this.loadDoc(nextName)
       const doc = this.state.doc
       if (doc) {
-        const genericTitle = !doc.title || doc.title === '主画布' || doc.title === '新画布' || doc.title === oldName
+        const genericTitle =
+          !doc.title ||
+          doc.title === '主画布' ||
+          doc.title === '新画布' ||
+          doc.title === '主设计稿' ||
+          doc.title === '新设计稿' ||
+          doc.title === oldName
         if (genericTitle && doc.title !== nextName) {
           doc.title = nextName
           this.state.dirty = true
@@ -463,7 +520,7 @@ class CanvasStore {
           this.scheduleSave()
         }
       }
-      this.toast('已重命名画布')
+      this.toast('已重命名设计稿')
     } catch (error) {
       this.toast(error instanceof ApiError ? error.message : String(error), 'error')
     }
@@ -473,14 +530,14 @@ class CanvasStore {
     try {
       await this.flush()
       if (this.state.dirty || this.state.saving) {
-        this.toast('请先解决画布保存冲突，再删除', 'error')
+        this.toast('请先解决设计稿保存冲突，再删除', 'error')
         return
       }
       const result = await deleteCanvasDoc(this.sessionId, this.state.name)
       const nextName = result.name ?? 'main'
       this.state.docs = result.docs ?? []
       await this.loadDoc(nextName)
-      this.toast('已删除画布')
+      this.toast('已删除设计稿')
     } catch (error) {
       this.toast(error instanceof ApiError ? error.message : String(error), 'error')
     }
@@ -510,7 +567,7 @@ class CanvasStore {
         this.state.conflict = {
           revision: error.revision,
           doc: error.doc ? normalizeDoc(error.doc) : null,
-          message: '画布在别处被修改了',
+          message: '设计稿在别处被修改了',
         }
       } else {
         this.toast(error instanceof ApiError ? error.message : String(error), 'error')
@@ -540,7 +597,7 @@ class CanvasStore {
     const data = await loadState(this.sessionId, this.state.name)
     if (!data || data.revision === this.state.revision) return
     if (this.state.dirty) {
-      this.state.conflict = { revision: data.revision, doc: data.doc ? normalizeDoc(data.doc) : null, message: '画布在别处被修改了' }
+      this.state.conflict = { revision: data.revision, doc: data.doc ? normalizeDoc(data.doc) : null, message: '设计稿在别处被修改了' }
       this.emit()
       return
     }
@@ -568,7 +625,7 @@ class CanvasStore {
         if (this.state.dirty || this.state.saving) {
           this.state.conflict = {
             revision: event.revision,
-            message: '画布在别处被修改了',
+            message: '设计稿在别处被修改了',
           }
           this.emit()
           return
@@ -607,7 +664,7 @@ class CanvasStore {
       this.history.reset(this.state.doc)
       this.rebuild()
       this.emit()
-      this.toast('已加载最新画布')
+      this.toast('已加载最新设计稿')
       return
     }
     // Keep local edits and overwrite the file using the server revision.
@@ -620,12 +677,12 @@ class CanvasStore {
   // ───────────────────────────── edits ─────────────────────────────
 
   /** Mutate the document and rebuild; call commit() to record history + save. */
-  mutate(fn, { commit = true, select, label } = {}) {
+  mutate(fn, { commit = true, select }: { commit?: boolean; select?: string[] } = {}) {
     if (!this.state.doc) return
     try {
       fn(this.state.doc)
     } catch (error) {
-      this.toast(String(error?.message ?? error), 'error')
+      this.toast(errorMessage(error), 'error')
       return
     }
     if (select) {
@@ -635,7 +692,7 @@ class CanvasStore {
     this.rebuild()
     this.emit()
     if (commit) {
-      this.commit(label)
+      this.commit()
       this.scheduleSave()
       this.queueSelectionPost()
     }
@@ -670,7 +727,62 @@ class CanvasStore {
     this.updateNode(sourceId, patch, options)
   }
 
-  addNode(node, parentId, index) {
+  activeComponent(doc = this.state.doc) {
+    if (!doc || !this.state.componentMode) return null
+    return doc.components?.find((entry) => entry.id === this.state.componentMode.componentId) ?? null
+  }
+
+  activeRootContainer(doc = this.state.doc) {
+    if (!doc) return null
+    if (this.state.componentMode) {
+      return this.activeComponent(doc)?.root ?? null
+    }
+    return doc.pages.find((page) => page.id === this.state.pageId) ?? doc.pages[0] ?? null
+  }
+
+  findActiveDocNode(doc, id) {
+    if (!doc || !id) return null
+    if (this.state.componentMode) {
+      const root = this.activeComponent(doc)?.root
+      return root ? deepFind([root], id) : null
+    }
+    const activePage = doc.pages.find((page) => page.id === this.state.pageId) ?? doc.pages[0]
+    if (activePage) {
+      const found = deepFind(activePage.children, id)
+      if (found) return found
+    }
+    return deepFind(doc.pages.flatMap((page) => page.children), id)
+  }
+
+  findActiveDocParent(doc, id) {
+    if (!doc || !id) return undefined
+    if (this.state.componentMode) {
+      const root = this.activeComponent(doc)?.root
+      return root ? parentOfNode([root], id, null) : undefined
+    }
+    const activePage = doc.pages.find((page) => page.id === this.state.pageId) ?? doc.pages[0]
+    if (activePage) {
+      const parent = parentOfNode(activePage.children, id, null)
+      if (parent !== undefined) return parent
+    }
+    for (const page of doc.pages) {
+      if (page === activePage) continue
+      const parent = parentOfNode(page.children, id, null)
+      if (parent !== undefined) return parent
+    }
+    return undefined
+  }
+
+  findActiveOwnerList(doc, id) {
+    const parent = this.findActiveDocParent(doc, id)
+    if (parent === undefined) return null
+    if (parent) return Array.isArray(parent.children) ? parent.children : null
+    if (this.state.componentMode) return null
+    const container = this.activeRootContainer(doc)
+    return Array.isArray(container?.children) ? container.children : null
+  }
+
+  addNode(node, parentId, index?: number) {
     const id = node.id ?? newId(node.type === 'instance' ? 'i' : 'n')
     const created = {
       name: node.name ?? defaultName(node.type),
@@ -688,23 +800,26 @@ class CanvasStore {
     if (created.type !== 'frame' && created.type !== 'group' && created.type !== 'instance') {
       delete created.children
     }
+    let inserted = false
     this.mutate((doc) => {
-      const pages = doc.pages
-      let container = pages.find((page) => page.id === this.state.pageId) ?? pages[0]
-      let parent = null
+      const rootContainer = this.activeRootContainer(doc)
+      if (!rootContainer) return
+      let target = rootContainer
       if (parentId) {
-        parent = deepFind(pages.flatMap((page) => page.children), parentId)
-        if (parent) container = parent
+        const parent = this.findActiveDocNode(doc, parentId)
+        if (parent) target = parent
       }
-      if (!parent) {
-        container.children = container.children ?? []
-        container.children.push(created)
-      } else {
-        parent.children = parent.children ?? []
-        parent.children.splice(index == null ? parent.children.length : index, 0, created)
+      if (target !== rootContainer || this.state.componentMode) {
+        if (target.type !== 'frame' && target.type !== 'group') {
+          throw new Error('目标节点不支持添加子图层')
+        }
       }
+      target.children = target.children ?? []
+      const insertAt = index == null ? target.children.length : clamp(index, 0, target.children.length)
+      target.children.splice(insertAt, 0, created)
+      inserted = true
     }, { select: [id] })
-    return created
+    return inserted ? created : null
   }
 
   createShapeAt(type, point) {
@@ -736,10 +851,23 @@ class CanvasStore {
   }
 
   deleteSelection() {
-    const ids = this.selectedNodes().filter((node) => node.editable && !node.isInstanceRoot).map((node) => node.sourceId)
-    const instanceIds = this.selectedNodes().filter((node) => node.isInstanceRoot).map((node) => node.sourceId)
-    const all = [...new Set([...ids, ...instanceIds])]
+    const selected = this.selectedNodes().filter((node) => node.editable)
+    let all = [...new Set(selected.map((node) => node.sourceId))]
     if (!all.length) return
+    if (this.state.componentMode) {
+      const rootId = this.activeComponent(this.state.doc)?.root?.id
+      all = all.filter((id) => id !== rootId)
+      if (!all.length) {
+        this.toast('不能删除主组件根节点')
+        return
+      }
+      this.mutate((doc) => {
+        const root = this.activeComponent(doc)?.root
+        if (!root?.children) return
+        for (const id of all) removeFromTree(root.children, id)
+      }, { select: [] })
+      return
+    }
     this.mutate((doc) => {
       for (const id of all) {
         for (const page of doc.pages) removeFromTree(page.children, id)
@@ -747,18 +875,37 @@ class CanvasStore {
     }, { select: [] })
   }
 
+  createPageReference() {
+    const node = this.primaryNode()
+    if (this.state.componentMode || this.state.selection.length !== 1 || !node?.editable || node.isInstanceRoot) return
+    const source = node.sourceNode
+    const wires = buildInteractionIndex(this.state.doc).wireIds
+    const artwork = clone(source)
+    function omitConnections(node) {
+      if (!Array.isArray(node.children)) return
+      node.children = node.children.filter(child => !wires.has(child.id))
+      node.children.forEach(omitConnections)
+    }
+    omitConnections(artwork)
+    const copy = reidTree(artwork, () => newId('n'))
+    copy.pageRef = findNodeInDoc(this.state.doc, source.pageRef)?.node?.id ?? source.id
+    copy.x += source.width + 32
+    if (copy.screenshot) copy.screenshot.use = 'reused'
+    return this.addNode(copy, this.findActiveDocParent(this.state.doc, source.id)?.id ?? null)
+  }
+
   duplicateSelection() {
-    const nodes = this.selectedNodes().filter((node) => node.editable && !node.isInstanceRoot)
+    const componentRootId = this.state.componentMode ? this.activeComponent(this.state.doc)?.root?.id : null
+    const nodes = this.selectedNodes().filter((node) => node.editable && node.sourceId !== componentRootId)
     if (!nodes.length) return
     const newKeys = []
     this.mutate((doc) => {
       for (const rnode of nodes) {
-        const parent = this.findDocParent(doc, rnode.sourceId)
-        const list = parent ? parent.children : doc.pages.find((page) => page.id === this.state.pageId)?.children
+        const list = this.findActiveOwnerList(doc, rnode.sourceId)
         if (!list) continue
-        const source = deepFind(list, rnode.sourceId)
+        const source = list.find((entry) => entry.id === rnode.sourceId) ?? deepFind(list, rnode.sourceId)
         if (!source) continue
-        const copy = reidTree(source, (old) => newId('n'))
+        const copy = reidTree(source, (_old, current) => newId(current?.type === 'instance' ? 'i' : 'n'))
         copy.x += 10
         copy.y += 10
         list.push(copy)
@@ -768,37 +915,165 @@ class CanvasStore {
   }
 
   findDocParent(doc, id) {
-    for (const page of doc.pages) {
-      const parent = parentOfNode(page.children, id, null)
-      if (parent !== undefined) return parent
-    }
-    return undefined
+    return this.findActiveDocParent(doc, id)
   }
 
   copySelection() {
     const nodes = this.selectedNodes().filter((node) => node.editable)
     if (!nodes.length) return
     this.clipboard = nodes.map((node) => clone(node.sourceNode))
+    void copySelectionSvgForFigma(this)
     this.toast(`已复制 ${nodes.length} 个图层`)
+  }
+
+  setPage(pageId: string) {
+    const doc = this.state.doc
+    if (!doc?.pages?.some((p) => p.id === pageId)) return
+    if (this.state.pageId === pageId && !this.state.componentMode) return
+    if (!this.state.componentMode && this.state.pageId) {
+      this.viewMemory.observe(this.state.pageId, this.state.viewport)
+    }
+    this.state.componentMode = null
+    this.state.pageId = pageId
+    this.state.selection = []
+    this.state.primaryKey = null
+    this.state.editingText = null
+    this.state.enteredInstance = null
+    this.state.commentDraft = null
+    this.state.crop = null
+    this.rebuild()
+    const remembered = this.viewMemory.getPageViewport(pageId)
+    if (remembered) {
+      this.state.viewport = remembered
+    } else if (this.state.scene?.roots?.length) {
+      this.zoomToFit()
+    } else {
+      this.state.viewport = { x: 40, y: 40, zoom: 1 }
+    }
+    this.emit()
+    this.queueSelectionPost()
+  }
+
+  addPage(name?: string) {
+    const pageId = newId('page')
+    this.mutate((doc) => {
+      doc.pages.push({
+        id: pageId,
+        name: name?.trim() || `画布 ${doc.pages.length + 1}`,
+        background: '#f5f5f5',
+        children: [],
+      })
+    })
+    this.setPage(pageId)
+  }
+
+  renamePage(pageId: string, name: string) {
+    const trimmed = String(name ?? '').trim().slice(0, 120)
+    if (!trimmed) return false
+    const existing = this.state.doc?.pages?.find((p) => p.id === pageId)
+    if (!existing || existing.name === trimmed) return false
+    this.mutate((doc) => {
+      const page = doc.pages.find((p) => p.id === pageId)
+      if (page) page.name = trimmed
+    })
+    return true
+  }
+
+  deletePage(pageId: string): boolean {
+    const doc = this.state.doc
+    if (!doc) return false
+    if (doc.pages.length <= 1) {
+      this.toast('至少保留一个画布')
+      return false
+    }
+    const index = doc.pages.findIndex((p) => p.id === pageId)
+    if (index === -1) return false
+    const deletingCurrent = this.state.pageId === pageId
+    const nextPageId = deletingCurrent
+      ? (doc.pages[index + 1]?.id ?? doc.pages[index - 1]?.id ?? null)
+      : null
+    if (deletingCurrent && nextPageId) {
+      this.setPage(nextPageId)
+    }
+    this.mutate((docValue) => {
+      const idx = docValue.pages.findIndex((p) => p.id === pageId)
+      if (idx !== -1) docValue.pages.splice(idx, 1)
+      docValue.comments = (docValue.comments ?? []).filter((comment) => comment.pageId !== pageId)
+    })
+    return true
+  }
+
+  duplicatePage(pageId: string): string | null {
+    const doc = this.state.doc
+    if (!doc) return null
+    const sourceIndex = doc.pages.findIndex((p) => p.id === pageId)
+    if (sourceIndex === -1) return null
+    const newPageId = newId('page')
+    this.mutate((docValue) => {
+      const idx = docValue.pages.findIndex((p) => p.id === pageId)
+      if (idx === -1) return
+      const source = docValue.pages[idx]
+      const reidWrapper = reidTree(
+        { id: source.id, children: source.children ?? [] },
+        (old, current) => (old === source.id ? newPageId : newId(current?.type === 'instance' ? 'i' : 'n')),
+      )
+      const duplicated = {
+        ...clone(source),
+        id: newPageId,
+        name: `${source.name} 副本`,
+        children: reidWrapper.children ?? [],
+      }
+      docValue.pages.splice(idx + 1, 0, duplicated)
+    })
+    this.setPage(newPageId)
+    return newPageId
+  }
+
+  setPageBackground(color: string | null, pageId?: string): void {
+    const doc = this.state.doc
+    if (!doc) return
+    const targetId = pageId ?? this.state.pageId ?? doc.pages[0]?.id
+    if (!targetId) return
+    const existing = doc.pages.find((p) => p.id === targetId)
+    if (!existing) return
+    const trimmed = typeof color === 'string' ? color.trim() : ''
+    const next = trimmed ? trimmed : null
+    if ((existing.background ?? null) === next) return
+    this.mutate((docValue) => {
+      const page = docValue.pages.find((p) => p.id === targetId)
+      if (page) page.background = next
+    })
+  }
+
+  async reload() {
+    const data = await loadState(this.sessionId, this.state.name)
+    this.applyState(data, { resetHistory: true })
+    this.emit()
   }
 
   paste() {
     if (!this.clipboard?.length) return
     const newKeys = []
     this.mutate((doc) => {
-      const page = doc.pages.find((entry) => entry.id === this.state.pageId) ?? doc.pages[0]
+      const container = this.activeRootContainer(doc)
+      if (!container) return
+      if (this.state.componentMode && container.type !== 'frame' && container.type !== 'group') {
+        throw new Error('当前主组件根节点不支持粘贴子图层')
+      }
+      container.children = container.children ?? []
       for (const source of this.clipboard) {
-        const copy = reidTree(source, () => newId('n'))
+        const copy = reidTree(source, (_old, current) => newId(current?.type === 'instance' ? 'i' : 'n'))
         copy.x += 20
         copy.y += 20
-        page.children.push(copy)
+        container.children.push(copy)
         newKeys.push(copy.id)
       }
     }, { select: newKeys })
   }
 
   groupSelection() {
-    const nodes = this.selectedNodes().filter((node) => node.editable && !node.isInstanceRoot)
+    const componentRootId = this.state.componentMode ? this.activeComponent(this.state.doc)?.root?.id : null
+    const nodes = this.selectedNodes().filter((node) => node.editable && node.sourceId !== componentRootId)
     if (nodes.length < 2) return
     const parentId = nodes[0].parent?.id ?? null
     if (!nodes.every((node) => (node.parent?.id ?? null) === parentId)) {
@@ -808,11 +1083,10 @@ class CanvasStore {
     const rect = unionRects(nodes.map((node) => ({ x: node.absX, y: node.absY, width: node.width, height: node.height })))
     const groupId = newId('g')
     this.mutate((doc) => {
-      const parent = parentId ? deepFind(doc.pages.flatMap((page) => page.children), parentId) : doc.pages.find((page) => page.id === this.state.pageId)
-      if (!parent) return
+      const parent = parentId ? this.findActiveDocNode(doc, parentId) : this.activeRootContainer(doc)
+      if (!parent || !Array.isArray(parent.children)) return
       const list = parent.children
       const selectedIds = new Set(nodes.map((node) => node.sourceId))
-      const originX = parentId ? 0 : 0
       const moved = []
       for (let index = list.length - 1; index >= 0; index -= 1) {
         if (!selectedIds.has(list[index].id)) continue
@@ -822,8 +1096,8 @@ class CanvasStore {
       const groupX = rect.x - parentAbs.x
       const groupY = rect.y - parentAbs.y
       for (const child of moved) {
-        child.x -= groupX - originX
-        child.y -= groupY - originY
+        child.x -= groupX
+        child.y -= groupY
       }
       list.push({
         id: groupId,
@@ -848,8 +1122,7 @@ class CanvasStore {
     const keep = []
     this.mutate((doc) => {
       for (const group of groups) {
-        const parent = this.findDocParent(doc, group.sourceId)
-        const list = parent ? parent.children : doc.pages.find((page) => page.id === this.state.pageId)?.children
+        const list = this.findActiveOwnerList(doc, group.sourceId)
         if (!list) continue
         const index = list.findIndex((node) => node.id === group.sourceId)
         if (index === -1) continue
@@ -871,8 +1144,7 @@ class CanvasStore {
     if (!nodes.length) return
     this.mutate((doc) => {
       for (const rnode of nodes) {
-        const parent = this.findDocParent(doc, rnode.sourceId)
-        const list = parent ? parent.children : doc.pages.find((page) => page.id === this.state.pageId)?.children
+        const list = this.findActiveOwnerList(doc, rnode.sourceId)
         if (!list) continue
         const index = list.findIndex((node) => node.id === rnode.sourceId)
         if (index === -1) continue
@@ -885,13 +1157,82 @@ class CanvasStore {
     }, { select: this.state.selection })
   }
 
+  moveLayer(sourceId: string, targetParentId: string | null, index: number): boolean {
+    const doc = this.state.doc
+    if (!doc || !sourceId) return false
+    const rootContainer = this.activeRootContainer(doc)
+    if (!rootContainer) return false
+    if (this.state.componentMode && sourceId === rootContainer.id) return false
+
+    const sourceNode = this.findActiveDocNode(doc, sourceId)
+    const sourceList = this.findActiveOwnerList(doc, sourceId)
+    if (!sourceNode || !sourceList) return false
+    const sourceIndex = sourceList.findIndex((entry) => entry.id === sourceId)
+    if (sourceIndex === -1) return false
+
+    const resolvingToRoot =
+      targetParentId === null ||
+      (!this.state.componentMode && targetParentId === rootContainer.id) ||
+      (Boolean(this.state.componentMode) && targetParentId === rootContainer.id)
+
+    let targetContainer = null
+    if (resolvingToRoot) {
+      if (this.state.componentMode && rootContainer.type !== 'frame' && rootContainer.type !== 'group') {
+        return false
+      }
+      targetContainer = rootContainer
+    } else {
+      targetContainer = this.findActiveDocNode(doc, targetParentId)
+      if (!targetContainer) return false
+      if (targetContainer.type !== 'frame' && targetContainer.type !== 'group') return false
+      if (targetContainer.id === sourceId || deepFind(sourceNode.children ?? [], targetContainer.id)) {
+        return false
+      }
+    }
+
+    const sameParent = sourceList === targetContainer.children
+    const sourceSceneNode = this.findSceneNode(sourceId)
+    let targetOrigin = { x: 0, y: 0 }
+    if (!resolvingToRoot) {
+      const targetSceneNode = this.findSceneNode(targetContainer.id)
+      if (targetSceneNode) targetOrigin = { x: targetSceneNode.absX, y: targetSceneNode.absY }
+    } else if (this.state.componentMode) {
+      const rootSceneNode = this.findSceneNode(rootContainer.id)
+      if (rootSceneNode) targetOrigin = { x: rootSceneNode.absX, y: rootSceneNode.absY }
+    }
+
+    let movedOk = false
+    const nextSelection = this.state.selection.includes(sourceId) ? this.state.selection : [sourceId]
+    this.mutate((docValue) => {
+      const currentRoot = this.activeRootContainer(docValue)
+      const currentSourceList = this.findActiveOwnerList(docValue, sourceId)
+      if (!currentRoot || !currentSourceList) return
+      const currentTarget = resolvingToRoot
+        ? currentRoot
+        : this.findActiveDocNode(docValue, targetParentId)
+      if (!currentTarget) return
+      currentTarget.children = currentTarget.children ?? []
+      const currentSourceIndex = currentSourceList.findIndex((entry) => entry.id === sourceId)
+      if (currentSourceIndex === -1) return
+      const [moved] = currentSourceList.splice(currentSourceIndex, 1)
+      if (!sameParent && sourceSceneNode) {
+        moved.x = sourceSceneNode.absX - targetOrigin.x
+        moved.y = sourceSceneNode.absY - targetOrigin.y
+      }
+      const insertAt = clamp(Number.isFinite(index) ? Math.trunc(index) : currentTarget.children.length, 0, currentTarget.children.length)
+      currentTarget.children.splice(insertAt, 0, moved)
+      movedOk = true
+    }, { select: nextSelection })
+    return movedOk
+  }
+
   align(kind) {
-    const nodes = this.selectedNodes().filter((node) => node.editable && !node.isInstanceRoot)
+    const nodes = this.selectedNodes().filter((node) => node.editable)
     if (nodes.length < 2) return
     const rect = unionRects(nodes.map((node) => ({ x: node.absX, y: node.absY, width: node.width, height: node.height })))
     this.mutate((doc) => {
       for (const rnode of nodes) {
-        const node = deepFind(doc.pages.flatMap((page) => page.children), rnode.sourceId)
+        const node = this.findActiveDocNode(doc, rnode.sourceId)
         if (!node) continue
         if (kind === 'left') node.x += rect.x - rnode.absX
         else if (kind === 'right') node.x += rect.x + rect.width - (rnode.absX + rnode.width)
@@ -904,7 +1245,7 @@ class CanvasStore {
   }
 
   distribute(axis) {
-    const nodes = this.selectedNodes().filter((node) => node.editable && !node.isInstanceRoot)
+    const nodes = this.selectedNodes().filter((node) => node.editable)
     if (nodes.length < 3) return
     this.mutate((doc) => {
       const sorted = [...nodes].sort((a, b) => (axis === 'x' ? a.absX - b.absX : a.absY - b.absY))
@@ -917,7 +1258,7 @@ class CanvasStore {
       const gap = (total - sizes) / (sorted.length - 1)
       let cursor = axis === 'x' ? first.absX : first.absY
       for (const rnode of sorted) {
-        const node = deepFind(doc.pages.flatMap((page) => page.children), rnode.sourceId)
+        const node = this.findActiveDocNode(doc, rnode.sourceId)
         if (!node) continue
         if (axis === 'x') node.x += cursor - rnode.absX
         else node.y += cursor - rnode.absY
@@ -1005,7 +1346,7 @@ class CanvasStore {
 
   setOverride(instanceRootId, sourceId, patch) {
     this.mutate((doc) => {
-      const instance = deepFind(doc.pages.flatMap((page) => page.children), instanceRootId)
+      const instance = this.findActiveDocNode(doc, instanceRootId)
       if (!instance || instance.type !== 'instance') return
       instance.overrides = instance.overrides ?? {}
       instance.overrides[sourceId] = { ...(instance.overrides[sourceId] ?? {}), ...patch }
@@ -1013,20 +1354,20 @@ class CanvasStore {
   }
 
   detachInstance(instanceRootId) {
+    const nextSelect = []
     this.mutate((doc) => {
-      for (const page of doc.pages) {
-        const instance = deepFind(page.children, instanceRootId)
-        if (!instance) continue
-        const component = doc.components.find((entry) => entry.id === instance.componentId)
-        if (!component) throw new Error('主组件不存在')
-        const parent = parentOfNode(page.children, instanceRootId, null)
-        const list = parent ? parent.children : page.children
-        const index = list.findIndex((node) => node.id === instanceRootId)
-        const copy = this.materializeInstance(doc, component, instance)
-        list.splice(index, 1, copy)
-        return
-      }
-    }, { select: [instanceRootId] })
+      const instance = this.findActiveDocNode(doc, instanceRootId)
+      if (!instance || instance.type !== 'instance') return
+      const component = doc.components.find((entry) => entry.id === instance.componentId)
+      if (!component) throw new Error('主组件不存在')
+      const list = this.findActiveOwnerList(doc, instanceRootId)
+      if (!list) return
+      const index = list.findIndex((node) => node.id === instanceRootId)
+      if (index === -1) return
+      const copy = this.materializeInstance(doc, component, instance)
+      list.splice(index, 1, copy)
+      nextSelect.push(copy.id)
+    }, { select: nextSelect })
   }
 
   materializeInstance(doc, component, instance) {
@@ -1042,7 +1383,7 @@ class CanvasStore {
     }
     // Fix override keys before ids change.
     const overrides = instance.overrides ?? {}
-    const overridesById = new Map(Object.entries(overrides))
+    const overridesById = new Map(Object.entries<{ text?: string; fills?: unknown[]; visible?: boolean }>(overrides))
     const applyWithOverrides = (node) => {
       const oldId = node.id
       const nextId = newId('n')
@@ -1071,13 +1412,11 @@ class CanvasStore {
     const rootId = newId('n')
     const instanceId = newId('i')
     this.mutate((doc) => {
-      const parent = this.findDocParent(doc, node.sourceId)
-      const list = parent ? parent.children : doc.pages.find((page) => page.id === this.state.pageId)?.children
+      const list = this.findActiveOwnerList(doc, node.sourceId)
       if (!list) return
       const index = list.findIndex((entry) => entry.id === node.sourceId)
       if (index === -1) return
       const [source] = list.splice(index, 1)
-      const sourceAbs = { x: node.absX, y: node.absY }
       const root = clone(source)
       root.x = 0
       root.y = 0
@@ -1092,8 +1431,8 @@ class CanvasStore {
         id: instanceId,
         type: 'instance',
         name: source.name,
-        x: sourceAbs.x - (parent ? this.findSceneNode(node.parent?.key)?.absX ?? 0 : 0),
-        y: sourceAbs.y - (parent ? this.findSceneNode(node.parent?.key)?.absY ?? 0 : 0),
+        x: node.absX - (node.parent?.absX ?? 0),
+        y: node.absY - (node.parent?.absY ?? 0),
         width: source.width,
         height: source.height,
         rotation: 0,
@@ -1104,30 +1443,33 @@ class CanvasStore {
         variantProps: {},
         overrides: {},
       }
-      // Rebase to the actual parent's absolute origin; the scene node parent is
-      // authoritative for page nodes.
-      instance.x = node.absX - (node.parent?.absX ?? 0)
-      instance.y = node.absY - (node.parent?.absY ?? 0)
       list.splice(index, 0, instance)
     }, { select: [instanceId] })
     this.toast('已创建组件')
   }
 
-  insertInstance(componentId) {
+  insertInstance(componentId: string, point?: { x: number; y: number }) {
     const doc = this.state.doc
     const component = doc?.components.find((entry) => entry.id === componentId)
     if (!component) return
-    const view = this.viewportSize()
-    const viewport = this.state.viewport
-    const world = worldPoint(viewport, { x: view.width / 2, y: view.height / 2 })
+    if (this.state.componentMode?.componentId === componentId) {
+      this.toast('不能将主组件实例插入自身', 'error')
+      return
+    }
+    const width = component.root.width ?? 120
+    const height = component.root.height ?? 40
+    const anchor =
+      point && Number.isFinite(point.x) && Number.isFinite(point.y)
+        ? point
+        : worldPoint(this.state.viewport, { x: this.viewportSize().width / 2, y: this.viewportSize().height / 2 })
     const node = {
       id: newId('i'),
       type: 'instance',
       name: component.name,
-      x: world.x - (component.root.width ?? 120) / 2,
-      y: world.y - (component.root.height ?? 40) / 2,
-      width: component.root.width ?? 120,
-      height: component.root.height ?? 40,
+      x: Math.round(anchor.x - width / 2),
+      y: Math.round(anchor.y - height / 2),
+      width,
+      height,
       rotation: 0,
       opacity: 1,
       visible: true,
@@ -1137,14 +1479,20 @@ class CanvasStore {
       overrides: {},
     }
     this.mutate((docValue) => {
-      const page = docValue.pages.find((entry) => entry.id === this.state.pageId) ?? docValue.pages[0]
-      page.children.push(node)
+      const container = this.activeRootContainer(docValue)
+      if (!container) return
+      if (this.state.componentMode && container.type !== 'frame' && container.type !== 'group') {
+        throw new Error('当前主组件根节点不支持添加子图层')
+      }
+      container.children = container.children ?? []
+      container.children.push(node)
     }, { select: [node.id] })
+    this.setTool('pointer')
   }
 
   setVariant(instanceId, key, value) {
     this.mutate((doc) => {
-      const instance = deepFind(doc.pages.flatMap((page) => page.children), instanceId)
+      const instance = this.findActiveDocNode(doc, instanceId)
       if (!instance) return
       instance.variantProps = { ...(instance.variantProps ?? {}), [key]: value }
     })
@@ -1153,7 +1501,7 @@ class CanvasStore {
   swapComponent(instanceId, componentId) {
     if (!this.state.doc.components.some((entry) => entry.id === componentId)) return
     this.mutate((doc) => {
-      const instance = deepFind(doc.pages.flatMap((page) => page.children), instanceId)
+      const instance = this.findActiveDocNode(doc, instanceId)
       if (!instance) return
       instance.componentId = componentId
       instance.variantProps = {}
@@ -1161,11 +1509,12 @@ class CanvasStore {
     })
   }
 
-  createVariantSet(componentIds) {
+  createVariantSet(componentIds: string[], name?: string) {
     if (componentIds.length < 2) {
       this.toast('至少选择两个组件才能创建变体集')
       return
     }
+    const setName = String(name ?? '').trim() || 'Variant set'
     this.mutate((doc) => {
       const setId = newId('vs')
       const values = componentIds.map((id) => {
@@ -1181,7 +1530,7 @@ class CanvasStore {
       }
       doc.variantSets.push({
         id: setId,
-        name: 'Variant set',
+        name: setName,
         properties: [{ name: 'State', values: unique }],
         componentIds,
       })
@@ -1189,10 +1538,20 @@ class CanvasStore {
   }
 
   editComponent(componentId) {
+    if (!this.state.doc?.components?.some((entry) => entry.id === componentId)) return
+    if (!this.state.componentMode && this.state.pageId) {
+      this.viewMemory.observe(this.state.pageId, this.state.viewport)
+    }
     this.state.componentMode = { componentId }
     this.state.selection = []
     this.state.primaryKey = null
+    this.state.editingText = null
+    this.state.enteredInstance = null
+    this.state.crop = null
     this.rebuild()
+    if (this.state.scene?.roots?.length) {
+      this.zoomToFit()
+    }
     this.emit()
   }
 
@@ -1200,26 +1559,36 @@ class CanvasStore {
     this.state.componentMode = null
     this.state.selection = []
     this.state.primaryKey = null
+    this.state.editingText = null
+    this.state.crop = null
     this.rebuild()
+    const remembered = this.state.pageId ? this.viewMemory.getPageViewport(this.state.pageId) : null
+    if (remembered) {
+      this.state.viewport = remembered
+    }
     this.emit()
   }
 
   createStyle(type, name) {
     const node = this.primaryNode()
-    if (!node) return
+    if (!node) {
+      this.toast('请先选中一个图层')
+      return
+    }
     const value = type === 'fill'
       ? node.fills?.[0]
       : type === 'text'
-        ? { font: node.font, fills: node.fills }
-        : node.effects
+        ? (node.type === 'text' && node.font ? { font: node.font, fills: node.fills } : null)
+        : (Array.isArray(node.effects) && node.effects.length ? node.effects : null)
     if (!value) {
-      this.toast('该图层没有可创建的样式')
+      this.toast(type === 'text' && node.type !== 'text' ? '请先选中文本图层以创建文本样式' : '该图层没有可创建的样式')
       return
     }
     const styleId = newId('style')
+    const trimmedName = String(name ?? '').trim()
     this.mutate((doc) => {
-      doc.styles.push({ id: styleId, type, name: name || `${type} style`, value: clone(value) })
-      const source = deepFind(doc.pages.flatMap((page) => page.children), node.sourceId)
+      doc.styles.push({ id: styleId, type, name: trimmedName || `${type} style`, value: clone(value) })
+      const source = this.findActiveDocNode(doc, node.sourceId)
       if (source) {
         if (type === 'fill') source.fillStyleId = styleId
         if (type === 'text') source.textStyleId = styleId
@@ -1230,19 +1599,81 @@ class CanvasStore {
   }
 
   applyStyle(styleId) {
-    const style = this.state.doc.styles.find((entry) => entry.id === styleId)
-    if (!style) return
+    const style = this.state.doc?.styles?.find((entry) => entry.id === styleId)
+    if (!style) return false
     const nodes = this.selectedNodes().filter((node) => node.editable)
-    if (!nodes.length) return
+    if (!nodes.length) {
+      this.toast('请先选中要应用样式的图层')
+      return false
+    }
+    const compatible = nodes.filter((node) => canApplyStyleToNodeType(style.type, node.type))
+    if (!compatible.length) {
+      const msg =
+        style.type === 'text'
+          ? '文本样式只能应用到文本图层'
+          : style.type === 'fill'
+            ? '选中的图层不支持填充样式'
+            : '选中的图层不支持效果样式'
+      this.toast(msg)
+      return false
+    }
     this.mutate((doc) => {
-      for (const rnode of nodes) {
-        const node = deepFind(doc.pages.flatMap((page) => page.children), rnode.sourceId)
+      for (const rnode of compatible) {
+        const node = this.findActiveDocNode(doc, rnode.sourceId)
         if (!node) continue
-        if (style.type === 'fill' && ['frame', 'rect', 'ellipse', 'path', 'text'].includes(node.type)) node.fillStyleId = styleId
-        if (style.type === 'text' && node.type === 'text') node.textStyleId = styleId
-        if (style.type === 'effect') node.effectStyleId = styleId
+        if (style.type === 'fill') node.fillStyleId = styleId
+        else if (style.type === 'text') node.textStyleId = styleId
+        else if (style.type === 'effect') node.effectStyleId = styleId
       }
     })
+    return true
+  }
+
+  applyStyleToNode(styleId: string, nodeKey: string): boolean {
+    const style = this.state.doc?.styles?.find((entry) => entry.id === styleId)
+    if (!style) {
+      this.toast('找不到该样式', 'error')
+      return false
+    }
+    const rnode = this.findSceneNode(nodeKey)
+    if (!rnode) {
+      this.toast('找不到目标图层', 'error')
+      return false
+    }
+    if (!rnode.editable) {
+      this.toast('组件实例内部图层不能直接应用样式')
+      return false
+    }
+    if (!canApplyStyleToNodeType(style.type, rnode.type)) {
+      const msg =
+        style.type === 'text'
+          ? '文本样式只能应用到文本图层'
+          : style.type === 'fill'
+            ? '填充样式不支持应用到该类型图层'
+            : '效果样式不支持应用到该类型图层'
+      this.toast(msg)
+      return false
+    }
+    let applied = false
+    this.mutate((doc) => {
+      const node = this.findActiveDocNode(doc, rnode.sourceId)
+      if (!node) return
+      if (style.type === 'fill') node.fillStyleId = styleId
+      else if (style.type === 'text') node.textStyleId = styleId
+      else if (style.type === 'effect') node.effectStyleId = styleId
+      applied = true
+    })
+    if (applied) this.toast(`已应用样式：${style.name}`)
+    return applied
+  }
+
+  renameStyle(styleId: string, name: string): boolean {
+    const trimmed = String(name ?? '').trim().slice(0, 120)
+    if (!trimmed) return false
+    const existing = this.state.doc?.styles?.find((entry) => entry.id === styleId)
+    if (!existing || existing.name === trimmed) return false
+    this.updateStyle(styleId, { name: trimmed })
+    return true
   }
 
   detachStyle(styleId) {
@@ -1346,6 +1777,41 @@ class CanvasStore {
     this.mutate((doc) => removeComment(doc, commentId))
   }
 
+  focusComment(comment: { id?: string; nodeId?: string; pageId?: string; x?: number; y?: number }): boolean {
+    const doc = this.state.doc
+    if (!doc || !comment) return false
+    const stored = comment.id ? doc.comments?.find((entry) => entry.id === comment.id) : null
+    const target = stored ? { ...stored, ...comment } : comment
+    if (target.pageId) {
+      if (!doc.pages.some((page) => page.id === target.pageId)) return false
+      if (this.state.componentMode || target.pageId !== this.state.pageId) {
+        this.setPage(target.pageId)
+      }
+    } else if (this.state.componentMode) {
+      this.exitComponentMode()
+    }
+    if (target.nodeId) {
+      const node = this.findSceneNode(target.nodeId)
+      if (node) {
+        if (node.instanceId) this.state.enteredInstance = node.instanceId
+        this.setSelection([node.key])
+        this.zoomToSelection()
+        return true
+      }
+    }
+    const bounds = this.pageBounds()
+    const worldX = bounds.x + (target.x ?? 0.5) * bounds.width
+    const worldY = bounds.y + (target.y ?? 0.5) * bounds.height
+    const view = this.viewportSize()
+    const zoom = this.state.viewport.zoom || 1
+    this.setViewport({
+      zoom,
+      x: view.width / 2 - worldX * zoom,
+      y: view.height / 2 - worldY * zoom,
+    })
+    return true
+  }
+
   // ───────────────────────────── fonts / images ─────────────────────────────
 
   fontFaceStyle() {
@@ -1403,7 +1869,7 @@ class CanvasStore {
       await this.ensureFonts()
       this.toast('字体已上传')
     } catch (error) {
-      this.toast(error?.message ?? String(error), 'error')
+      this.toast(errorMessage(error), 'error')
     }
   }
 
@@ -1438,17 +1904,20 @@ class CanvasStore {
         node.fills[fillIndex] = { type: 'image', asset: result.asset, fit: 'cover' }
       })
     } catch (error) {
-      this.toast(error?.message ?? String(error), 'error')
+      this.toast(errorMessage(error), 'error')
     }
   }
 
-  importSvg(source) {
+  importSvg(source: string, at?: { x: number; y: number }) {
     const { paths, warnings } = importSvgPaths(source)
     if (!paths.length) {
       this.toast(warnings[0] ?? '没有可导入的 SVG path', 'error')
       return 0
     }
-    const center = this.viewportCenterWorld()
+    const center =
+      at && Number.isFinite(at.x) && Number.isFinite(at.y)
+        ? at
+        : this.viewportCenterWorld()
     const createdIds = []
     for (const [index, path] of paths.entries()) {
       const scale = Math.min(1, 240 / Math.max(1, path.viewBox.width), 240 / Math.max(1, path.viewBox.height))
@@ -1516,7 +1985,7 @@ class CanvasStore {
       }
       this.addNode(node, null)
     } catch (error) {
-      this.toast(error?.message ?? String(error), 'error')
+      this.toast(errorMessage(error), 'error')
     }
   }
 
@@ -1576,23 +2045,23 @@ class CanvasStore {
     }
   }
 
-  insertTemplate(templateId) {
+  insertTemplate(templateId: string, point?: { x: number; y: number }) {
     try {
       const { node, template } = instantiateTemplate(templateId, { device: this.state.foundation?.device ?? DEFAULT_DEVICE })
-      const center = this.viewportCenterWorld()
-      node.x = Math.round(center.x - node.width / 2)
-      node.y = Math.round(center.y - node.height / 2)
+      const anchor = point && Number.isFinite(point.x) && Number.isFinite(point.y) ? point : this.viewportCenterWorld()
+      node.x = Math.round(anchor.x - node.width / 2)
+      node.y = Math.round(anchor.y - node.height / 2)
       const created = this.addNode(node, null)
       if (!created) return
       this.setTool('pointer')
-      this.zoomToSelection()
+      if (!point) this.zoomToSelection()
       this.toast(`已插入模板：${template.name}`)
     } catch (error) {
-      this.toast(error?.message ?? String(error), 'error')
+      this.toast(errorMessage(error), 'error')
     }
   }
 
-  setFoundation(patch = {}) {
+  setFoundation(patch: {device?: string; preset?: string} = {}) {
     const device = getDevice(patch.device ?? this.state.foundation?.device ?? DEFAULT_DEVICE)
     const preset = getPreset(patch.preset ?? this.state.foundation?.preset ?? DEFAULT_PRESET)
     this.state.foundation = { device: device.id, preset: preset.id }
@@ -1657,8 +2126,8 @@ class CanvasStore {
       this.toast('图片已生成并插入画布')
       return result
     } catch (error) {
-      this.toast(error?.message ?? String(error), 'error')
-      return { ok: false, code: error?.code ?? 'image-failed', message: error?.message }
+      this.toast(errorMessage(error), 'error')
+      return { ok: false, code: error instanceof ApiError ? error.code : 'image-failed', message: errorMessage(error) }
     } finally {
       this.state.imageGenerating = false
       this.emit()
@@ -1683,7 +2152,7 @@ class CanvasStore {
       this.toast(high ? `检查完成：${high} 个高优先级问题` : '检查完成')
       return result
     } catch (error) {
-      this.toast(error?.message ?? String(error), 'error')
+      this.toast(errorMessage(error), 'error')
       return null
     }
   }
@@ -1822,7 +2291,7 @@ class CanvasStore {
       if (result.cancelled) return
       this.toast(`已保存 ${result.filename}`)
     } catch (error) {
-      this.toast(`导出失败：${String(error?.message ?? error)}`, 'error')
+      this.toast(`导出失败：${errorMessage(error)}`, 'error')
     }
   }
 
@@ -1836,7 +2305,7 @@ class CanvasStore {
       this.toast(`已保存 ${result.filename}`)
       return result
     } catch (error) {
-      this.toast(`打包失败：${String(error?.message ?? error)}`, 'error')
+      this.toast(`打包失败：${errorMessage(error)}`, 'error')
       return null
     }
   }
@@ -1852,7 +2321,7 @@ class CanvasStore {
       this.emit()
       return result
     } catch (error) {
-      this.toast(`导入失败：${String(error?.message ?? error)}`, 'error')
+      this.toast(`导入失败：${errorMessage(error)}`, 'error')
       return null
     }
   }
@@ -1873,7 +2342,7 @@ class CanvasStore {
       link.click()
       this.toast('剪贴板不可用，已下载 PNG')
     } catch (error) {
-      this.toast(`复制图片失败：${String(error?.message ?? error)}`, 'error')
+      this.toast(`复制图片失败：${errorMessage(error)}`, 'error')
     }
   }
 
@@ -1902,7 +2371,7 @@ class CanvasStore {
     const state = this.state.crop
     if (!state) return
     this.mutate((doc) => {
-      const node = deepFind(doc.pages.flatMap((page) => page.children), state.sourceId)
+      const node = this.findActiveDocNode(doc, state.sourceId)
       if (!node?.fills?.[state.fillIndex]) return
       node.fills[state.fillIndex].crop = state.crop
     })
@@ -1914,6 +2383,241 @@ class CanvasStore {
     this.state.crop = null
     this.emit()
   }
+
+  // ───────────────────────────── interaction connectors ─────────────────────────────
+
+  /** Create a visible flow connector (path + event label) with interaction metadata. */
+  createInteraction(fromId: string, toId: string, eventText = '点击跳转') {
+    if (!this.state.doc) return null
+    if (this.state.componentMode) {
+      this.toast('组件编辑模式下不支持创建交互连线', 'error')
+      return null
+    }
+    if (!fromId || !toId || fromId === toId) {
+      this.toast('起点和终点不能是同一个元素', 'error')
+      return null
+    }
+    const fromLocated = findNodeInDoc(this.state.doc, fromId)
+    const toLocated = findNodeInDoc(this.state.doc, toId)
+    if (!fromLocated || !toLocated) {
+      this.toast('找不到连线起点或目标节点', 'error')
+      return null
+    }
+
+    const fromScene = this.findSceneNode(fromId)
+    const toScene = this.findSceneNode(toId)
+    const fromRect = fromScene
+      ? { x: fromScene.absX, y: fromScene.absY, width: Math.max(1, fromScene.width), height: Math.max(1, fromScene.height) }
+      : {
+          x: Number(fromLocated.node.x ?? 0),
+          y: Number(fromLocated.node.y ?? 0),
+          width: Math.max(1, Number(fromLocated.node.width ?? 120)),
+          height: Math.max(1, Number(fromLocated.node.height ?? 44)),
+        }
+    const samePage = fromLocated.page?.id === toLocated.page?.id
+    const toRect = samePage && toScene
+      ? { x: toScene.absX, y: toScene.absY, width: Math.max(1, toScene.width), height: Math.max(1, toScene.height) }
+      : samePage
+        ? {
+            x: Number(toLocated.node.x ?? 0),
+            y: Number(toLocated.node.y ?? 0),
+            width: Math.max(1, Number(toLocated.node.width ?? 120)),
+            height: Math.max(1, Number(toLocated.node.height ?? 44)),
+          }
+        : {
+            // Cross-canvas target: draw a compact outgoing stub extending to the right of source.
+            x: fromRect.x + fromRect.width + 130,
+            y: fromRect.y + fromRect.height / 2 - 14,
+            width: 28,
+            height: 28,
+          }
+
+    const label = String(eventText ?? '').trim() || '点击跳转'
+    const geom = computeConnectionGeometry(fromRect, toRect)
+    const wireId = newId('wire')
+    const labelId = newId('ev')
+    const ixId = newId('ix')
+    const labelWidth = Math.max(64, Math.min(220, label.length * 13 + 18))
+
+    const wireNode = {
+      id: wireId,
+      type: 'path',
+      name: label,
+      x: geom.x,
+      y: geom.y,
+      width: geom.width,
+      height: geom.height,
+      rotation: 0,
+      opacity: 1,
+      visible: true,
+      locked: false,
+      d: geom.d,
+      viewBox: geom.viewBox,
+      fillRule: 'nonzero',
+      fills: [],
+      strokes: [{ color: '#4D6BFE', width: 2, align: 'center' }],
+      effects: [],
+      interaction: {
+        id: ixId,
+        from: fromId,
+        to: toId,
+        event: label,
+        labelId,
+      },
+    }
+
+    const labelNode = {
+      id: labelId,
+      type: 'text',
+      name: '触发事件',
+      x: Math.round(geom.labelX - labelWidth / 2),
+      y: Math.round(geom.labelY - 10),
+      width: labelWidth,
+      height: 20,
+      rotation: 0,
+      opacity: 1,
+      visible: true,
+      locked: false,
+      text: label,
+      font: { family: 'system-ui', weight: 600, style: 'normal', size: 12, lineHeight: 1.35, letterSpacing: 0 },
+      align: 'center',
+      verticalAlign: 'middle',
+      fills: [{ type: 'solid', color: '#4D6BFE' }],
+      effects: [],
+      autoHeight: true,
+    }
+
+    const hostPageId = fromLocated.page?.id ?? this.state.pageId
+    this.mutate((doc) => {
+      const page = doc.pages.find((entry) => entry.id === hostPageId) ?? doc.pages[0]
+      if (!page) return
+      page.children.push(wireNode, labelNode)
+    }, { select: [fromId] })
+
+    const fromName = fromLocated.node.name || fromLocated.node.type
+    const toName = toLocated.node.name || toLocated.node.type
+    this.toast(`已建立交互连线：${fromName} → ${toName}`)
+    return { wireId, labelId }
+  }
+
+  updateInteractionEvent(wireId: string, eventText: string): boolean {
+    if (!this.state.doc || !wireId) return false
+    const trimmed = String(eventText ?? '').trim()
+    if (!trimmed) return false
+    let updated = false
+    this.mutate((doc) => {
+      for (const page of doc.pages ?? []) {
+        const wire = deepFind(page.children, wireId)
+        if (!wire?.interaction) continue
+        wire.interaction.event = trimmed
+        wire.name = trimmed
+        if (wire.interaction.labelId) {
+          const labelNode = deepFind(page.children, wire.interaction.labelId)
+          if (labelNode && labelNode.type === 'text') {
+            labelNode.text = trimmed
+            labelNode.width = Math.max(64, Math.min(220, trimmed.length * 13 + 18))
+          }
+        }
+        updated = true
+        return
+      }
+    })
+    return updated
+  }
+
+  deleteInteraction(wireId: string): boolean {
+    if (!this.state.doc || !wireId) return false
+    let removed = false
+    this.mutate((doc) => {
+      for (const page of doc.pages ?? []) {
+        const wire = deepFind(page.children, wireId)
+        if (!wire) continue
+        const labelId = wire.interaction?.labelId
+        removeFromTree(page.children, wireId)
+        if (labelId) removeFromTree(page.children, labelId)
+        removed = true
+        return
+      }
+    })
+    if (removed) this.toast('已删除交互连线')
+    return removed
+  }
+
+  /** Re-route same-page interaction wires attached to moved/resized nodes so arrows stay attached. */
+  syncConnectedWires(movedSourceIds?: Iterable<string>) {
+    const doc = this.state.doc
+    const scene = this.state.scene
+    if (!doc || !scene || this.state.componentMode) return
+    const page = doc.pages.find((entry) => entry.id === this.state.pageId)
+    if (!page) return
+    const moved = movedSourceIds ? new Set(movedSourceIds) : null
+
+    const wires: any[] = []
+    const collect = (nodes: any[]) => {
+      for (const node of nodes ?? []) {
+        if ((node.type === 'path' || node.type === 'line') && node.interaction?.from && node.interaction?.to) {
+          wires.push(node)
+        }
+        if (Array.isArray(node.children)) collect(node.children)
+      }
+    }
+    collect(page.children)
+    if (!wires.length) return
+
+    let changed = false
+    for (const wire of wires) {
+      const fromId = wire.interaction.from
+      const toId = wire.interaction.to
+      if (moved && !moved.has(fromId) && !moved.has(toId)) {
+        // Also check if an ancestor frame of fromId/toId was moved.
+        const fromScene = this.findSceneNode(fromId)
+        const toScene = this.findSceneNode(toId)
+        let ancestorMoved = false
+        for (const s of [fromScene, toScene]) {
+          let cur = s?.parent
+          while (cur) {
+            if (moved.has(cur.sourceId)) {
+              ancestorMoved = true
+              break
+            }
+            cur = cur.parent
+          }
+          if (ancestorMoved) break
+        }
+        if (!ancestorMoved) continue
+      }
+      const fromNode = this.findSceneNode(fromId)
+      const toNode = this.findSceneNode(toId)
+      if (!fromNode || !toNode) continue
+      const geom = computeConnectionGeometry(
+        { x: fromNode.absX, y: fromNode.absY, width: Math.max(1, fromNode.width), height: Math.max(1, fromNode.height) },
+        { x: toNode.absX, y: toNode.absY, width: Math.max(1, toNode.width), height: Math.max(1, toNode.height) },
+      )
+      wire.x = geom.x
+      wire.y = geom.y
+      wire.width = geom.width
+      wire.height = geom.height
+      wire.d = geom.d
+      wire.viewBox = geom.viewBox
+      if (wire.interaction.labelId) {
+        const labelNode = deepFind(page.children, wire.interaction.labelId)
+        if (labelNode && labelNode.type === 'text') {
+          const w = Number(labelNode.width) || 80
+          labelNode.x = Math.round(geom.labelX - w / 2)
+          labelNode.y = Math.round(geom.labelY - 10)
+        }
+      }
+      changed = true
+    }
+    if (changed) {
+      this.rebuild()
+      this.emit()
+    }
+  }
+}
+
+function errorMessage(error: unknown) {
+  return String(error && typeof error === 'object' && 'message' in error ? error.message : error)
 }
 
 function defaultName(type) {
@@ -1934,7 +2638,7 @@ function btoaUnicode(text) {
 }
 
 function imageSize(url) {
-  return new Promise((resolve, reject) => {
+  return new Promise<{ width: number; height: number }>((resolve, reject) => {
     const image = new Image()
     image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight })
     image.onerror = reject

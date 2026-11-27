@@ -18,15 +18,18 @@ export function Button({ icon, children, active, primary, danger, small, title, 
   )
 }
 
-export function IconButton({ icon, title, active, onClick, size = 20, danger }: any) {
+export function IconButton({ icon, title, active, onClick, onMouseDown, size = 20, danger, disabled, className = '', ...rest }: any) {
   return React.createElement(
     'button',
     {
+      ...rest,
       type: 'button',
       'aria-label': title,
       'data-tip': title,
+      disabled,
+      onMouseDown,
       onClick,
-      className: `dshc-icon-btn ${active ? 'is-active' : ''} ${danger ? 'is-danger' : ''}`,
+      className: `dshc-icon-btn ${active ? 'is-active' : ''} ${danger ? 'is-danger' : ''} ${className}`.trim(),
     },
     React.createElement(Icon, { name: icon, size }),
   )
@@ -134,6 +137,20 @@ export function NumberInput({ value, onChange, min, max, step = 1, disabled, suf
 
 export function ColorInput({ value, onChange, allowAlpha = true }: any) {
   const normalized = normalizeColor(value)
+  const [draft, setDraft] = React.useState(normalized)
+  const skipBlurRef = React.useRef(false)
+  React.useEffect(() => setDraft(normalized), [normalized])
+
+  const commit = (raw: string) => {
+    const parsed = parseHexColor(raw, allowAlpha, true)
+    if (parsed) {
+      setDraft(parsed)
+      if (parsed !== normalized) onChange(parsed)
+    } else {
+      setDraft(normalized)
+    }
+  }
+
   return React.createElement(
     'span',
     { className: 'dshc-color' },
@@ -141,25 +158,58 @@ export function ColorInput({ value, onChange, allowAlpha = true }: any) {
       type: 'color',
       value: normalized.slice(0, 7),
       onChange: (event) => {
-        const alpha = normalized.length === 9 ? normalized.slice(7) : ''
+        const alpha = allowAlpha && normalized.length === 9 ? normalized.slice(7) : ''
         onChange(`${event.target.value.toUpperCase()}${alpha}`)
       },
     }),
     React.createElement('input', {
       className: 'dshc-color-text',
-      value: normalized,
+      value: draft,
       spellCheck: false,
-      onChange: (event) => {
-        const next = event.target.value.trim().toUpperCase()
-        if (/^#([0-9A-F]{6}|[0-9A-F]{8})$/.test(next)) onChange(next)
+      onFocus: () => {
+        skipBlurRef.current = false
       },
-      onBlur: (event) => {
-        if (!/^#([0-9A-F]{6}|[0-9A-F]{8})$/.test(event.target.value.trim().toUpperCase())) {
-          event.target.value = normalized
+      onChange: (event) => {
+        const next = event.target.value
+        setDraft(next)
+        const parsed = parseHexColor(next, allowAlpha, false)
+        if (parsed && parsed !== normalized) onChange(parsed)
+      },
+      onBlur: () => {
+        if (skipBlurRef.current) {
+          skipBlurRef.current = false
+          return
+        }
+        commit(draft)
+      },
+      onKeyDown: (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          commit(draft)
+          skipBlurRef.current = true
+          event.currentTarget.blur()
+        } else if (event.key === 'Escape') {
+          event.preventDefault()
+          event.stopPropagation()
+          setDraft(normalized)
+          skipBlurRef.current = true
+          event.currentTarget.blur()
         }
       },
     }),
   )
+}
+
+function parseHexColor(raw: string, allowAlpha: boolean, expandShort: boolean): string | null {
+  const trimmed = raw.trim().toUpperCase()
+  const withHash = trimmed.startsWith('#') ? trimmed : `#${trimmed}`
+  if (expandShort && /^#[0-9A-F]{3}$/.test(withHash)) {
+    const [, r, g, b] = withHash
+    return `#${r}${r}${g}${g}${b}${b}`
+  }
+  if (/^#[0-9A-F]{6}$/.test(withHash)) return withHash
+  if (allowAlpha && /^#[0-9A-F]{8}$/.test(withHash)) return withHash
+  return null
 }
 
 function normalizeColor(value) {
@@ -199,12 +249,48 @@ export function Toggle({ value, onChange, label }: any) {
 }
 
 export function Modal({ title, children, onClose, footer, width = 360 }: any) {
+  const onCloseRef = React.useRef(onClose)
+  onCloseRef.current = onClose
+  const innerPointerDownRef = React.useRef(false)
+
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      onCloseRef.current?.()
+    }
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  }, [])
+
   return React.createElement(
     'div',
-    { className: 'dshc-modal-backdrop', onPointerDown: (event) => event.stopPropagation() },
+    {
+      className: 'dshc-modal-backdrop',
+      onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => {
+        event.stopPropagation()
+        innerPointerDownRef.current = false
+      },
+      onClick: (event: React.MouseEvent<HTMLDivElement>) => {
+        event.stopPropagation()
+        if (event.target === event.currentTarget && !innerPointerDownRef.current) {
+          onClose?.()
+        }
+        innerPointerDownRef.current = false
+      },
+    },
     React.createElement(
       'div',
-      { className: 'dshc-modal', style: { width } },
+      {
+        className: 'dshc-modal',
+        style: { width },
+        onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => {
+          event.stopPropagation()
+          innerPointerDownRef.current = true
+        },
+        onClick: (event: React.MouseEvent<HTMLDivElement>) => event.stopPropagation(),
+      },
       React.createElement(
         'div',
         { className: 'dshc-modal-head' },

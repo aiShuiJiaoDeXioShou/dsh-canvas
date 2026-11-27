@@ -1,10 +1,11 @@
-// @ts-nocheck
 /** Canvas viewport, DOM scene, selection overlays and direct manipulation. */
 
 import * as React from 'react'
+import { SceneTiles } from './editor/scene-tiles.js'
 import { SceneView, primaryPaint } from './editor/render-dom.jsx'
 import {
   centerOf,
+  clamp,
   handlePoints,
   nodeQuad,
   pointInNode,
@@ -18,11 +19,102 @@ import {
 } from './editor/geometry.js'
 import { deepFind } from './store.js'
 import { hitTestScene } from './editor/hit-test.js'
+import type { InteractionPresentation } from '../shared/interactions.js'
+import { computeLiveConnectionSvgPath } from '../shared/interaction-geometry.js'
 import { ContextMenu } from './ui/common.jsx'
 import { buildSelectionMenu } from './ui/selection-menu.js'
+import {
+  COMPONENT_DRAG_MIME,
+  STYLE_DRAG_MIME,
+  TEMPLATE_DRAG_MIME,
+  clearActiveCanvasDrag,
+  getActiveCanvasDrag,
+} from './ui/template-preview.js'
+import {
+  handleFigmaPasteEvent,
+  hasFigmaClipboardData,
+  isSelfCopiedDrafiSvg,
+} from './editor/clipboard-figma.js'
 
 const P = 'dshc'
 const HANDLE_SIZE = 8
+
+interface DrawPreviewState {
+  tool: string
+  x: number
+  y: number
+  width: number
+  height: number
+  w: number
+  h: number
+  x1?: number
+  y1?: number
+  x2?: number
+  y2?: number
+}
+
+function measurePillWidth(text: string): number {
+  let width = 16
+  for (const ch of text) {
+    width += ch.charCodeAt(0) > 255 ? 11.5 : 6.8
+  }
+  return Math.ceil(width)
+}
+
+function computeDrawGeometry(
+  tool: string,
+  startWorld: { x: number; y: number },
+  endWorld: { x: number; y: number },
+  shiftKey: boolean,
+) {
+  const rawDx = endWorld.x - startWorld.x
+  const rawDy = endWorld.y - startWorld.y
+  if (tool === 'line') {
+    const length = Math.hypot(rawDx, rawDy)
+    let angleRad = Math.atan2(rawDy, rawDx)
+    if (shiftKey && length > 0) {
+      const step = Math.PI / 12
+      angleRad = Math.round(angleRad / step) * step
+    }
+    const dx = Math.cos(angleRad) * length
+    const dy = Math.sin(angleRad) * length
+    const endX = startWorld.x + dx
+    const endY = startWorld.y + dy
+    return {
+      x: Math.min(startWorld.x, endX),
+      y: Math.min(startWorld.y, endY),
+      w: Math.abs(dx),
+      h: Math.abs(dy),
+      dx,
+      dy,
+      endX,
+      endY,
+      length,
+      rotation: (angleRad * 180) / Math.PI,
+    }
+  }
+  let dx = rawDx
+  let dy = rawDy
+  if (shiftKey && (tool === 'frame' || tool === 'rect' || tool === 'ellipse')) {
+    const size = Math.max(Math.abs(rawDx), Math.abs(rawDy))
+    dx = (rawDx < 0 ? -1 : 1) * size
+    dy = (rawDy < 0 ? -1 : 1) * size
+  }
+  const endX = startWorld.x + dx
+  const endY = startWorld.y + dy
+  return {
+    x: Math.min(startWorld.x, endX),
+    y: Math.min(startWorld.y, endY),
+    w: Math.abs(dx),
+    h: Math.abs(dy),
+    dx,
+    dy,
+    endX,
+    endY,
+    length: Math.hypot(dx, dy),
+    rotation: 0,
+  }
+}
 
 function isTyping(target) {
   if (!target || !(target instanceof HTMLElement)) return false
@@ -67,7 +159,7 @@ function applyMove(store, entries, dx, dy) {
   )
 }
 
-function snapForMove(store, entries, dx, dy, disable) {
+function snapForMove(store, entries, dx, dy, disable, ignoredKeys?: ReadonlySet<string>) {
   if (disable) return { dx, dy, guides: [] }
   const selected = new Set(entries.map((entry) => entry.sourceId))
   const moving = entries.map((entry) => ({
@@ -85,7 +177,7 @@ function snapForMove(store, entries, dx, dy, disable) {
     parents.add(parent?.key ?? 'root')
     const siblings = parent ? parent.children : store.state.scene.roots
     for (const sibling of siblings ?? []) {
-      if (!selected.has(sibling.sourceId) && sibling.visible !== false) {
+      if (!selected.has(sibling.sourceId) && sibling.visible !== false && !ignoredKeys?.has(sibling.key)) {
         candidates.push({ x: sibling.absX, y: sibling.absY, width: sibling.width, height: sibling.height })
       }
     }
@@ -152,7 +244,14 @@ function parentAbsFor(store, node) {
   return node.parent ? { x: node.parent.absX, y: node.parent.absY } : { x: 0, y: 0 }
 }
 
-export function CanvasView({ store, version }: any) {
+interface CanvasViewProps {
+  store: any
+  version?: number
+  interactions?: InteractionPresentation
+  interactionDestination?: string
+}
+
+export function CanvasView({ store, version, interactions, interactionDestination }: CanvasViewProps) {
   const containerRef = React.useRef(null)
   const dragRef = React.useRef(null)
   const spaceRef = React.useRef(false)
@@ -164,19 +263,37 @@ export function CanvasView({ store, version }: any) {
   const [replyText, setReplyText] = React.useState('')
   const [hoverKey, setHoverKey] = React.useState(null)
   const [marquee, setMarquee] = React.useState(null)
-  const [drawPreview, setDrawPreview] = React.useState(null)
+  const [drawPreview, setDrawPreview] = React.useState<DrawPreviewState | null>(null)
   const [guides, setGuides] = React.useState([])
   const [spaceHeld, setSpaceHeld] = React.useState(false)
   const [contextMenu, setContextMenu] = React.useState(null)
   const [measurements, setMeasurements] = React.useState([])
+  const [templateGhost, setTemplateGhost] = React.useState<{ x: number; y: number; width: number; height: number; name: string } | null>(null)
+  const [fileDropActive, setFileDropActive] = React.useState(false)
+  const [styleDropTarget, setStyleDropTarget] = React.useState<{ key: string; styleName: string } | null>(null)
+  const [connectPreview, setConnectPreview] = React.useState<{
+    fromNode: any
+    startScreen: { x: number; y: number }
+    currentScreen: { x: number; y: number }
+    targetNode: any | null
+  } | null>(null)
 
   const state = store.state
-  const viewport = state.viewport
+  const viewport = React.useSyncExternalStore(store.subscribeViewport, store.getViewport) as { x: number; y: number; zoom: number }
+  const tiles = React.useMemo(() => new SceneTiles(state.scene?.roots ?? []), [state.scene])
+  const [size, setSize] = React.useState(() => store.viewportSize())
+  const visibleChildren = React.useMemo(() => tiles.query(viewport, size),
+    [tiles, viewport.x, viewport.y, viewport.zoom, size.width, size.height])
 
 
   // Keep a stable callback surface for window listeners.
-  const api = React.useRef({})
+  const api = React.useRef({ store, version })
   api.current = { store, version }
+  const pick = (point, deep = false) => hitTestScene(store.state.scene, point, {
+    enteredInstance: store.state.enteredInstance,
+    ignoredKeys: interactions?.hidden,
+    deep,
+  })
 
   React.useEffect(() => {
     const element = containerRef.current
@@ -185,7 +302,7 @@ export function CanvasView({ store, version }: any) {
       const rect = entries[0]?.contentRect
       if (!rect) return
       store.canvasSize = { width: rect.width, height: rect.height }
-      store.emit()
+      setSize(previous => previous.width === rect.width && previous.height === rect.height ? previous : store.canvasSize)
     })
     observer.observe(element)
     store.canvasSize = { width: element.clientWidth, height: element.clientHeight }
@@ -196,6 +313,7 @@ export function CanvasView({ store, version }: any) {
     const element = containerRef.current
     if (!element) return
     const onWheel = (event) => {
+      if (event.target?.closest?.('.dshc-context-menu')) return
       event.preventDefault()
       const rect = element.getBoundingClientRect()
       const point = { x: event.clientX - rect.left, y: event.clientY - rect.top }
@@ -208,20 +326,33 @@ export function CanvasView({ store, version }: any) {
       }
     }
     element.addEventListener('wheel', onWheel, { passive: false })
-    const onPaste = (event) => {
-      // Only the canvas owns paste. Pasting an image into the chat composer
-      // must not create a canvas node; require the event target and focus to
-      // be inside this canvas tab.
+    const onPaste = (event: ClipboardEvent) => {
+      // Unified paste scoped to `.dshc-root`: never hijack chat composer or open dialogs.
       const root = containerRef.current?.closest?.('.dshc-root')
+      if (!root) return
       const target = event.target
-      if (!root || !(target instanceof Node) || !root.contains(target)) return
-      const active = document.activeElement
-      if (!(active === containerRef.current || containerRef.current?.contains(active))) return
-      if (isTyping(target)) return
-      const files = [...(event.clipboardData?.files ?? [])]
-      if (!files.length) return
-      event.preventDefault()
-      for (const file of files) if (file.type.startsWith('image/')) store.uploadImageFile(file)
+      const activeEl = document.activeElement
+      const targetInRoot = target instanceof Node && (target === root || root.contains(target))
+      const activeInRoot = activeEl instanceof Node && (activeEl === root || root.contains(activeEl))
+      if (!targetInRoot && !activeInRoot) return
+      if (document.querySelector('.dshc-modal-backdrop')) return
+      if (isTyping(target) || isTyping(activeEl)) return
+
+      const dt = event.clipboardData
+      if (hasFigmaClipboardData(dt) && !(isSelfCopiedDrafiSvg(dt) && store.clipboard?.length)) {
+        void handleFigmaPasteEvent(event, store)
+        return
+      }
+      const imageFiles = [...(dt?.files ?? [])].filter((file) => file.type.startsWith('image/'))
+      if (imageFiles.length > 0) {
+        event.preventDefault()
+        for (const file of imageFiles) void store.uploadImageFile(file)
+        return
+      }
+      if (store.clipboard?.length) {
+        event.preventDefault()
+        store.paste()
+      }
     }
     window.addEventListener('paste', onPaste)
     return () => {
@@ -238,22 +369,28 @@ export function CanvasView({ store, version }: any) {
   React.useEffect(() => {
     const onKeyDown = (event) => {
       const viewportElement = containerRef.current
-      const insideViewport =
-        viewportElement &&
-        (document.activeElement === viewportElement || viewportElement.contains(document.activeElement))
-      if (!insideViewport && !isTyping(event.target)) return
-      if (event.key === ' ' && !isTyping(event.target)) {
+      const root = viewportElement?.closest?.('.dshc-root')
+      const activeEl = document.activeElement
+      const insidePlugin = Boolean(root && (activeEl === root || root.contains(activeEl)))
+      if (!insidePlugin) return
+      if (document.querySelector('.dshc-modal-backdrop')) return
+      if (isTyping(event.target) || isTyping(activeEl)) return
+      if (event.key === ' ') {
         spaceRef.current = true
         setSpaceHeld(true)
         event.preventDefault()
         return
       }
-      if (isTyping(event.target)) return
       const key = event.key.toLowerCase()
       const meta = event.metaKey || event.ctrlKey
       const active = api.current.store
       if (event.key === 'Escape') {
-        if (active.state.crop) active.cancelCrop()
+        if (dragRef.current?.mode === 'connect') {
+          dragRef.current = null
+          setConnectPreview(null)
+        } else if (active.state.tool === 'connect') {
+          active.setTool('pointer')
+        } else if (active.state.crop) active.cancelCrop()
         else if (active.state.editingText) active.cancelTextEdit()
         else if (active.state.commentDraft) {
           active.state.commentDraft = null
@@ -325,18 +462,14 @@ export function CanvasView({ store, version }: any) {
       }
       if (meta && key === 'c') {
         event.preventDefault()
-        active.copySelection()
+        if (event.shiftKey) void active.copySelectionImage()
+        else active.copySelection()
         return
       }
       if (meta && key === 'x') {
         event.preventDefault()
         active.copySelection()
         active.deleteSelection()
-        return
-      }
-      if (meta && key === 'v') {
-        event.preventDefault()
-        active.paste()
         return
       }
       if (meta && key === 'd') {
@@ -408,10 +541,14 @@ export function CanvasView({ store, version }: any) {
         active.scheduleSave()
         return
       }
-      const tools = { v: 'pointer', f: 'frame', r: 'rect', o: 'ellipse', l: 'line', t: 'text', h: 'hand', c: 'comment', i: 'image' }
+      if (!meta && key === 'i') {
+        event.preventDefault()
+        active.requestImagePick?.()
+        return
+      }
+      const tools = { v: 'pointer', f: 'frame', r: 'rect', o: 'ellipse', l: 'line', k: 'connect', t: 'text', h: 'hand', c: 'comment' }
       if (!meta && tools[key]) {
         active.setTool(tools[key])
-        if (key === 'i') api.current.store.requestImagePick?.()
       }
     }
     const onKeyUp = (event) => {
@@ -448,7 +585,7 @@ export function CanvasView({ store, version }: any) {
   React.useEffect(() => {
     if (!contextMenu) return
     const close = (event) => {
-      if (event.type === 'pointerdown' && event.target?.closest?.('.dshc-context-menu')) return
+      if (event.target?.closest?.('.dshc-context-menu')) return
       setContextMenu(null)
     }
     const onKey = (event) => {
@@ -472,16 +609,13 @@ export function CanvasView({ store, version }: any) {
     if (!containerRef.current) return
     const point = localPoint(event)
     const world = worldPoint(viewport, point)
-    const hit = hitTestScene(store.state.scene, world, { enteredInstance: store.state.enteredInstance })
+    const hit = pick(world)
     if (hit && !store.state.selection.includes(hit.key)) store.setSelection([hit.key])
-    const rootRect = containerRef.current?.getBoundingClientRect?.()
-    const width = typeof window !== 'undefined' ? window.innerWidth : 1200
-    const height = typeof window !== 'undefined' ? window.innerHeight : 800
-    const maxY = Math.max(8, (rootRect?.bottom ?? height) - 460)
+    const { clientWidth, clientHeight } = containerRef.current
+    const menuHeight = Math.min(window.innerHeight * 0.7, clientHeight - 16)
     setContextMenu({
-      x: Math.min(Math.max(8, event.clientX), Math.max(8, width - 224)),
-      y: Math.min(Math.max(8, event.clientY), maxY),
-      fixed: true,
+      x: clamp(point.x, 8, Math.max(8, clientWidth - 226)),
+      y: clamp(point.y, 8, Math.max(8, clientHeight - menuHeight - 8)),
       world,
       hit: hit?.key ?? null,
     })
@@ -572,6 +706,17 @@ export function CanvasView({ store, version }: any) {
     }
 
     const handle = target.closest?.('[data-handle]')?.getAttribute('data-handle')
+    if (handle === 'connect') {
+      const fromNode = store.primaryNode()
+      if (fromNode && !state.componentMode) {
+        event.preventDefault()
+        const startScreen = screenPoint(viewport, toPage(fromNode, { x: fromNode.width, y: fromNode.height / 2 }))
+        dragRef.current = { mode: 'connect', fromNode, startScreen, targetNode: null }
+        setConnectPreview({ fromNode, startScreen, currentScreen: point, targetNode: null })
+        containerRef.current.setPointerCapture?.(event.pointerId)
+      }
+      return
+    }
     if (handle) {
       event.preventDefault()
       startResize(handle, point, event.pointerId)
@@ -600,8 +745,20 @@ export function CanvasView({ store, version }: any) {
       }
     }
 
+    if (state.tool === 'connect') {
+      const hit = pick(world)
+      if (!hit || hit.type === 'path' || hit.type === 'line' || state.componentMode) return
+      event.preventDefault()
+      store.setSelection([hit.key])
+      const startScreen = screenPoint(viewport, toPage(hit, { x: hit.width, y: hit.height / 2 }))
+      dragRef.current = { mode: 'connect', fromNode: hit, startScreen, targetNode: null }
+      setConnectPreview({ fromNode: hit, startScreen, currentScreen: point, targetNode: null })
+      containerRef.current.setPointerCapture?.(event.pointerId)
+      return
+    }
+
     if (state.tool === 'comment') {
-      const hit = hitTestScene(store.state.scene, world, { enteredInstance: store.state.enteredInstance })
+      const hit = pick(world)
       store.state.commentDraft = {
         x: world.x,
         y: world.y,
@@ -623,12 +780,12 @@ export function CanvasView({ store, version }: any) {
         parent,
         startScreen: point,
       }
-      setDrawPreview({ x: point.x, y: point.y, width: 0, height: 0 })
+      setDrawPreview({ tool: state.tool, x: point.x, y: point.y, width: 0, height: 0, w: 0, h: 0 })
       containerRef.current.setPointerCapture?.(event.pointerId)
       return
     }
 
-    const hit = hitTestScene(store.state.scene, world, { enteredInstance: store.state.enteredInstance })
+    const hit = pick(world)
     if (!hit) {
       dragRef.current = { mode: 'marquee', start: world, startScreen: point, container: containerAt(store, world) }
       setMarquee({ x: point.x, y: point.y, width: 0, height: 0 })
@@ -669,8 +826,58 @@ export function CanvasView({ store, version }: any) {
     containerRef.current.setPointerCapture?.(event.pointerId)
   }
 
+  const startFrameLabelMove = (node, event: React.PointerEvent) => {
+    if (event.button !== 0) return
+    event.stopPropagation()
+    setMeasurements([])
+    containerRef.current?.focus?.({ preventScroll: true })
+    if (state.editingText) return
+    const point = localPoint(event)
+    const world = worldPoint(viewport, point)
+    store.canvasSize = { width: containerRef.current.clientWidth, height: containerRef.current.clientHeight }
+    if (spaceRef.current || state.tool === 'hand') {
+      dragRef.current = { mode: 'pan', startScreen: point, startViewport: { ...viewport } }
+      containerRef.current?.setPointerCapture?.(event.pointerId)
+      return
+    }
+    if (event.shiftKey) {
+      store.toggleSelection(node.key)
+      return
+    }
+    if (!store.state.selection.includes(node.key)) {
+      store.setSelection([node.key])
+    }
+    const nodes = store.selectedNodes().filter((entry) => entry.editable)
+    if (!nodes.length) return
+    const entries = nodes.map((entry) => ({
+      key: entry.key,
+      sourceId: entry.sourceId,
+      x: entry.sourceNode.x,
+      y: entry.sourceNode.y,
+      absX: entry.absX,
+      absY: entry.absY,
+      width: entry.width,
+      height: entry.height,
+      parent: entry.parent,
+      layoutParent: entry.parent?.layout && entry.parent.type !== 'instance' ? entry.parent : null,
+      node: entry,
+    }))
+    dragRef.current = {
+      mode: 'move',
+      start: world,
+      startScreen: point,
+      entries,
+      moved: false,
+      alt: event.altKey,
+      duplicated: false,
+      thresholdPx: 2,
+      pointerId: event.pointerId,
+      captured: false,
+    }
+  }
+
   const containerAt = (store, world) => {
-    const hit = hitTestScene(store.state.scene, world, { enteredInstance: store.state.enteredInstance })
+    const hit = pick(world)
     if (!hit) return null
     let node = hit
     while (node) {
@@ -715,7 +922,7 @@ export function CanvasView({ store, version }: any) {
     const point = localPoint(event)
     const world = worldPoint(viewport, point)
     if (!drag) {
-      const hit = hitTestScene(store.state.scene, world, { enteredInstance: store.state.enteredInstance })
+      const hit = pick(world)
       if ((hit?.key ?? null) !== hoverKey) setHoverKey(hit?.key ?? null)
       if (event.altKey && !state.editingText) {
         // Keep the selected layer as the measurement anchor: hit-testing a
@@ -725,6 +932,39 @@ export function CanvasView({ store, version }: any) {
       } else if (measurements.length) {
         setMeasurements([])
       }
+      return
+    }
+    if (drag.mode === 'connect') {
+      const rootFrameOf = (node) => {
+        let cur = node
+        let topFrame = null
+        while (cur) {
+          if (cur.type === 'frame') topFrame = cur
+          cur = cur.parent
+        }
+        return topFrame
+      }
+      const hit = pick(world)
+      let targetNode = null
+      if (hit && hit.type !== 'path' && hit.type !== 'line' && !hit.sourceNode?.interaction) {
+        const hitRoot = rootFrameOf(hit)
+        const fromRoot = rootFrameOf(drag.fromNode)
+        if (hitRoot && hitRoot.sourceId !== fromRoot?.sourceId) {
+          targetNode = hitRoot
+        } else if (hit.sourceId !== drag.fromNode.sourceId) {
+          targetNode = hit
+        }
+      }
+      drag.targetNode = targetNode
+      const endScreen = targetNode
+        ? screenPoint(viewport, toPage(targetNode, { x: 0, y: targetNode.height / 2 }))
+        : point
+      setConnectPreview({
+        fromNode: drag.fromNode,
+        startScreen: drag.startScreen,
+        currentScreen: endScreen,
+        targetNode,
+      })
       return
     }
     if (drag.mode === 'pan') {
@@ -751,16 +991,40 @@ export function CanvasView({ store, version }: any) {
       return
     }
     if (drag.mode === 'draw') {
-      const x = Math.min(drag.startScreen.x, point.x)
-      const y = Math.min(drag.startScreen.y, point.y)
-      setDrawPreview({ x, y, width: Math.abs(point.x - drag.startScreen.x), height: Math.abs(point.y - drag.startScreen.y) })
+      const geom = computeDrawGeometry(drag.tool, drag.start, world, event.shiftKey)
+      const p1 = screenPoint(viewport, drag.start)
+      const p2 = screenPoint(viewport, { x: geom.endX, y: geom.endY })
+      const x = Math.min(p1.x, p2.x)
+      const y = Math.min(p1.y, p2.y)
+      setDrawPreview({
+        tool: drag.tool,
+        x,
+        y,
+        width: Math.abs(p2.x - p1.x),
+        height: Math.abs(p2.y - p1.y),
+        w: Math.round(drag.tool === 'line' ? geom.length : geom.w),
+        h: Math.round(drag.tool === 'line' ? 0 : geom.h),
+        x1: p1.x,
+        y1: p1.y,
+        x2: p2.x,
+        y2: p2.y,
+      })
       return
     }
     if (drag.mode === 'move') {
-      const rawDx = world.x - drag.start.x
-      const rawDy = world.y - drag.start.y
-      if (!drag.moved && Math.abs(rawDx) + Math.abs(rawDy) > 0.5) {
+      let rawDx = world.x - drag.start.x
+      let rawDy = world.y - drag.start.y
+      if (!drag.moved) {
+        const dist = drag.thresholdPx
+          ? Math.hypot(point.x - drag.startScreen.x, point.y - drag.startScreen.y)
+          : Math.abs(rawDx) + Math.abs(rawDy)
+        const threshold = drag.thresholdPx ?? 0.5
+        if (dist <= threshold) return
         drag.moved = true
+        if (drag.pointerId != null && !drag.captured) {
+          containerRef.current?.setPointerCapture?.(drag.pointerId)
+          drag.captured = true
+        }
         if (drag.alt) {
           store.duplicateSelection()
           drag.entries = store.selectedNodes().filter((node) => node.editable).map((node) => ({
@@ -778,14 +1042,22 @@ export function CanvasView({ store, version }: any) {
           drag.duplicated = true
         }
       }
+      const lockedAxis = event.shiftKey ? (Math.abs(rawDx) >= Math.abs(rawDy) ? 'x' : 'y') : null
+      if (lockedAxis === 'x') rawDy = 0
+      else if (lockedAxis === 'y') rawDx = 0
       if (drag.entries.length === 1 && drag.entries[0].layoutParent) {
         schedule(() => reorderInLayout(store, drag.entries[0], world))
         return
       }
       schedule(() => {
-        const snap = snapForMove(store, drag.entries, rawDx, rawDy, drag.duplicated || event.altKey)
-        applyMove(store, drag.entries, snap.dx, snap.dy)
-        setGuides(snap.guides)
+        const snap = snapForMove(store, drag.entries, rawDx, rawDy, drag.duplicated || event.altKey, interactions?.hidden)
+        const finalDx = lockedAxis === 'y' ? 0 : snap.dx
+        const finalDy = lockedAxis === 'x' ? 0 : snap.dy
+        const filteredGuides = lockedAxis
+          ? snap.guides.filter((guide) => guide.axis === lockedAxis)
+          : snap.guides
+        applyMove(store, drag.entries, finalDx, finalDy)
+        setGuides(filteredGuides)
       })
       return
     }
@@ -797,10 +1069,14 @@ export function CanvasView({ store, version }: any) {
       const center = screenPoint(store.state.viewport, centerOf(drag.node))
       const angle = Math.atan2(point.y - center.y, point.x - center.x)
       const delta = ((angle - drag.startAngle) * 180) / Math.PI
+      const rawRotation = drag.startRotation + delta
+      const nextRotation = event.shiftKey
+        ? Math.round(rawRotation / 15) * 15
+        : Math.round(rawRotation * 10) / 10
       store.mutate(
         (doc) => {
           const node = findDocNode(store, drag.node.sourceId)
-          if (node) node.rotation = Math.round((drag.startRotation + delta) * 10) / 10
+          if (node) node.rotation = nextRotation
         },
         { commit: false },
       )
@@ -907,7 +1183,7 @@ export function CanvasView({ store, version }: any) {
         const pool = drag.container
           ? drag.container.children ?? []
           : store.state.scene?.roots ?? []
-        const keys = pool.filter((node) => node.visible !== false && rectsIntersect(worldRect, {
+        const keys = pool.filter((node) => node.visible !== false && !interactions?.hidden.has(node.key) && rectsIntersect(worldRect, {
           x: node.absX,
           y: node.absY,
           width: node.width,
@@ -922,13 +1198,12 @@ export function CanvasView({ store, version }: any) {
       const end = localPoint(event)
       const startWorld = drag.start
       const endWorld = worldPoint(viewport, end)
-      const signedWidth = endWorld.x - startWorld.x
-      const signedHeight = endWorld.y - startWorld.y
-      const width = Math.abs(signedWidth)
-      const height = Math.abs(signedHeight)
+      const geom = computeDrawGeometry(drag.tool, startWorld, endWorld, event.shiftKey)
+      const width = geom.w
+      const height = geom.h
       const parent = drag.parent
       const parentAbs = parent ? { x: parent.absX, y: parent.absY } : { x: 0, y: 0 }
-      const tiny = width < 4 && height < 4
+      const tiny = drag.tool === 'line' ? geom.length < 4 : width < 4 && height < 4
       const defaults = {
         frame: { width: 320, height: 480 },
         rect: { width: 120, height: 120 },
@@ -938,21 +1213,21 @@ export function CanvasView({ store, version }: any) {
       }[drag.tool]
       const finalWidth = tiny ? defaults.width : Math.max(2, width)
       const finalHeight = tiny ? defaults.height : Math.max(drag.tool === 'line' ? 0 : 2, height)
-      let x = tiny ? startWorld.x : Math.min(startWorld.x, endWorld.x)
-      let y = tiny ? startWorld.y : Math.min(startWorld.y, endWorld.y)
+      let x = tiny ? startWorld.x : geom.x
+      let y = tiny ? startWorld.y : geom.y
       let rotation = 0
       if (drag.tool === 'line' && !tiny) {
-        const distance = Math.max(2, Math.hypot(signedWidth, signedHeight))
-        x = (startWorld.x + endWorld.x) / 2 - distance / 2
-        y = (startWorld.y + endWorld.y) / 2
-        rotation = (Math.atan2(signedHeight, signedWidth) * 180) / Math.PI
+        const distance = Math.max(2, geom.length)
+        x = (startWorld.x + geom.endX) / 2 - distance / 2
+        y = (startWorld.y + geom.endY) / 2
+        rotation = Math.round(geom.rotation * 10) / 10
       }
       const node = {
         type: drag.tool,
         name: drag.tool === 'text' ? 'Text' : drag.tool === 'frame' ? 'Frame' : drag.tool === 'rect' ? 'Rectangle' : drag.tool === 'ellipse' ? 'Ellipse' : 'Line',
         x: x - parentAbs.x,
         y: y - parentAbs.y,
-        width: drag.tool === 'line' && !tiny ? Math.max(2, Math.hypot(signedWidth, signedHeight)) : finalWidth,
+        width: drag.tool === 'line' && !tiny ? Math.max(2, geom.length) : finalWidth,
         height: drag.tool === 'line' ? 0 : finalHeight,
         rotation,
         opacity: 1,
@@ -983,6 +1258,13 @@ export function CanvasView({ store, version }: any) {
       }
       return
     }
+    if (drag.mode === 'connect') {
+      setConnectPreview(null)
+      if (drag.targetNode && drag.targetNode.sourceId !== drag.fromNode?.sourceId) {
+        store.createInteraction?.(drag.fromNode.sourceId, drag.targetNode.sourceId, '点击跳转')
+      }
+      return
+    }
     if (drag.mode === 'crop') {
       store.commitCrop()
       return
@@ -995,6 +1277,11 @@ export function CanvasView({ store, version }: any) {
         pendingRef.current = null
         run?.()
       }
+      if (drag.mode === 'move' && !drag.moved) return
+      const movedIds = drag.mode === 'move'
+        ? (drag.entries ?? []).map((entry) => entry.sourceId)
+        : drag.node?.sourceId ? [drag.node.sourceId] : []
+      if (movedIds.length) store.syncConnectedWires?.(movedIds)
       store.commit()
       store.scheduleSave()
       store.queueSelectionPost()
@@ -1004,7 +1291,7 @@ export function CanvasView({ store, version }: any) {
   const onDoubleClick = (event) => {
     const point = localPoint(event)
     const world = worldPoint(viewport, point)
-    const deep = hitTestScene(store.state.scene, world, { enteredInstance: store.state.enteredInstance, deep: true })
+    const deep = pick(world, true)
     if (!deep) return
     if (deep.type === 'text') {
       store.beginTextEdit(deep.key)
@@ -1025,8 +1312,8 @@ export function CanvasView({ store, version }: any) {
   }
 
   const renderOverlay = () => {
-    const selected = store.selectedNodes()
-    const primary = store.primaryNode()
+    const selected = store.selectedNodes().filter(node => !interactions?.hidden.has(node.key))
+    const primary = selected.find(node => node.key === state.primaryKey)
     const overlay = []
     for (const node of selected) {
       const points = nodeQuad(node).map((point) => screenPoint(viewport, point))
@@ -1058,7 +1345,7 @@ export function CanvasView({ store, version }: any) {
     }
     if (primary && selected.length === 1 && primary.editable && !state.crop) {
       const handles = handlePoints(primary, viewport)
-      for (const [name, point] of Object.entries(handles)) {
+      for (const [name, point] of Object.entries(handles as Record<string, { x: number; y: number }>)) {
         overlay.push(
           React.createElement('rect', {
             key: `handle-${name}`,
@@ -1080,6 +1367,103 @@ export function CanvasView({ store, version }: any) {
         React.createElement('line', { key: 'rotate-line', x1: top.x, y1: top.y, x2: rotate.x, y2: rotate.y, stroke: 'var(--dshc-accent)', strokeWidth: 1 }),
         React.createElement('circle', { key: 'rotate', cx: rotate.x, cy: rotate.y, r: 5, fill: 'var(--dsw-alias-bg-base)', stroke: 'var(--dshc-accent)', strokeWidth: 1, 'data-handle': 'rotate', style: { cursor: 'grab' } }),
       )
+      if (!state.componentMode && primary.type !== 'path' && primary.type !== 'line' && !primary.sourceNode?.interaction) {
+        const rightEdge = screenPoint(viewport, toPage(primary, { x: primary.width, y: primary.height / 2 }))
+        const cx = rightEdge.x + 18
+        const cy = rightEdge.y
+        overlay.push(
+          React.createElement(
+            'g',
+            { key: 'connect-handle', 'data-handle': 'connect', style: { cursor: 'crosshair' } },
+            React.createElement('title', null, '拖向目标界面建立交互跳转连线'),
+            React.createElement('line', {
+              x1: rightEdge.x + 4,
+              y1: cy,
+              x2: cx - 7,
+              y2: cy,
+              stroke: 'var(--dshc-accent)',
+              strokeWidth: 1.25,
+              opacity: 0.7,
+            }),
+            React.createElement('circle', {
+              cx,
+              cy,
+              r: 7,
+              fill: '#4D6BFE',
+              stroke: '#FFFFFF',
+              strokeWidth: 1.5,
+            }),
+            React.createElement('path', {
+              d: `M ${cx - 3} ${cy} H ${cx + 3} M ${cx} ${cy - 3} V ${cy + 3}`,
+              stroke: '#FFFFFF',
+              strokeWidth: 1.5,
+              strokeLinecap: 'round',
+              pointerEvents: 'none',
+            }),
+          ),
+        )
+      }
+    }
+    if (connectPreview) {
+      const d = computeLiveConnectionSvgPath(connectPreview.startScreen, connectPreview.currentScreen)
+      if (connectPreview.targetNode) {
+        const pts = nodeQuad(connectPreview.targetNode).map((p) => screenPoint(viewport, p))
+        overlay.push(
+          React.createElement('polygon', {
+            key: 'connect-target-outline',
+            points: pts.map((p) => `${p.x},${p.y}`).join(' '),
+            fill: 'rgba(77, 107, 254, 0.08)',
+            stroke: '#4D6BFE',
+            strokeWidth: 2,
+            strokeDasharray: '6 3',
+          }),
+        )
+      }
+      overlay.push(
+        React.createElement('circle', {
+          key: 'connect-start-dot',
+          cx: connectPreview.startScreen.x,
+          cy: connectPreview.startScreen.y,
+          r: 4,
+          fill: '#4D6BFE',
+          stroke: '#FFFFFF',
+          strokeWidth: 1.5,
+        }),
+        React.createElement('path', {
+          key: 'connect-live-wire',
+          d,
+          fill: 'none',
+          stroke: '#4D6BFE',
+          strokeWidth: 2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+        }),
+      )
+    }
+    if (interactions?.placements?.length > 1) {
+      for (const id of interactions.placements) {
+        const node = store.findSceneNode(id)
+        if (!node) continue
+        const point = screenPoint(viewport, toPage(node, { x: 0, y: 0 }))
+        const origin = id === interactions.anchorId
+        overlay.push(<g key={'reference-' + id} data-placement-id={id} pointerEvents="none">
+          <rect x={point.x} y={point.y} width={origin ? 62 : 38} height={18} rx={3} fill="var(--dshc-accent)" />
+          <text x={point.x + 5} y={point.y + 13} fill="white" fontSize={12}>{origin ? '聚焦起点' : '同页'}</text>
+        </g>)
+      }
+    }
+    const interactionTarget = interactionDestination ? store.findSceneNode(interactionDestination) : null
+    if (interactionTarget) {
+      const points = nodeQuad(interactionTarget).map(point => screenPoint(viewport, point))
+      overlay.push(React.createElement('polygon', {
+        key: 'interaction-destination',
+        className: `${P}-interaction-destination`,
+        points: points.map(point => `${point.x},${point.y}`).join(' '),
+        fill: 'none',
+        stroke: 'var(--dshc-accent)',
+        strokeWidth: 2,
+        strokeDasharray: '5 3',
+      }))
     }
     for (const guide of guides) {
       if (guide.axis === 'x') {
@@ -1094,7 +1478,80 @@ export function CanvasView({ store, version }: any) {
       overlay.push(React.createElement('rect', { key: 'marquee', x: marquee.x, y: marquee.y, width: marquee.width, height: marquee.height, fill: 'color-mix(in srgb, var(--dshc-accent) 10%, transparent)', stroke: 'var(--dshc-accent)', strokeWidth: 1, strokeDasharray: '4 3' }))
     }
     if (drawPreview) {
-      overlay.push(React.createElement('rect', { key: 'draw', x: drawPreview.x, y: drawPreview.y, width: drawPreview.width, height: drawPreview.height, fill: 'none', stroke: 'var(--dshc-accent)', strokeWidth: 1, strokeDasharray: '4 3' }))
+      if (
+        drawPreview.tool === 'line' &&
+        drawPreview.x1 != null &&
+        drawPreview.y1 != null &&
+        drawPreview.x2 != null &&
+        drawPreview.y2 != null
+      ) {
+        overlay.push(
+          React.createElement('line', {
+            key: 'draw-line',
+            x1: drawPreview.x1,
+            y1: drawPreview.y1,
+            x2: drawPreview.x2,
+            y2: drawPreview.y2,
+            stroke: 'var(--dshc-accent)',
+            strokeWidth: 1.5,
+            strokeDasharray: '4 3',
+          }),
+        )
+      } else if (drawPreview.tool === 'ellipse') {
+        overlay.push(
+          React.createElement('ellipse', {
+            key: 'draw-ellipse',
+            cx: drawPreview.x + drawPreview.width / 2,
+            cy: drawPreview.y + drawPreview.height / 2,
+            rx: drawPreview.width / 2,
+            ry: drawPreview.height / 2,
+            fill: 'rgba(77, 107, 254, 0.06)',
+            stroke: 'var(--dshc-accent)',
+            strokeWidth: 1,
+            strokeDasharray: '4 3',
+          }),
+        )
+      } else {
+        overlay.push(
+          React.createElement('rect', {
+            key: 'draw',
+            x: drawPreview.x,
+            y: drawPreview.y,
+            width: drawPreview.width,
+            height: drawPreview.height,
+            fill: 'rgba(77, 107, 254, 0.06)',
+            stroke: 'var(--dshc-accent)',
+            strokeWidth: 1,
+            strokeDasharray: '4 3',
+          }),
+        )
+      }
+      if (drawPreview.width > 1 || drawPreview.height > 1) {
+        const dimLabel = `${drawPreview.w} × ${drawPreview.h}`
+        const pillW = Math.max(54, measurePillWidth(dimLabel))
+        const pillX = drawPreview.x + drawPreview.width / 2 - pillW / 2
+        const pillY = drawPreview.y + drawPreview.height + 8
+        overlay.push(
+          React.createElement('rect', {
+            key: 'draw-dim-bg',
+            x: pillX,
+            y: pillY,
+            width: pillW,
+            height: 20,
+            rx: 6,
+            fill: '#4D6BFE',
+          }),
+          React.createElement('text', {
+            key: 'draw-dim-text',
+            x: pillX + pillW / 2,
+            y: pillY + 14,
+            fill: '#FFFFFF',
+            fontSize: 11,
+            fontFamily: 'system-ui',
+            textAnchor: 'middle',
+          }, dimLabel),
+        )
+      }
     }
     if (state.crop) {
       const node = store.findSceneNode(state.crop.key)
@@ -1152,6 +1609,82 @@ export function CanvasView({ store, version }: any) {
         }, measure.label),
       )
     }
+    if (templateGhost) {
+      const topLeft = screenPoint(viewport, { x: templateGhost.x, y: templateGhost.y })
+      const w = templateGhost.width * viewport.zoom
+      const h = templateGhost.height * viewport.zoom
+      const badgeText = `${templateGhost.name} · ${templateGhost.width}×${templateGhost.height}`
+      const badgeW = Math.max(88, badgeText.length * 7 + 16)
+      overlay.push(
+        React.createElement('rect', {
+          key: 'template-ghost-rect',
+          x: topLeft.x,
+          y: topLeft.y,
+          width: w,
+          height: h,
+          rx: 4,
+          fill: 'rgba(77, 107, 254, 0.08)',
+          stroke: '#4D6BFE',
+          strokeWidth: 1.5,
+          strokeDasharray: '6 4',
+        }),
+        React.createElement('rect', {
+          key: 'template-ghost-badge-bg',
+          x: topLeft.x + w / 2 - badgeW / 2,
+          y: topLeft.y + h / 2 - 11,
+          width: badgeW,
+          height: 22,
+          rx: 6,
+          fill: '#4D6BFE',
+        }),
+        React.createElement('text', {
+          key: 'template-ghost-badge-text',
+          x: topLeft.x + w / 2,
+          y: topLeft.y + h / 2 + 4,
+          fill: '#FFFFFF',
+          fontSize: 11,
+          fontFamily: 'system-ui',
+          textAnchor: 'middle',
+        }, badgeText),
+      )
+    }
+    if (styleDropTarget) {
+      const targetNode = store.findSceneNode(styleDropTarget.key)
+      if (targetNode) {
+        const points = nodeQuad(targetNode).map((point) => screenPoint(viewport, point))
+        const anchor = screenPoint(viewport, toPage(targetNode, { x: targetNode.width / 2, y: 0 }))
+        const label = `应用样式：${styleDropTarget.styleName}`
+        const badgeW = Math.max(76, measurePillWidth(label))
+        overlay.push(
+          React.createElement('polygon', {
+            key: 'style-drop-outline',
+            points: points.map((point) => `${point.x},${point.y}`).join(' '),
+            fill: 'rgba(77, 107, 254, 0.12)',
+            stroke: '#4D6BFE',
+            strokeWidth: 2,
+            strokeDasharray: '5 3',
+          }),
+          React.createElement('rect', {
+            key: 'style-drop-badge-bg',
+            x: anchor.x - badgeW / 2,
+            y: anchor.y - 28,
+            width: badgeW,
+            height: 20,
+            rx: 6,
+            fill: '#4D6BFE',
+          }),
+          React.createElement('text', {
+            key: 'style-drop-badge-text',
+            x: anchor.x,
+            y: anchor.y - 14,
+            fill: '#FFFFFF',
+            fontSize: 11,
+            fontFamily: 'system-ui',
+            textAnchor: 'middle',
+          }, label),
+        )
+      }
+    }
     return overlay
   }
 
@@ -1177,13 +1710,144 @@ export function CanvasView({ store, version }: any) {
       onDoubleClick,
       onContextMenu,
       onDragOver: (event) => {
-        if (event.dataTransfer?.types?.includes('Files')) event.preventDefault()
+        const types = [...(event.dataTransfer?.types ?? [])]
+        const activeDrag = getActiveCanvasDrag()
+        if (types.includes(STYLE_DRAG_MIME) || activeDrag?.kind === 'style') {
+          event.preventDefault()
+          if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+          if (templateGhost) setTemplateGhost(null)
+          if (fileDropActive) setFileDropActive(false)
+          const rect = containerRef.current?.getBoundingClientRect()
+          if (rect) {
+            const world = worldPoint(viewport, { x: event.clientX - rect.left, y: event.clientY - rect.top })
+            const hit = pick(world)
+            if (hit) {
+              const styleName = activeDrag?.kind === 'style' ? activeDrag.name : '样式'
+              setStyleDropTarget((prev) =>
+                prev && prev.key === hit.key && prev.styleName === styleName ? prev : { key: hit.key, styleName },
+              )
+            } else {
+              setStyleDropTarget((prev) => (prev ? null : prev))
+            }
+          }
+          return
+        }
+        if (
+          types.includes(TEMPLATE_DRAG_MIME) ||
+          types.includes(COMPONENT_DRAG_MIME) ||
+          activeDrag?.kind === 'template' ||
+          activeDrag?.kind === 'component'
+        ) {
+          event.preventDefault()
+          if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+          if (styleDropTarget) setStyleDropTarget(null)
+          if (fileDropActive) setFileDropActive(false)
+          const rect = containerRef.current?.getBoundingClientRect()
+          if (rect && activeDrag && (activeDrag.kind === 'template' || activeDrag.kind === 'component')) {
+            const world = worldPoint(viewport, { x: event.clientX - rect.left, y: event.clientY - rect.top })
+            setTemplateGhost({
+              x: Math.round(world.x - activeDrag.width / 2),
+              y: Math.round(world.y - activeDrag.height / 2),
+              width: activeDrag.width,
+              height: activeDrag.height,
+              name: activeDrag.name,
+            })
+          }
+          return
+        }
+        if (types.includes('Files')) {
+          event.preventDefault()
+          if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+          if (templateGhost) setTemplateGhost(null)
+          if (styleDropTarget) setStyleDropTarget(null)
+          if (!fileDropActive) setFileDropActive(true)
+        }
+      },
+      onDragLeave: (event) => {
+        if (!containerRef.current?.contains(event.relatedTarget as Node)) {
+          setTemplateGhost(null)
+          setStyleDropTarget(null)
+          setFileDropActive(false)
+        }
       },
       onDrop: (event) => {
+        const activeDrag = getActiveCanvasDrag()
+        setFileDropActive(false)
+        setStyleDropTarget(null)
+        const styleId =
+          event.dataTransfer?.getData(STYLE_DRAG_MIME) ||
+          (activeDrag?.kind === 'style' ? activeDrag.id : '')
+        if (styleId) {
+          event.preventDefault()
+          setTemplateGhost(null)
+          clearActiveCanvasDrag()
+          const rect = containerRef.current?.getBoundingClientRect()
+          const world = rect
+            ? worldPoint(viewport, { x: event.clientX - rect.left, y: event.clientY - rect.top })
+            : null
+          const hit = world ? pick(world) : null
+          if (hit) {
+            store.applyStyleToNode(styleId, hit.key)
+          } else if (store.state.selection?.length) {
+            store.applyStyle(styleId)
+          } else {
+            store.toast('请将样式拖放到目标图层上')
+          }
+          return
+        }
+        const componentId =
+          event.dataTransfer?.getData(COMPONENT_DRAG_MIME) ||
+          (activeDrag?.kind === 'component' ? activeDrag.id : '')
+        if (componentId) {
+          event.preventDefault()
+          const rect = containerRef.current?.getBoundingClientRect()
+          const world = rect
+            ? worldPoint(viewport, { x: event.clientX - rect.left, y: event.clientY - rect.top })
+            : undefined
+          setTemplateGhost(null)
+          clearActiveCanvasDrag()
+          store.insertInstance(componentId, world)
+          return
+        }
+        const templateId =
+          event.dataTransfer?.getData(TEMPLATE_DRAG_MIME) ||
+          (activeDrag?.kind === 'template' ? activeDrag.id : '')
+        if (templateId) {
+          event.preventDefault()
+          const rect = containerRef.current?.getBoundingClientRect()
+          const world = rect
+            ? worldPoint(viewport, { x: event.clientX - rect.left, y: event.clientY - rect.top })
+            : undefined
+          setTemplateGhost(null)
+          clearActiveCanvasDrag()
+          store.insertTemplate(templateId, world)
+          return
+        }
         const files = [...(event.dataTransfer?.files ?? [])]
         if (!files.length) return
         event.preventDefault()
-        for (const file of files) if (file.type.startsWith('image/')) store.uploadImageFile(file)
+        const rect = containerRef.current?.getBoundingClientRect()
+        const baseWorld = rect
+          ? worldPoint(viewport, { x: event.clientX - rect.left, y: event.clientY - rect.top })
+          : undefined
+        let dropIndex = 0
+        for (const file of files) {
+          const isSvg = file.type === 'image/svg+xml' || /\.svg$/i.test(file.name)
+          const isImage = !isSvg && file.type.startsWith('image/')
+          if (!isSvg && !isImage) continue
+          const offset = dropIndex * 16
+          dropIndex += 1
+          const at = baseWorld
+            ? { x: Math.round(baseWorld.x + offset), y: Math.round(baseWorld.y + offset) }
+            : undefined
+          if (isSvg) {
+            void file.text().then((source) => store.importSvg(source, at)).catch(() => {
+              store.toast('读取 SVG 文件失败', 'error')
+            })
+          } else {
+            void store.uploadImageFile(file, at)
+          }
+        }
       },
       style: {
         position: 'absolute',
@@ -1204,20 +1868,14 @@ export function CanvasView({ store, version }: any) {
         userSelect: 'none',
       },
     },
-    React.createElement(
-      'div',
-      {
-        className: `${P}-world`,
-        style: {
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
-          transformOrigin: '0 0',
-        },
-      },
-      React.createElement(SceneView, { scene: state.scene, store }),
-    ),
+    <div className="dshc-scene-surface">
+      <div className="dshc-world" style={{
+        transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+      }}>
+        <SceneView scene={state.scene} store={store} interactions={interactions}
+          visibleChildren={visibleChildren} editingKey={state.editingText?.key} />
+      </div>
+    </div>,
     React.createElement(
       'svg',
       {
@@ -1226,21 +1884,23 @@ export function CanvasView({ store, version }: any) {
       },
       renderOverlay(),
     ),
-    (state.scene?.roots ?? [])
+    (visibleChildren.get(null) ?? [])
       .filter((node) => node.type === 'frame' && node.visible !== false)
-      .map((node) =>
-        React.createElement(FrameLabel, {
+      .map((node) => {
+        const sceneNode = store.findSceneNode(node.key) ?? node
+        return React.createElement(FrameLabel, {
           key: `frame-label-${node.key}`,
-          node,
+          node: sceneNode,
           viewport,
           selected: state.selection.includes(node.key),
-          onSelect: () => {
-            store.setSelection([node.key])
-            store.emit()
+          onStartMove: (event) => startFrameLabelMove(sceneNode, event),
+          onRename: (name) => {
+            if (sceneNode?.sourceId) store.renameNode(sceneNode.sourceId, name)
           },
-        }),
-      ),
-    hoverKey &&
+          onFocusViewport: () => containerRef.current?.focus?.({ preventScroll: true }),
+        })
+      }),
+    hoverKey && !interactions?.hidden.has(hoverKey) &&
       !((state.scene?.roots ?? []).some((node) => node.key === hoverKey && node.type === 'frame')) &&
       React.createElement(HoverLabel, { node: store.findSceneNode(hoverKey), viewport, key: `hover-label-${hoverKey}` }),
     state.editingText &&
@@ -1325,7 +1985,36 @@ export function CanvasView({ store, version }: any) {
         onCancel: () => store.cancelCrop(),
       }),
     contextMenu &&
-      React.createElement(ContextMenu, { x: contextMenu.x, y: contextMenu.y, fixed: contextMenu.fixed, items: menuItems, onClose: () => setContextMenu(null) }),
+      React.createElement(ContextMenu, { x: contextMenu.x, y: contextMenu.y, items: menuItems, onClose: () => setContextMenu(null) }),
+    fileDropActive && (
+      <div className={`${P}-canvas-drop-overlay`}>
+        <span>松手插入图片或 SVG 到此处</span>
+      </div>
+    ),
+    (state.tool === 'connect' || connectPreview) && (
+      <div
+        className={`${P}-connect-banner`}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <span className={`${P}-connect-banner-dot`} />
+        <span className={`${P}-connect-banner-text`}>
+          {connectPreview
+            ? connectPreview.targetNode
+              ? `松手建立跳转：「${connectPreview.fromNode?.name || '起点'}」→「${connectPreview.targetNode.name || '目标'}」`
+              : `起点「${connectPreview.fromNode?.name || '元素'}」→ 拖到目标界面松手建立跳转`
+            : '交互连线模式：从按钮或界面拖向目标界面，标注点击跳转流程'}
+        </span>
+        {!connectPreview && (
+          <button
+            type="button"
+            className={`${P}-connect-banner-exit`}
+            onClick={() => store.setTool('pointer')}
+          >
+            退出 (Esc)
+          </button>
+        )}
+      </div>
+    ),
     !state.scene?.roots?.length &&
       React.createElement(
         'div',
@@ -1336,9 +2025,73 @@ export function CanvasView({ store, version }: any) {
   )
 }
 
-function FrameLabel({ node, viewport, selected, onSelect }) {
+function FrameLabel({ node, viewport, selected, onStartMove, onRename, onFocusViewport }) {
+  const [editing, setEditing] = React.useState(false)
+  const [draft, setDraft] = React.useState(node.name || 'Frame')
+  const inputRef = React.useRef<HTMLInputElement | null>(null)
+  const committedRef = React.useRef(false)
+
+  React.useEffect(() => {
+    if (!editing) return
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  }, [editing])
+
   const page = toPage(node, { x: 0, y: 0 })
   const point = screenPoint(viewport, page)
+
+  const commitRename = () => {
+    if (committedRef.current) return
+    committedRef.current = true
+    const trimmed = draft.trim()
+    setEditing(false)
+    if (trimmed && trimmed !== node.name) {
+      onRename?.(trimmed)
+    }
+    onFocusViewport?.()
+  }
+
+  const cancelRename = () => {
+    committedRef.current = true
+    setEditing(false)
+    setDraft(node.name || 'Frame')
+    onFocusViewport?.()
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="text"
+        className={`${P}-frame-label-input`}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onPointerDown={(event) => event.stopPropagation()}
+        onDoubleClick={(event) => event.stopPropagation()}
+        onBlur={commitRename}
+        onKeyDown={(event) => {
+          event.stopPropagation()
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            commitRename()
+          } else if (event.key === 'Escape') {
+            event.preventDefault()
+            cancelRename()
+          }
+        }}
+        style={{
+          position: 'absolute',
+          left: point.x,
+          top: point.y - 6,
+          transform: 'translateY(-100%)',
+          width: Math.max(80, Math.min(240, (draft.length + 2) * 8)),
+          pointerEvents: 'auto',
+          boxSizing: 'border-box',
+        }}
+      />
+    )
+  }
+
   return React.createElement(
     'div',
     {
@@ -1358,16 +2111,22 @@ function FrameLabel({ node, viewport, selected, onSelect }) {
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        cursor: 'pointer',
+        cursor: 'grab',
         pointerEvents: 'auto',
         userSelect: 'none',
         zIndex: 9,
       },
       title: node.name,
-      onPointerDown: (event) => {
+      onPointerDown: (event: React.PointerEvent) => {
+        onStartMove?.(event)
+      },
+      onDoubleClick: (event: React.MouseEvent) => {
         event.preventDefault()
         event.stopPropagation()
-        onSelect?.()
+        if (!node.editable) return
+        committedRef.current = false
+        setDraft(node.name || '')
+        setEditing(true)
       },
     },
     node.name || 'Frame',
@@ -1445,7 +2204,7 @@ function TextEditor({ node, viewport, value, onChange, onCommit, onCancel }) {
   )
 }
 
-function CommentDraft({ draft, value, onChange, onCancel, onSave }) {
+function CommentDraft({ draft, value, onChange, onCancel, onSave }: { draft: { screenX: number; screenY: number }; value: string; onChange: (value: string) => void; onCancel: () => void; onSave: () => void }) {
   return React.createElement(
     'div',
     {
@@ -1457,7 +2216,7 @@ function CommentDraft({ draft, value, onChange, onCancel, onSave }) {
     React.createElement('textarea', {
       autoFocus: true,
       value,
-      onChange: (event) => onChange(event.target.value),
+      onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value),
       placeholder: '写下设计反馈…',
       className: `${P}-comment-input`,
       rows: 3,
@@ -1496,7 +2255,7 @@ function CommentThread({ comment, position, replyText, onReplyChange, onReply, o
         null,
         React.createElement('textarea', {
           value: replyText,
-          onChange: (event) => onReplyChange(event.target.value),
+          onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => onReplyChange(event.target.value),
           placeholder: '回复…',
           className: `${P}-comment-input`,
           rows: 2,

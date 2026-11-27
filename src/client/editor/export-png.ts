@@ -1,7 +1,7 @@
 /** Rasterise an exported SVG through an <img> and a canvas. */
 
 export function svgToPng(svg, scale = 2) {
-  return new Promise((resolve, reject) => {
+  return new Promise<string>((resolve, reject) => {
     const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const image = new Image()
