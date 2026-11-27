@@ -57,10 +57,12 @@ function shadowAndFilter(node) {
       backdrop += ` blur(${effect.blur ?? effect.radius ?? 0}px)`
     }
   }
-  for (const stroke of node.strokes ?? []) {
-    const width = Number(stroke.width) || 1
-    const color = stroke.color ?? '#000000'
-    shadows.push(`${stroke.align === 'outside' ? '' : 'inset '}0 0 0 ${width}px ${color}`)
+  if (node.type !== 'path' && node.type !== 'line' && node.type !== 'text') {
+    for (const stroke of node.strokes ?? []) {
+      const width = Number(stroke.width) || 1
+      const color = stroke.color ?? '#000000'
+      shadows.push(`${stroke.align === 'outside' ? '' : 'inset '}0 0 0 ${width}px ${color}`)
+    }
   }
   return {
     boxShadow: shadows.length ? shadows.join(', ') : undefined,

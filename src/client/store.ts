@@ -2481,7 +2481,7 @@ class CanvasStore {
       text: label,
       font: { family: 'system-ui', weight: 600, style: 'normal', size: 12, lineHeight: 1.35, letterSpacing: 0 },
       align: 'center',
-      verticalAlign: 'middle',
+      verticalAlign: 'center',
       fills: [{ type: 'solid', color: '#4D6BFE' }],
       effects: [],
       autoHeight: true,

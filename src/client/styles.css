@@ -1519,6 +1519,11 @@
 
 .dshc-viewport {
   touch-action: none;
+  outline: none;
+}
+
+.dshc-viewport:focus {
+  outline: none;
 }
 
 /* Bound scene painting to the visible viewport even when document coordinates
@@ -2337,9 +2342,14 @@
 .dshc-page-switcher {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 8px;
+  gap: 3px;
+  padding: 6px 6px;
   border-bottom: 1px solid var(--dshc-line);
+}
+.dshc-page-switcher .dshc-icon-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
 }
 .dshc-page-select,
 .dshc-page-input {

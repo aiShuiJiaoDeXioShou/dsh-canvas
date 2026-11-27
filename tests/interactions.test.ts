@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import { buildInteractionIndex, interactionPresentation, interactionScope } from '../src/shared/interactions.js'
 import { computeConnectionGeometry, computeLiveConnectionSvgPath } from '../src/shared/interaction-geometry.js'
 import { parsePathData } from '../src/shared/path/parse.js'
+import { normalizeDoc } from '../src/shared/format.js'
 import { CanvasStore } from '../src/client/store.js'
 import { revealInteractionNode } from '../src/client/editor/interaction-navigation.js'
 import { hitTestScene } from '../src/client/editor/hit-test.js'
@@ -176,6 +177,8 @@ test('CanvasStore creates, edits, re-routes on move, and deletes interactive flo
 
   const created = store.createInteraction('btn-login', 'screen-b', '点击登录')
   assert.ok(created?.wireId && created?.labelId)
+  // Document with created wire + label must pass full Host schema normalization
+  assert.doesNotThrow(() => normalizeDoc(store.state.doc))
 
   const index1 = buildInteractionIndex(store.state.doc)
   assert.equal(index1.edges.length, 1)

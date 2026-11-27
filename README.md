@@ -32,6 +32,30 @@ Design UI mockups visually in the right sidebar, reference any canvas selection 
   </tr>
 </table>
 
+### Feature Highlights
+
+<table align="center">
+  <tr>
+    <td align="center" valign="top" colspan="2">
+      <img src="docs/interaction-flow-preview.png" width="820" alt="Interactive flow connectors, multi-canvas switcher, and right-side flow panel" />
+      <br />
+      <sub><b>Interactive Flow Connectors & Multi-Canvas</b> — drag connectors via the toolbar tool (<code>K</code>) or the blue <code>+</code> quick-connect handle, auto-route arrows when screens move, and jump/edit/focus transitions from the always-on Flow panel</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/components-variants-preview.png" width="400" alt="Live variant set preview cards, drag-and-drop components, and variant inspector" />
+      <br />
+      <sub><b>Live Variant Previews & Direct Manipulation</b> — click variant chips to switch live SVG previews without accidental inserts, drag onto the canvas at the cursor, and swap variants in the inspector</sub>
+    </td>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/figma-sync-preview.png" width="400" alt="Dedicated Figma toolbar button and Figma ecosystem sync dialog" />
+      <br />
+      <sub><b>Figma Ecosystem Sync & Zero-Leak Setup</b> — L0 clipboard paste, L1 free Companion Plugin local pairing, L2 Keychain-backed REST sync, 3-way Pull/Push diffs, and lossless <code>.dshfig</code> bundles</sub>
+    </td>
+  </tr>
+</table>
+
 ---
 
 ## Features
