@@ -215,3 +215,12 @@ test('toolbar separates Import and Export buttons with direct Copy-to-Figma guid
   assert.ok(css.includes('.dshc-io-card'))
   assert.ok(css.includes('.dshc-io-card-primary'))
 })
+
+test('canvas scene surface resets host corner-shape to round so circles are never squircles', async () => {
+  const css = await readFile(new URL('src/client/styles.css', root), 'utf8')
+  assert.match(
+    css,
+    /\.dshc-scene-surface,\s*\.dshc-scene-surface \* \{\s*corner-shape: round !important;\s*\}/,
+    'scene surface and descendants must override host squircle corner-shape',
+  )
+})

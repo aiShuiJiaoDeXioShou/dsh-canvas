@@ -18,7 +18,7 @@ import {
   worldPoint,
 } from './editor/geometry.js'
 import { deepFind } from './store.js'
-import { hitTestScene } from './editor/hit-test.js'
+import { hitTestScene, interactionWireIntersectsRect, isInteractionWire } from './editor/hit-test.js'
 import type { InteractionPresentation } from '../shared/interactions.js'
 import { computeLiveConnectionSvgPath } from '../shared/interaction-geometry.js'
 import { ContextMenu } from './ui/common.jsx'
@@ -292,6 +292,7 @@ export function CanvasView({ store, version, interactions, interactionDestinatio
   const pick = (point, deep = false) => hitTestScene(store.state.scene, point, {
     enteredInstance: store.state.enteredInstance,
     ignoredKeys: interactions?.hidden,
+    wireTolerance: 8 / Math.max(0.15, viewport.zoom),
     deep,
   })
 
@@ -1183,12 +1184,16 @@ export function CanvasView({ store, version, interactions, interactionDestinatio
         const pool = drag.container
           ? drag.container.children ?? []
           : store.state.scene?.roots ?? []
-        const keys = pool.filter((node) => node.visible !== false && !interactions?.hidden.has(node.key) && rectsIntersect(worldRect, {
-          x: node.absX,
-          y: node.absY,
-          width: node.width,
-          height: node.height,
-        })).map((node) => node.key)
+        const keys = pool.filter((node) => {
+          if (node.visible === false || interactions?.hidden.has(node.key)) return false
+          if (isInteractionWire(node)) return interactionWireIntersectsRect(node, worldRect)
+          return rectsIntersect(worldRect, {
+            x: node.absX,
+            y: node.absY,
+            width: node.width,
+            height: node.height,
+          })
+        }).map((node) => node.key)
         store.setSelection(keys)
       };
       return
@@ -1311,11 +1316,49 @@ export function CanvasView({ store, version, interactions, interactionDestinatio
     }
   }
 
+  const renderWireOverlay = (key: string, node: any, options: { strokeWidth: number; opacity?: number }) => {
+    const topLeft = screenPoint(viewport, { x: node.absX, y: node.absY })
+    const w = Math.max(1, node.width * viewport.zoom)
+    const h = Math.max(1, node.height * viewport.zoom)
+    const vb = node.viewBox ?? { x: 0, y: 0, width: node.width || 1, height: node.height || 1 }
+    const svg = React.createElement(
+      'svg',
+      {
+        key: node.rotation ? undefined : key,
+        x: topLeft.x,
+        y: topLeft.y,
+        width: w,
+        height: h,
+        viewBox: `${vb.x} ${vb.y} ${vb.width || 1} ${vb.height || 1}`,
+        preserveAspectRatio: 'none',
+        overflow: 'visible',
+        pointerEvents: 'none',
+      },
+      React.createElement('path', {
+        d: node.d,
+        fill: 'none',
+        stroke: 'var(--dshc-accent)',
+        strokeWidth: options.strokeWidth,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        vectorEffect: 'non-scaling-stroke',
+        opacity: options.opacity,
+      }),
+    )
+    if (!node.rotation) return svg
+    const center = screenPoint(viewport, centerOf(node))
+    return React.createElement('g', { key, transform: `rotate(${node.rotation} ${center.x} ${center.y})` }, svg)
+  }
+
   const renderOverlay = () => {
     const selected = store.selectedNodes().filter(node => !interactions?.hidden.has(node.key))
     const primary = selected.find(node => node.key === state.primaryKey)
     const overlay = []
     for (const node of selected) {
+      if (isInteractionWire(node) && typeof node.d === 'string') {
+        overlay.push(renderWireOverlay(`outline-${node.key}`, node, { strokeWidth: 2.5 }))
+        continue
+      }
       const points = nodeQuad(node).map((point) => screenPoint(viewport, point))
       overlay.push(
         React.createElement('polygon', {
@@ -1330,20 +1373,24 @@ export function CanvasView({ store, version, interactions, interactionDestinatio
     if (hoverKey && !state.selection.includes(hoverKey)) {
       const node = store.findSceneNode(hoverKey)
       if (node) {
-        const points = nodeQuad(node).map((point) => screenPoint(viewport, point))
-        overlay.push(
-          React.createElement('polygon', {
-            key: 'hover',
-            points: points.map((point) => `${point.x},${point.y}`).join(' '),
-            fill: 'none',
-            stroke: 'var(--dshc-accent)',
-            strokeWidth: 1,
-            opacity: 0.55,
-          }),
-        )
+        if (isInteractionWire(node) && typeof node.d === 'string') {
+          overlay.push(renderWireOverlay('hover', node, { strokeWidth: 2, opacity: 0.7 }))
+        } else {
+          const points = nodeQuad(node).map((point) => screenPoint(viewport, point))
+          overlay.push(
+            React.createElement('polygon', {
+              key: 'hover',
+              points: points.map((point) => `${point.x},${point.y}`).join(' '),
+              fill: 'none',
+              stroke: 'var(--dshc-accent)',
+              strokeWidth: 1,
+              opacity: 0.55,
+            }),
+          )
+        }
       }
     }
-    if (primary && selected.length === 1 && primary.editable && !state.crop) {
+    if (primary && selected.length === 1 && primary.editable && !state.crop && !isInteractionWire(primary)) {
       const handles = handlePoints(primary, viewport)
       for (const [name, point] of Object.entries(handles as Record<string, { x: number; y: number }>)) {
         overlay.push(
@@ -1902,6 +1949,7 @@ export function CanvasView({ store, version, interactions, interactionDestinatio
       }),
     hoverKey && !interactions?.hidden.has(hoverKey) &&
       !((state.scene?.roots ?? []).some((node) => node.key === hoverKey && node.type === 'frame')) &&
+      !isInteractionWire(store.findSceneNode(hoverKey)) &&
       React.createElement(HoverLabel, { node: store.findSceneNode(hoverKey), viewport, key: `hover-label-${hoverKey}` }),
     state.editingText &&
       editingNode &&

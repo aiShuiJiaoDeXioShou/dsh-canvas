@@ -1536,6 +1536,14 @@
   isolation: isolate;
 }
 
+/* Reset host global corner-shape (e.g. squircle in Chromium 139+) so canvas
+   ellipses and circular frames/rects render as true Figma/CSS circles and
+   stay 100% consistent with SVG export. */
+.dshc-scene-surface,
+.dshc-scene-surface * {
+  corner-shape: round !important;
+}
+
 .dshc-world {
   position: absolute;
   left: 0;

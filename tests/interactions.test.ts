@@ -6,7 +6,7 @@ import { parsePathData } from '../src/shared/path/parse.js'
 import { normalizeDoc } from '../src/shared/format.js'
 import { CanvasStore } from '../src/client/store.js'
 import { revealInteractionNode } from '../src/client/editor/interaction-navigation.js'
-import { hitTestScene } from '../src/client/editor/hit-test.js'
+import { hitTestScene, interactionWireIntersectsRect, isInteractionWire, pointNearInteractionWire } from '../src/client/editor/hit-test.js'
 
 const edge = (id: string, from: string, to: string, event: string, labelId?: string) => ({
   id, type: 'path', name: event, interaction: { from, to, event, ...(labelId ? { labelId } : {}) },
@@ -207,4 +207,74 @@ test('CanvasStore creates, edits, re-routes on move, and deletes interactive flo
   const index3 = buildInteractionIndex(store.state.doc)
   assert.equal(index3.edges.length, 0)
   assert.equal(store.state.doc.pages[0].children.some((n: any) => n.id === created.labelId), false)
+})
+
+test('cross-row interaction wire hit-testing uses actual path segments and yields to design nodes', () => {
+  // Large L/U-shaped orthogonal wire spanning from (900, 100) down to y=900 and left to x=100,
+  // whose giant bounding box (100..900, 100..900) covers an unrelated middle screen.
+  const screenMid = {
+    key: 'screen-mid',
+    type: 'frame',
+    absX: 300,
+    absY: 200,
+    width: 390,
+    height: 600,
+    children: [
+      { key: 'btn-mid', type: 'rect', absX: 340, absY: 400, width: 120, height: 48, children: [] },
+    ],
+  }
+  const crossRowWire = {
+    key: 'wire-cross-row',
+    type: 'path',
+    absX: 100,
+    absY: 100,
+    width: 800,
+    height: 800,
+    viewBox: { x: 0, y: 0, width: 800, height: 800 },
+    d: 'M 800 0 L 800 800 L 0 800',
+    strokes: [{ color: '#4D6BFE', width: 2 }],
+    sourceNode: { interaction: { from: 'screen-a', to: 'screen-b', event: '跨行跳转' } },
+  }
+  // Place wire AFTER screenMid in z-order (just like top-level connectors on top of screens)
+  const scene = { roots: [screenMid, crossRowWire] }
+
+  assert.equal(isInteractionWire(crossRowWire), true)
+  // Empty interior of the huge bounding box must NOT hit the wire
+  assert.equal(hitTestScene(scene, { x: 200, y: 300 }), null)
+  assert.equal(pointNearInteractionWire(crossRowWire, { x: 200, y: 300 }), false)
+  // Design nodes inside the wire's huge bounding box must win cleanly
+  assert.equal(hitTestScene(scene, { x: 380, y: 420 })?.key, 'btn-mid')
+  assert.equal(hitTestScene(scene, { x: 320, y: 240 })?.key, 'screen-mid')
+  // Clicking directly on the wire's actual stroke in open space hits the wire
+  assert.equal(hitTestScene(scene, { x: 900, y: 500 })?.key, 'wire-cross-row')
+  assert.equal(hitTestScene(scene, { x: 500, y: 900 })?.key, 'wire-cross-row')
+  // Even if a screen sits directly under the wire segment, the design node takes priority
+  const overlapScreen = { key: 'screen-overlap', type: 'frame', absX: 450, absY: 860, width: 100, height: 80, children: [] }
+  assert.equal(hitTestScene({ roots: [overlapScreen, crossRowWire] }, { x: 500, y: 900 })?.key, 'screen-overlap')
+  // Marquee over the empty interior must NOT select the wire; marquee crossing the stroke DOES
+  assert.equal(interactionWireIntersectsRect(crossRowWire, { x: 200, y: 200, width: 300, height: 300 }), false)
+  assert.equal(interactionWireIntersectsRect(crossRowWire, { x: 450, y: 880, width: 100, height: 40 }), true)
+})
+
+test('curved Bezier interaction wire hits along the curve without capturing bounding-box corners', () => {
+  const geom = computeConnectionGeometry(
+    { x: 0, y: 100, width: 300, height: 400 },
+    { x: 500, y: 600, width: 300, height: 400 },
+  )
+  const wire = {
+    key: 'bezier-wire',
+    type: 'path',
+    absX: geom.x,
+    absY: geom.y,
+    width: geom.width,
+    height: geom.height,
+    viewBox: geom.viewBox,
+    d: geom.d,
+    strokes: [{ color: '#4D6BFE', width: 2 }],
+    sourceNode: { interaction: { from: 'a', to: 'b', event: '跳转' } },
+  }
+  // Midpoint of cubic S-curve lies directly on the curve
+  assert.equal(pointNearInteractionWire(wire, { x: (geom.start.x + geom.end.x) / 2, y: (geom.start.y + geom.end.y) / 2 }), true)
+  // Far off-diagonal corner of the bounding box is empty space and must not hit
+  assert.equal(pointNearInteractionWire(wire, { x: geom.x + 8, y: geom.y + geom.height - 8 }), false)
 })
