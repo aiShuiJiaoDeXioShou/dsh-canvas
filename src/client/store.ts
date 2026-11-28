@@ -41,6 +41,7 @@ import {
   fontUrl,
   auditCanvas,
   deleteCanvasDoc,
+  downloadDshFigBundle,
   generateCanvasImage,
   imageCapabilities,
   loadState,
@@ -51,6 +52,7 @@ import {
   postSnapshot,
   renameCanvasDoc,
   saveDoc,
+  uploadDshFigBundle,
   uploadFont,
   uploadImage,
 } from './api.js'
@@ -2326,6 +2328,57 @@ class CanvasStore {
     }
   }
 
+  /** Copy the current selection (or the whole current canvas) as SVG to clipboard for instant ⌘V paste into Figma. */
+  async copyForFigma() {
+    const targetKeys = this.exportTargetKeys(null)
+    if (!targetKeys.length) {
+      this.toast('当前画布为空，没有可复制到 Figma 的内容', 'error')
+      return false
+    }
+    try {
+      const svg = await this.buildExportSvg(targetKeys)
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(svg)
+        this.toast('已复制到剪贴板：切到 Figma 按 ⌘V 即可直接粘贴为可编辑图层')
+        return true
+      }
+      const { saveFile } = await import('./save-file.js')
+      const result = await saveFile(svg, `${this.state.name}.svg`, 'image/svg+xml')
+      if (!result.cancelled) this.toast(`剪贴板不可用，已保存 ${result.filename}，可直接拖入 Figma`)
+      return true
+    } catch (error) {
+      this.toast(`复制到 Figma 失败：${errorMessage(error)}`, 'error')
+      return false
+    }
+  }
+
+  async exportDshFig() {
+    try {
+      await this.flush()
+      const blob = await downloadDshFigBundle(this.sessionId, this.state.name)
+      const { saveFile } = await import('./save-file.js')
+      const result = await saveFile(blob, `${this.state.name}.dshfig`, 'application/zip')
+      if (result.cancelled) return null
+      this.toast(`已导出 ${result.filename}`)
+      return result
+    } catch (error) {
+      this.toast(`导出 .dshfig 失败：${errorMessage(error)}`, 'error')
+      return null
+    }
+  }
+
+  async importDshFigFile(file: File) {
+    try {
+      const res = await uploadDshFigBundle(this.sessionId, this.state.name, file)
+      await this.reload()
+      this.toast(`已导入 .dshfig（恢复 ${res.assetsRestored ?? 0} 个资源${res.hasSidecar ? ' + Figma 绑定' : ''}）`)
+      return res
+    } catch (error) {
+      this.toast(`导入 .dshfig 失败：${errorMessage(error)}`, 'error')
+      return null
+    }
+  }
+
   /** Copy the current selection (or the page) as a PNG image to the clipboard. */
   async copySelectionImage() {
     try {
@@ -2481,7 +2534,7 @@ class CanvasStore {
       text: label,
       font: { family: 'system-ui', weight: 600, style: 'normal', size: 12, lineHeight: 1.35, letterSpacing: 0 },
       align: 'center',
-      verticalAlign: 'middle',
+      verticalAlign: 'center',
       fills: [{ type: 'solid', color: '#4D6BFE' }],
       effects: [],
       autoHeight: true,

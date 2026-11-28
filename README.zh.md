@@ -32,6 +32,30 @@
   </tr>
 </table>
 
+### 新版核心体验一览
+
+<table align="center">
+  <tr>
+    <td align="center" valign="top" colspan="2">
+      <img src="docs/interaction-flow-preview.png" width="820" alt="交互连线工具、多画布切换与右侧交互流程面板" />
+      <br />
+      <sub><b>交互连线与多画布流程</b> — 工具栏连线工具（<code>K</code>）与选中元素右侧 <code>+</code> 快捷拉线、自动生成平滑箭头与事件标签、右侧常驻「交互流程」面板支持缩略图跳转、聚焦连线与事件编删</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/components-variants-preview.png" width="400" alt="变体集实时缩略预览卡片、组件拖拽与属性检查器" />
+      <br />
+      <sub><b>变体集实时预览与直接操纵</b> — 点击变体胶囊即时切换缩略图预览，拖入画布按落点放置，属性面板一键切换变体</sub>
+    </td>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/figma-sync-preview.png" width="400" alt="顶栏独立 Figma 入口与 Figma 生态同步弹窗" />
+      <br />
+      <sub><b>Figma 生态同步与零泄漏配置</b> — L0 剪贴板直粘、L1 免费 Companion Plugin 本地直连配对、L2 Keychain 凭证与三方 Diff 审查</sub>
+    </td>
+  </tr>
+</table>
+
 ---
 
 ## 核心特性
